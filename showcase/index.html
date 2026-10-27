@@ -1,0 +1,1013 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Beam — Finalized Mascot & Interactive Behaviors Lab</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --bg: #0c0d12;
+      --surface: #15161d;
+      --card-border: rgba(255, 255, 255, 0.08);
+      --ink: #ffffff;
+      --ink-muted: #8e919f;
+      --accent: #FFAA00;
+      --accent-glow: rgba(255, 170, 0, 0.25);
+      --radius: 18px;
+      --font: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+      --ease-spring: cubic-bezier(.34, 1.56, .64, 1);
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      background: var(--bg);
+      color: var(--ink);
+      font-family: var(--font);
+      line-height: 1.5;
+      padding: 40px 24px 80px;
+      transition: background 0.2s, color 0.2s;
+    }
+
+    body.light-mode {
+      --bg: #f5f5f5;
+      --surface: #ffffff;
+      --card-border: rgba(0, 0, 0, 0.08);
+      --ink: #000000;
+      --ink-muted: #666666;
+    }
+
+    .wrap {
+      max-width: 1060px;
+      margin: 0 auto;
+    }
+
+    header {
+      text-align: center;
+      margin-bottom: 36px;
+    }
+
+    .badge {
+      display: inline-block;
+      background: var(--accent-glow);
+      color: var(--accent);
+      border: 1px solid rgba(255, 170, 0, 0.35);
+      border-radius: 999px;
+      padding: 4px 14px;
+      font-size: 12px;
+      font-weight: 700;
+      margin-bottom: 12px;
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+    }
+
+    h1 {
+      font-size: 38px;
+      font-weight: 700;
+      letter-spacing: -0.03em;
+      margin-bottom: 6px;
+    }
+
+    .subtitle {
+      font-size: 15px;
+      color: var(--ink-muted);
+      max-width: 680px;
+      margin: 0 auto 24px;
+    }
+
+    .toolbar {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      background: var(--surface);
+      border: 1px solid var(--card-border);
+      border-radius: 999px;
+      padding: 8px 18px;
+      margin-bottom: 32px;
+      gap: 12px;
+      flex-wrap: wrap;
+    }
+
+    .controls-group {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .pill-btn {
+      background: rgba(255, 255, 255, 0.08);
+      border: 1px solid var(--card-border);
+      color: var(--ink);
+      padding: 6px 14px;
+      font-size: 12px;
+      font-weight: 600;
+      border-radius: 999px;
+      cursor: pointer;
+      transition: background 0.15s, border-color 0.15s;
+    }
+
+    .pill-btn:hover {
+      background: rgba(255, 255, 255, 0.15);
+      border-color: var(--accent);
+    }
+
+    .pill-btn.active {
+      background: var(--accent);
+      color: #111111;
+      border-color: var(--accent);
+    }
+
+    /* Master Spotlight Banner */
+    .hero-banner {
+      background: var(--surface);
+      border: 1px solid var(--card-border);
+      border-radius: 24px;
+      padding: 36px 32px;
+      margin-bottom: 40px;
+      display: grid;
+      grid-template-columns: 280px 1fr;
+      gap: 32px;
+      align-items: center;
+      position: relative;
+      overflow: hidden;
+    }
+
+    @media (max-width: 760px) {
+      .hero-banner {
+        grid-template-columns: 1fr;
+        text-align: center;
+      }
+    }
+
+    /* Transparent Checkerboard Stage */
+    .stage {
+      height: 200px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      border-radius: 16px;
+      border: 1px dashed var(--card-border);
+      background-image: 
+        linear-gradient(45deg, rgba(255,255,255,0.03) 25%, transparent 25%), 
+        linear-gradient(-45deg, rgba(255,255,255,0.03) 25%, transparent 25%), 
+        linear-gradient(45deg, transparent 75%, rgba(255,255,255,0.03) 75%), 
+        linear-gradient(-45deg, transparent 75%, rgba(255,255,255,0.03) 75%);
+      background-size: 16px 16px;
+      background-position: 0 0, 0 8px, 8px -8px, -8px 0px;
+      position: relative;
+      user-select: none;
+    }
+
+    body.light-mode .stage {
+      background-image: 
+        linear-gradient(45deg, rgba(0,0,0,0.03) 25%, transparent 25%), 
+        linear-gradient(-45deg, rgba(0,0,0,0.03) 25%, transparent 25%), 
+        linear-gradient(45deg, transparent 75%, rgba(0,0,0,0.03) 75%), 
+        linear-gradient(-45deg, transparent 75%, rgba(0,0,0,0.03) 75%);
+    }
+
+    .hero-banner .stage svg {
+      width: 150px;
+      height: 150px;
+      transition: transform 0.35s var(--ease-spring);
+      cursor: pointer;
+    }
+
+    .hero-banner .stage:hover svg {
+      transform: scale(1.12) rotate(4deg);
+    }
+
+    /* Master Eye Blink Animation */
+    .animated-eyes .eye-wink {
+      animation: winkAnim 3s infinite;
+      transform-origin: 45px 57px;
+    }
+
+    .animated-eyes .eye-pupil {
+      animation: blinkAnim 3.5s infinite;
+      transform-origin: 70px 57px;
+    }
+
+    @keyframes winkAnim {
+      0%, 85%, 100% { transform: scale(1); }
+      90% { transform: scale(1, 0.1); }
+      95% { transform: scale(1); }
+    }
+
+    @keyframes blinkAnim {
+      0%, 90%, 100% { transform: scaleY(1); }
+      95% { transform: scaleY(0.08); }
+    }
+
+    .hero-info h2 {
+      font-size: 26px;
+      font-weight: 700;
+      letter-spacing: -0.02em;
+      margin-bottom: 8px;
+    }
+
+    .hero-info p {
+      font-size: 14px;
+      color: var(--ink-muted);
+      line-height: 1.6;
+      margin-bottom: 20px;
+    }
+
+    .hero-specs {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+      margin-bottom: 24px;
+    }
+
+    .spec-pill {
+      font-size: 12px;
+      font-weight: 600;
+      background: rgba(255, 255, 255, 0.05);
+      border: 1px solid var(--card-border);
+      padding: 4px 12px;
+      border-radius: 999px;
+      color: var(--ink-muted);
+    }
+
+    .section-title {
+      font-size: 20px;
+      font-weight: 600;
+      letter-spacing: -0.02em;
+      margin: 44px 0 16px;
+      padding-bottom: 8px;
+      border-bottom: 1px solid var(--card-border);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+
+    .section-title span {
+      font-size: 12px;
+      color: var(--ink-muted);
+      font-weight: 400;
+    }
+
+    /* Section 1: Utility Mood Grid */
+    .grid-moods {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+      gap: 16px;
+      margin-bottom: 32px;
+    }
+
+    .mood-card {
+      background: var(--surface);
+      border: 1px solid var(--card-border);
+      border-radius: var(--radius);
+      padding: 18px 14px;
+      text-align: center;
+      transition: transform 0.25s var(--ease-spring), border-color 0.2s;
+    }
+
+    .mood-card:hover {
+      transform: translateY(-4px);
+      border-color: rgba(255, 170, 0, 0.4);
+    }
+
+    .mood-card .stage {
+      height: 130px;
+      margin-bottom: 12px;
+    }
+
+    .mood-card .stage svg {
+      width: 90px;
+      height: 90px;
+    }
+
+    .card-title {
+      font-size: 15px;
+      font-weight: 600;
+      letter-spacing: -0.01em;
+      margin-bottom: 4px;
+    }
+
+    .card-desc {
+      font-size: 12px;
+      color: var(--ink-muted);
+      margin-bottom: 12px;
+      min-height: 34px;
+    }
+
+    .btn-copy {
+      background: var(--ink);
+      color: var(--bg);
+      border: none;
+      border-radius: 999px;
+      padding: 7px 14px;
+      font-size: 12px;
+      font-weight: 600;
+      cursor: pointer;
+      width: 100%;
+      transition: opacity 0.15s;
+    }
+
+    .btn-copy:hover {
+      opacity: 0.85;
+    }
+
+    /* Section 2: Interactive Micro-Behaviors Grid */
+    .grid-behaviors {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+      gap: 20px;
+      margin-bottom: 48px;
+    }
+
+    .behavior-card {
+      background: var(--surface);
+      border: 1px solid var(--card-border);
+      border-radius: var(--radius);
+      padding: 24px;
+      display: flex;
+      flex-direction: column;
+      position: relative;
+    }
+
+    .behavior-card .stage {
+      height: 180px;
+      margin-bottom: 16px;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .behavior-card .stage svg {
+      width: 120px;
+      height: 120px;
+    }
+
+    .behavior-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 8px;
+    }
+
+    .behavior-tag {
+      font-size: 11px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      color: var(--accent);
+      background: var(--accent-glow);
+      padding: 2px 8px;
+      border-radius: 999px;
+    }
+
+    /* Micro-Behavior 1: Cursor Eye Tracking */
+    #stage-tracking {
+      cursor: crosshair;
+    }
+
+    /* Micro-Behavior 2: Jelly Poke Squish */
+    #star-squish-svg {
+      cursor: pointer;
+      transform-origin: 60px 90px;
+      transition: transform 0.1s ease;
+    }
+
+    .is-squishing {
+      animation: jellySquish 0.6s var(--ease-spring);
+    }
+
+    @keyframes jellySquish {
+      0%   { transform: scale(1, 1); }
+      20%  { transform: scale(1.3, 0.72) translateY(8px); }
+      40%  { transform: scale(0.85, 1.22) translateY(-6px); }
+      60%  { transform: scale(1.12, 0.92) translateY(2px); }
+      80%  { transform: scale(0.96, 1.04) translateY(-1px); }
+      100% { transform: scale(1, 1); }
+    }
+
+    /* Micro-Behavior 3: File Drag & Gulp */
+    .drag-chip {
+      position: absolute;
+      bottom: 12px;
+      left: 12px;
+      background: rgba(255, 255, 255, 0.1);
+      border: 1px solid var(--card-border);
+      padding: 5px 12px;
+      border-radius: 8px;
+      font-size: 11px;
+      font-weight: 600;
+      color: var(--ink);
+      cursor: grab;
+      user-select: none;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      z-index: 10;
+      backdrop-filter: blur(8px);
+    }
+
+    .drag-chip:active {
+      cursor: grabbing;
+    }
+
+    #stage-drop.drag-over {
+      border-color: var(--accent);
+      background-color: rgba(255, 170, 0, 0.08);
+    }
+
+    #star-gulp-svg {
+      transform-origin: 60px 60px;
+      transition: transform 0.25s var(--ease-spring);
+    }
+
+    /* Micro-Behavior 4: Music Beat Pulse */
+    .pulsing-body {
+      animation: beatPulse 0.5s infinite ease-in-out alternate;
+      transform-origin: 60px 70px;
+    }
+
+    @keyframes beatPulse {
+      0% {
+        transform: scale(0.98) rotate(-3deg);
+      }
+      100% {
+        transform: scale(1.08) rotate(3deg);
+      }
+    }
+
+    /* Micro-Behavior 5: Deep Sleep Breathing */
+    .sleeping-body {
+      animation: sleepBreathe 4s infinite ease-in-out;
+      transform-origin: 60px 75px;
+    }
+
+    @keyframes sleepBreathe {
+      0%, 100% {
+        transform: scale(0.96, 0.94) translateY(2px);
+      }
+      50% {
+        transform: scale(1.03, 1.04) translateY(-2px);
+      }
+    }
+
+    .sleep-z {
+      position: absolute;
+      font-size: 14px;
+      font-weight: 700;
+      color: var(--accent);
+      opacity: 0;
+      pointer-events: none;
+      animation: floatZ 3s infinite ease-out;
+    }
+
+    .sleep-z:nth-child(2) {
+      animation-delay: 1s;
+    }
+    .sleep-z:nth-child(3) {
+      animation-delay: 2s;
+    }
+
+    @keyframes floatZ {
+      0% {
+        transform: translate(65px, -10px) scale(0.6);
+        opacity: 0;
+      }
+      30% {
+        opacity: 0.9;
+      }
+      80% {
+        opacity: 0.7;
+      }
+      100% {
+        transform: translate(95px, -55px) scale(1.3);
+        opacity: 0;
+      }
+    }
+
+    .behavior-action {
+      margin-top: auto;
+      padding-top: 14px;
+    }
+
+    #toast {
+      position: fixed;
+      bottom: 24px;
+      left: 50%;
+      transform: translateX(-50%) translateY(50px);
+      background: var(--ink);
+      color: var(--bg);
+      padding: 8px 20px;
+      border-radius: 999px;
+      font-size: 12px;
+      font-weight: 600;
+      opacity: 0;
+      transition: all 0.2s;
+      pointer-events: none;
+      z-index: 100;
+    }
+
+    #toast.show {
+      transform: translateX(-50%) translateY(0);
+      opacity: 1;
+    }
+  </style>
+</head>
+<body>
+
+  <div class="wrap">
+    <header>
+      <div class="badge">Official Brand Asset & Behaviors Lab</div>
+      <h1>beam. mascot & variations</h1>
+      <p class="subtitle">Mathematically smoothed 5-point polar harmonic spline (#FFAA00). Explore the 5 feature state variations alongside 5 live interactive micro-behaviors.</p>
+    </header>
+
+    <div class="toolbar">
+      <span style="font-size: 13px; color: var(--ink-muted);">Hover, poke, drag files, or move your mouse to test micro-behaviors</span>
+      <div class="controls-group">
+        <button class="pill-btn active" id="animToggle" onclick="toggleHeroAnimation()">Eye Wink Animation: ON</button>
+        <button class="pill-btn" onclick="toggleTheme()">Canvas: Dark / Light</button>
+      </div>
+    </div>
+
+    <!-- ============================================== -->
+    <!-- MASTERWORK HERO SPOTLIGHT -->
+    <!-- ============================================== -->
+    <div class="hero-banner">
+      <div class="stage" id="m-star-master">
+        <svg viewBox="0 0 120 120" width="120" height="120" fill="none" id="hero-star-svg">
+          <!-- 5-Point Symmetrical Cubic Bezier Polar Spline -->
+          <path d="M 60.00 10.00 C 78.00 10.00, 68.90 29.38, 77.63 35.73 C 86.37 42.08, 101.99 27.43, 107.55 44.55 C 113.12 61.67, 91.87 59.00, 88.53 69.27 C 85.19 79.54, 103.95 89.87, 89.39 100.45 C 74.83 111.03, 70.80 90.00, 60.00 90.00 C 49.20 90.00, 45.17 111.03, 30.61 100.45 C 16.05 89.87, 34.81 79.54, 31.47 69.27 C 28.13 59.00, 6.88 61.67, 12.45 44.55 C 18.01 27.43, 33.63 42.08, 42.37 35.73 C 51.10 29.38, 42.00 10.00, 60.00 10.00 Z" fill="#FFAA00" />
+          
+          <!-- Left Eye: Wink Chevron (>) -->
+          <path class="eye-wink" d="M 42 52 L 49 57 L 42 62" stroke="#111111" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round" fill="none" />
+          
+          <!-- Right Eye: Pure Solid Black Circle with Inner Tracking White Catchlight -->
+          <circle cx="70" cy="57" r="6" fill="#111111" />
+          <circle id="hero-catchlight" cx="68.5" cy="55.5" r="2" fill="#FFFFFF" />
+          
+          <!-- Playful Curved Smile -->
+          <path d="M 51 68 Q 56 74 61 68" stroke="#111111" stroke-width="3" stroke-linecap="round" fill="none" />
+        </svg>
+      </div>
+
+      <div class="hero-info">
+        <h2>Puffy Chubby Star (Master Mark)</h2>
+        <p>The official locked mascot for Beam. Pure harmonic curvature with the signature wink chevron on the left, solid black circle with live cursor-tracking white catchlight on the right, and subtle smile.</p>
+        <div class="hero-specs">
+          <span class="spec-pill">Format: Pure SVG</span>
+          <span class="spec-pill">Color: #FFAA00 Honey Gold</span>
+          <span class="spec-pill">Right Eye: Live Catchlight Tracking</span>
+          <span class="spec-pill">Left Eye: Signature Wink Chevron</span>
+          <span class="spec-pill">Background: 100% Transparent</span>
+        </div>
+        <button class="btn-copy" style="max-width: 220px; padding: 10px 20px; font-size: 13px;" onclick="copySnippet('m-star-master')">Copy Master SVG</button>
+      </div>
+    </div>
+
+    <!-- ============================================== -->
+    <!-- SECTION 1: 5 FEATURE STATE MOODS -->
+    <!-- ============================================== -->
+    <div class="section-title">
+      Beam Feature State Variations
+      <span>5 state-driven companion moods for floating desktop pill modes</span>
+    </div>
+
+    <div class="grid-moods">
+      <!-- 1. IDLE -->
+      <div class="mood-card">
+        <div class="stage" id="m-star-idle">
+          <svg viewBox="0 0 120 120" width="90" height="90" fill="none">
+            <path d="M 60.00 10.00 C 78.00 10.00, 68.90 29.38, 77.63 35.73 C 86.37 42.08, 101.99 27.43, 107.55 44.55 C 113.12 61.67, 91.87 59.00, 88.53 69.27 C 85.19 79.54, 103.95 89.87, 89.39 100.45 C 74.83 111.03, 70.80 90.00, 60.00 90.00 C 49.20 90.00, 45.17 111.03, 30.61 100.45 C 16.05 89.87, 34.81 79.54, 31.47 69.27 C 28.13 59.00, 6.88 61.67, 12.45 44.55 C 18.01 27.43, 33.63 42.08, 42.37 35.73 C 51.10 29.38, 42.00 10.00, 60.00 10.00 Z" fill="#FFAA00" />
+            <path d="M 42 58 Q 48 50 54 58" stroke="#111111" stroke-width="3" stroke-linecap="round" fill="none" />
+            <path d="M 66 58 Q 72 50 78 58" stroke="#111111" stroke-width="3" stroke-linecap="round" fill="none" />
+            <path d="M 57 66 Q 60 69 63 66" stroke="#111111" stroke-width="2.5" stroke-linecap="round" fill="none" />
+            <path d="M 88 32 L 95 32 L 88 40 L 95 40" stroke="#111111" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" fill="none" />
+          </svg>
+        </div>
+        <div class="card-title">Idle / Sleepy</div>
+        <div class="card-desc">Resting state when docked or inactive.</div>
+        <button class="btn-copy" onclick="copySnippet('m-star-idle')">Copy SVG</button>
+      </div>
+
+      <!-- 2. MUSIC -->
+      <div class="mood-card">
+        <div class="stage" id="m-star-music">
+          <svg viewBox="0 0 120 120" width="90" height="90" fill="none">
+            <path d="M 60.00 10.00 C 78.00 10.00, 68.90 29.38, 77.63 35.73 C 86.37 42.08, 101.99 27.43, 107.55 44.55 C 113.12 61.67, 91.87 59.00, 88.53 69.27 C 85.19 79.54, 103.95 89.87, 89.39 100.45 C 74.83 111.03, 70.80 90.00, 60.00 90.00 C 49.20 90.00, 45.17 111.03, 30.61 100.45 C 16.05 89.87, 34.81 79.54, 31.47 69.27 C 28.13 59.00, 6.88 61.67, 12.45 44.55 C 18.01 27.43, 33.63 42.08, 42.37 35.73 C 51.10 29.38, 42.00 10.00, 60.00 10.00 Z" fill="#FFAA00" />
+            <path d="M 32 36 Q 60 14 88 36" stroke="#111111" stroke-width="4.5" stroke-linecap="round" fill="none" />
+            <rect x="23" y="32" width="10" height="18" rx="5" fill="#111111" />
+            <rect x="87" y="32" width="10" height="18" rx="5" fill="#111111" />
+            <path d="M 43 57 Q 49 50 55 57" stroke="#111111" stroke-width="3" stroke-linecap="round" fill="none" />
+            <path d="M 65 57 Q 71 50 77 57" stroke="#111111" stroke-width="3" stroke-linecap="round" fill="none" />
+            <ellipse cx="60" cy="67" rx="3.5" ry="4.5" fill="#111111" />
+            <path d="M 96 46 L 96 38 L 105 35 L 105 43" stroke="#111111" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" fill="none" />
+            <circle cx="94" cy="46" r="2.5" fill="#111111" />
+            <circle cx="103" cy="43" r="2.5" fill="#111111" />
+          </svg>
+        </div>
+        <div class="card-title">Music Playback</div>
+        <div class="card-desc">DJ headphones for audio streaming.</div>
+        <button class="btn-copy" onclick="copySnippet('m-star-music')">Copy SVG</button>
+      </div>
+
+      <!-- 3. FILE SHELF -->
+      <div class="mood-card">
+        <div class="stage" id="m-star-files">
+          <svg viewBox="0 0 120 120" width="90" height="90" fill="none">
+            <path d="M 60.00 10.00 C 78.00 10.00, 68.90 29.38, 77.63 35.73 C 86.37 42.08, 101.99 27.43, 107.55 44.55 C 113.12 61.67, 91.87 59.00, 88.53 69.27 C 85.19 79.54, 103.95 89.87, 89.39 100.45 C 74.83 111.03, 70.80 90.00, 60.00 90.00 C 49.20 90.00, 45.17 111.03, 30.61 100.45 C 16.05 89.87, 34.81 79.54, 31.47 69.27 C 28.13 59.00, 6.88 61.67, 12.45 44.55 C 18.01 27.43, 33.63 42.08, 42.37 35.73 C 51.10 29.38, 42.00 10.00, 60.00 10.00 Z" fill="#FFAA00" />
+            <circle cx="44" cy="54" r="5.5" fill="#111111" />
+            <circle cx="42.5" cy="52.5" r="1.8" fill="#FFFFFF" />
+            <path d="M 66 50 L 72 54 L 66 58" stroke="#111111" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" fill="none" />
+            <path d="M 50 64 Q 55 69 60 65" stroke="#111111" stroke-width="2.5" stroke-linecap="round" fill="none" />
+            <g transform="translate(62, 58) rotate(6)">
+              <path d="M 0 0 L 16 0 L 22 6 L 22 26 L 0 26 Z" fill="#FFFFFF" stroke="#111111" stroke-width="2.2" stroke-linejoin="round" />
+              <path d="M 16 0 L 16 6 L 22 6" fill="#E5E7EB" stroke="#111111" stroke-width="2" stroke-linejoin="round" />
+              <line x1="5" y1="10" x2="13" y2="10" stroke="#9CA3AF" stroke-width="1.8" stroke-linecap="round" />
+              <line x1="5" y1="15" x2="17" y2="15" stroke="#9CA3AF" stroke-width="1.8" stroke-linecap="round" />
+              <line x1="5" y1="20" x2="14" y2="20" stroke="#9CA3AF" stroke-width="1.8" stroke-linecap="round" />
+            </g>
+            <circle cx="62" cy="72" r="5" fill="#FFAA00" stroke="#111111" stroke-width="2.2" />
+          </svg>
+        </div>
+        <div class="card-title">File Shelf / Drop</div>
+        <div class="card-desc">Holding origami page on drop.</div>
+        <button class="btn-copy" onclick="copySnippet('m-star-files')">Copy SVG</button>
+      </div>
+
+      <!-- 4. TIMER -->
+      <div class="mood-card">
+        <div class="stage" id="m-star-timer">
+          <svg viewBox="0 0 120 120" width="90" height="90" fill="none">
+            <path d="M 60.00 10.00 C 78.00 10.00, 68.90 29.38, 77.63 35.73 C 86.37 42.08, 101.99 27.43, 107.55 44.55 C 113.12 61.67, 91.87 59.00, 88.53 69.27 C 85.19 79.54, 103.95 89.87, 89.39 100.45 C 74.83 111.03, 70.80 90.00, 60.00 90.00 C 49.20 90.00, 45.17 111.03, 30.61 100.45 C 16.05 89.87, 34.81 79.54, 31.47 69.27 C 28.13 59.00, 6.88 61.67, 12.45 44.55 C 18.01 27.43, 33.63 42.08, 42.37 35.73 C 51.10 29.38, 42.00 10.00, 60.00 10.00 Z" fill="#FFAA00" />
+            <circle cx="45" cy="55" r="5.5" fill="#111111" />
+            <circle cx="47" cy="53.5" r="1.8" fill="#FFFFFF" />
+            <circle cx="67" cy="55" r="5.5" fill="#111111" />
+            <circle cx="69" cy="53.5" r="1.8" fill="#FFFFFF" />
+            <path d="M 52 66 Q 58 70 64 66" stroke="#111111" stroke-width="2.5" stroke-linecap="round" fill="none" />
+            <g transform="translate(80, 66)">
+              <line x1="0" y1="-10" x2="0" y2="-13" stroke="#111111" stroke-width="2.5" stroke-linecap="round" />
+              <line x1="-3" y1="-13" x2="3" y2="-13" stroke="#111111" stroke-width="2" stroke-linecap="round" />
+              <circle cx="0" cy="0" r="10.5" fill="#FFFFFF" stroke="#111111" stroke-width="2.2" />
+              <line x1="0" y1="0" x2="0" y2="-6" stroke="#111111" stroke-width="1.8" stroke-linecap="round" />
+              <line x1="0" y1="0" x2="4.5" y2="0" stroke="#0A84FF" stroke-width="1.8" stroke-linecap="round" />
+            </g>
+          </svg>
+        </div>
+        <div class="card-title">Countdown Timer</div>
+        <div class="card-desc">Stopwatch focus during countdowns.</div>
+        <button class="btn-copy" onclick="copySnippet('m-star-timer')">Copy SVG</button>
+      </div>
+
+      <!-- 5. DONE -->
+      <div class="mood-card">
+        <div class="stage" id="m-star-done">
+          <svg viewBox="0 0 120 120" width="90" height="90" fill="none">
+            <path d="M 60.00 10.00 C 78.00 10.00, 68.90 29.38, 77.63 35.73 C 86.37 42.08, 101.99 27.43, 107.55 44.55 C 113.12 61.67, 91.87 59.00, 88.53 69.27 C 85.19 79.54, 103.95 89.87, 89.39 100.45 C 74.83 111.03, 70.80 90.00, 60.00 90.00 C 49.20 90.00, 45.17 111.03, 30.61 100.45 C 16.05 89.87, 34.81 79.54, 31.47 69.27 C 28.13 59.00, 6.88 61.67, 12.45 44.55 C 18.01 27.43, 33.63 42.08, 42.37 35.73 C 51.10 29.38, 42.00 10.00, 60.00 10.00 Z" fill="#FFAA00" />
+            <path d="M 40 55 Q 46 47 52 55" stroke="#111111" stroke-width="3.5" stroke-linecap="round" fill="none" />
+            <path d="M 68 55 Q 74 47 80 55" stroke="#111111" stroke-width="3.5" stroke-linecap="round" fill="none" />
+            <circle cx="38" cy="62" r="4.5" fill="#FF7675" opacity="0.65" />
+            <circle cx="82" cy="62" r="4.5" fill="#FF7675" opacity="0.65" />
+            <path d="M 52 64 Q 60 76 68 64 Z" fill="#E11D48" stroke="#111111" stroke-width="2.5" stroke-linejoin="round" />
+            <path d="M 22 25 Q 26 25 26 21 Q 26 25 30 25 Q 26 25 26 29 Q 26 25 22 25 Z" fill="#FFAA00" stroke="#111111" stroke-width="1.2" />
+            <path d="M 94 28 Q 98 28 98 24 Q 98 28 102 28 Q 98 28 98 32 Q 98 28 94 28 Z" fill="#0A84FF" stroke="#111111" stroke-width="1.2" />
+          </svg>
+        </div>
+        <div class="card-title">Celebration / Done</div>
+        <div class="card-desc">Sparkles for timer chimes and tasks.</div>
+        <button class="btn-copy" onclick="copySnippet('m-star-done')">Copy SVG</button>
+      </div>
+    </div>
+
+    <!-- ============================================== -->
+    <!-- SECTION 2: 5 INTERACTIVE MICRO-BEHAVIORS -->
+    <!-- ============================================== -->
+    <div class="section-title">
+      Interactive Micro-Behaviors Playground
+      <span>5 live animations powered by vanilla SVG/CSS transforms</span>
+    </div>
+
+    <div class="grid-behaviors">
+
+      <!-- BEHAVIOR 1: MASTER MARK CATCHLIGHT TRACKING -->
+      <div class="behavior-card">
+        <div class="behavior-header">
+          <span class="card-title">01. Master Mark Catchlight Tracking</span>
+          <span class="behavior-tag">Interactive</span>
+        </div>
+        <div class="card-desc">Exact original master face: wink chevron on left, solid black circle on right. The white specular catchlight dot glides smoothly inside the black circle to follow your mouse.</div>
+        <div class="stage" id="stage-tracking">
+          <svg viewBox="0 0 120 120" width="120" height="120" fill="none" id="star-tracking-svg">
+            <path d="M 60.00 10.00 C 78.00 10.00, 68.90 29.38, 77.63 35.73 C 86.37 42.08, 101.99 27.43, 107.55 44.55 C 113.12 61.67, 91.87 59.00, 88.53 69.27 C 85.19 79.54, 103.95 89.87, 89.39 100.45 C 74.83 111.03, 70.80 90.00, 60.00 90.00 C 49.20 90.00, 45.17 111.03, 30.61 100.45 C 16.05 89.87, 34.81 79.54, 31.47 69.27 C 28.13 59.00, 6.88 61.67, 12.45 44.55 C 18.01 27.43, 33.63 42.08, 42.37 35.73 C 51.10 29.38, 42.00 10.00, 60.00 10.00 Z" fill="#FFAA00" />
+            
+            <!-- Left Eye: Wink Chevron (>) -->
+            <path d="M 42 52 L 49 57 L 42 62" stroke="#111111" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round" fill="none" />
+
+            <!-- Right Eye: Solid Black Circle with Inner Tracking White Catchlight -->
+            <circle cx="70" cy="57" r="6" fill="#111111" />
+            <circle id="track-catchlight-right" cx="68.5" cy="55.5" r="2" fill="#FFFFFF" />
+
+            <!-- Cute Curved Smile -->
+            <path d="M 51 68 Q 56 74 61 68" stroke="#111111" stroke-width="3" stroke-linecap="round" fill="none" />
+          </svg>
+        </div>
+        <div class="behavior-action">
+          <button class="btn-copy" onclick="copySnippet('star-tracking-svg')">Copy SVG Markup</button>
+        </div>
+      </div>
+
+      <!-- BEHAVIOR 2: JELLY POKE SQUISH -->
+      <div class="behavior-card">
+        <div class="behavior-header">
+          <span class="card-title">02. Jelly Poke Squish</span>
+          <span class="behavior-tag">Spring Physics</span>
+        </div>
+        <div class="card-desc">Click or tap directly on the mascot. It compresses along the Y-axis and wobbles back with an elastic spring.</div>
+        <div class="stage" onclick="triggerSquish()" title="Click to poke!">
+          <svg viewBox="0 0 120 120" width="120" height="120" fill="none" id="star-squish-svg">
+            <path d="M 60.00 10.00 C 78.00 10.00, 68.90 29.38, 77.63 35.73 C 86.37 42.08, 101.99 27.43, 107.55 44.55 C 113.12 61.67, 91.87 59.00, 88.53 69.27 C 85.19 79.54, 103.95 89.87, 89.39 100.45 C 74.83 111.03, 70.80 90.00, 60.00 90.00 C 49.20 90.00, 45.17 111.03, 30.61 100.45 C 16.05 89.87, 34.81 79.54, 31.47 69.27 C 28.13 59.00, 6.88 61.67, 12.45 44.55 C 18.01 27.43, 33.63 42.08, 42.37 35.73 C 51.10 29.38, 42.00 10.00, 60.00 10.00 Z" fill="#FFAA00" />
+            <path id="squish-eye-left" d="M 42 52 L 49 57 L 42 62" stroke="#111111" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round" fill="none" />
+            <circle cx="70" cy="57" r="6" fill="#111111" />
+            <circle cx="68.5" cy="55.5" r="2" fill="#FFFFFF" />
+            <path id="squish-mouth" d="M 51 68 Q 56 74 61 68" stroke="#111111" stroke-width="3" stroke-linecap="round" fill="none" />
+          </svg>
+        </div>
+        <div class="behavior-action">
+          <button class="btn-copy" onclick="triggerSquish()">Poke Mascot (Click)</button>
+        </div>
+      </div>
+
+      <!-- BEHAVIOR 3: FILE DRAG & GULP -->
+      <div class="behavior-card">
+        <div class="behavior-header">
+          <span class="card-title">03. File Drag & Gulp</span>
+          <span class="behavior-tag">Drag & Drop</span>
+        </div>
+        <div class="card-desc">Drag the sample file badge into the stage. The mascot's mouth expands wide, then gulps the file upon release.</div>
+        <div class="stage" id="stage-drop">
+          <div class="drag-chip" id="sample-file" draggable="true">
+            📄 memo.txt
+          </div>
+          <svg viewBox="0 0 120 120" width="120" height="120" fill="none" id="star-gulp-svg">
+            <path d="M 60.00 10.00 C 78.00 10.00, 68.90 29.38, 77.63 35.73 C 86.37 42.08, 101.99 27.43, 107.55 44.55 C 113.12 61.67, 91.87 59.00, 88.53 69.27 C 85.19 79.54, 103.95 89.87, 89.39 100.45 C 74.83 111.03, 70.80 90.00, 60.00 90.00 C 49.20 90.00, 45.17 111.03, 30.61 100.45 C 16.05 89.87, 34.81 79.54, 31.47 69.27 C 28.13 59.00, 6.88 61.67, 12.45 44.55 C 18.01 27.43, 33.63 42.08, 42.37 35.73 C 51.10 29.38, 42.00 10.00, 60.00 10.00 Z" fill="#FFAA00" />
+            
+            <!-- Eyes (Surprised Anticipation) -->
+            <g id="gulp-eyes">
+              <circle cx="46" cy="55" r="6" fill="#111111" />
+              <circle cx="44.5" cy="53.5" r="2" fill="#FFFFFF" />
+              <circle cx="68" cy="55" r="6" fill="#111111" />
+              <circle cx="66.5" cy="53.5" r="2" fill="#FFFFFF" />
+            </g>
+
+            <!-- Dynamic Gulp Mouth (Transitions to Big O) -->
+            <ellipse id="gulp-mouth" cx="57" cy="69" rx="4" ry="2.5" fill="#111111" />
+          </svg>
+        </div>
+        <div class="behavior-action">
+          <button class="btn-copy" onclick="simulateDropGulp()">Simulate File Drop</button>
+        </div>
+      </div>
+
+      <!-- BEHAVIOR 4: MUSIC BEAT PULSE -->
+      <div class="behavior-card">
+        <div class="behavior-header">
+          <span class="card-title">04. Music Beat Pulse</span>
+          <span class="behavior-tag">Audio Sync</span>
+        </div>
+        <div class="card-desc">Simulates real-time SMTC music playback. The mascot wears DJ headphones and grooves rhythmically to 120 BPM beats.</div>
+        <div class="stage">
+          <svg viewBox="0 0 120 120" width="120" height="120" fill="none" id="star-beat-svg" class="pulsing-body">
+            <path d="M 60.00 10.00 C 78.00 10.00, 68.90 29.38, 77.63 35.73 C 86.37 42.08, 101.99 27.43, 107.55 44.55 C 113.12 61.67, 91.87 59.00, 88.53 69.27 C 85.19 79.54, 103.95 89.87, 89.39 100.45 C 74.83 111.03, 70.80 90.00, 60.00 90.00 C 49.20 90.00, 45.17 111.03, 30.61 100.45 C 16.05 89.87, 34.81 79.54, 31.47 69.27 C 28.13 59.00, 6.88 61.67, 12.45 44.55 C 18.01 27.43, 33.63 42.08, 42.37 35.73 C 51.10 29.38, 42.00 10.00, 60.00 10.00 Z" fill="#FFAA00" />
+            <path d="M 32 36 Q 60 14 88 36" stroke="#111111" stroke-width="4.5" stroke-linecap="round" fill="none" />
+            <rect x="23" y="32" width="10" height="18" rx="5" fill="#111111" />
+            <rect x="87" y="32" width="10" height="18" rx="5" fill="#111111" />
+            <path d="M 43 57 Q 49 50 55 57" stroke="#111111" stroke-width="3" stroke-linecap="round" fill="none" />
+            <path d="M 65 57 Q 71 50 77 57" stroke="#111111" stroke-width="3" stroke-linecap="round" fill="none" />
+            <ellipse cx="60" cy="67" rx="3.5" ry="4.5" fill="#111111" />
+            <path d="M 96 46 L 96 38 L 105 35 L 105 43" stroke="#111111" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" fill="none" />
+            <circle cx="94" cy="46" r="2.5" fill="#111111" />
+            <circle cx="103" cy="43" r="2.5" fill="#111111" />
+          </svg>
+        </div>
+        <div class="behavior-action">
+          <button class="btn-copy" id="beatToggleBtn" onclick="toggleBeatPulse()">Pause Beat Rhythm</button>
+        </div>
+      </div>
+
+      <!-- BEHAVIOR 5: DEEP SLEEP BREATHING -->
+      <div class="behavior-card">
+        <div class="behavior-header">
+          <span class="card-title">05. Deep Sleep Breathing</span>
+          <span class="behavior-tag">Idle State</span>
+        </div>
+        <div class="card-desc">Activates after 5 minutes of system inactivity. The mascot breathes with slow 4s easing and drifting Z particles.</div>
+        <div class="stage" style="position: relative;">
+          <span class="sleep-z">Z</span>
+          <span class="sleep-z">Z</span>
+          <span class="sleep-z">z</span>
+          <svg viewBox="0 0 120 120" width="120" height="120" fill="none" id="star-sleep-svg" class="sleeping-body">
+            <path d="M 60.00 10.00 C 78.00 10.00, 68.90 29.38, 77.63 35.73 C 86.37 42.08, 101.99 27.43, 107.55 44.55 C 113.12 61.67, 91.87 59.00, 88.53 69.27 C 85.19 79.54, 103.95 89.87, 89.39 100.45 C 74.83 111.03, 70.80 90.00, 60.00 90.00 C 49.20 90.00, 45.17 111.03, 30.61 100.45 C 16.05 89.87, 34.81 79.54, 31.47 69.27 C 28.13 59.00, 6.88 61.67, 12.45 44.55 C 18.01 27.43, 33.63 42.08, 42.37 35.73 C 51.10 29.38, 42.00 10.00, 60.00 10.00 Z" fill="#FFAA00" />
+            <path d="M 42 58 Q 48 51 54 58" stroke="#111111" stroke-width="3" stroke-linecap="round" fill="none" />
+            <path d="M 66 58 Q 72 51 78 58" stroke="#111111" stroke-width="3" stroke-linecap="round" fill="none" />
+            <path d="M 57 66 Q 60 69 63 66" stroke="#111111" stroke-width="2.5" stroke-linecap="round" fill="none" />
+          </svg>
+        </div>
+        <div class="behavior-action">
+          <button class="btn-copy" onclick="copySnippet('star-sleep-svg')">Copy Sleep SVG</button>
+        </div>
+      </div>
+
+    </div>
+
+  </div>
+
+  <div id="toast">SVG Copied to Clipboard!</div>
+
+  <script>
+    // Theme toggle
+    function toggleTheme() {
+      document.body.classList.toggle('light-mode');
+    }
+
+    // Hero Wink Animation Toggle
+    let heroAnimated = true;
+    function toggleHeroAnimation() {
+      heroAnimated = !heroAnimated;
+      const master = document.getElementById('m-star-master');
+      const btn = document.getElementById('animToggle');
+      if (heroAnimated) {
+        master.classList.add('animated-eyes');
+        btn.textContent = 'Eye Wink Animation: ON';
+        btn.classList.add('active');
+      } else {
+        master.classList.remove('animated-eyes');
+        btn.textContent = 'Eye Wink Animation: OFF';
+        btn.classList.remove('active');
+      }
+    }
+
+    // 01. Live Specular Catchlight Tracking (Master Mark in Hero & Card 1)
+    const heroCatchlight = document.getElementById('hero-catchlight');
+    const heroStage = document.getElementById('m-star-master');
+    const trackingStage = document.getElementById('stage-tracking');
+    const trackCatchlight = document.getElementById('track-catchlight-right');
+
+    // Global window cursor tracking for the Master Hero Mark (white catchlight glides inside black circle)
+    window.addEventListener('mousemove', (e) => {
+      if (!heroCatchlight || !heroStage) return;
+      const rect = heroStage.getBoundingClientRect();
+      const eyeCenterX = rect.left + rect.width * 0.583;
+      const eyeCenterY = rect.top + rect.height * 0.475;
+
+      const deltaX = e.clientX - eyeCenterX;
+      const deltaY = e.clientY - eyeCenterY;
+      const angle = Math.atan2(deltaY, deltaX);
+      const maxDistance = 2.4; // Confined strictly inside the solid black circle (r=6)
+      const distance = Math.min(Math.hypot(deltaX, deltaY) / 25, maxDistance);
+
+      const cx = 70 + Math.cos(angle) * distance;
+      const cy = 57 + Math.sin(angle) * distance;
+      heroCatchlight.setAttribute('cx', cx.toFixed(2));
+      heroCatchlight.setAttribute('cy', cy.toFixed(2));
+    });
+
+    // Card-level cursor tracking for Behavior 1
+    if (trackingStage && trackCatchlight) {
+      trackingStage.addEventListener('mousemove', (e) => {
+        const rect = trackingStage.getBoundingClientRect();
+        const eyeCenterX = rect.left + rect.width * 0.583;
+        const eyeCenterY = rect.top + rect.height * 0.475;
+
+        const deltaX = e.clientX - eyeCenterX;
+        const deltaY = e.clientY - eyeCenterY;
+        const angle = Math.atan2(deltaY, deltaX);
+        const maxDistance = 2.4;
+        const distance = Math.min(Math.hypot(deltaX, deltaY) / 12, maxDistance);
+
+        const cx = 70 + Math.cos(angle) * distance;
+        const cy = 57 + Math.sin(angle) * distance;
+        trackCatchlight.setAttribute('cx', cx.toFixed(2));
+        trackCatchlight.setAttribute('cy', cy.toFixed(2));
+      });
+
+      trackingStage.addEventListener('mouseleave', () => {
+        trackCatchlight.setAttribute('cx', '68.5');
+        trackCatchlight.setAttribute('cy', '55.5');
+      });
+    }
+
+    // 02. Jelly Poke Squish
+    function triggerSquish() {
+      const el = document.getElementById('star-squish-svg');
+      el.classList.remove('is-squishing');
+      void el.offsetWidth; // Reflow
+      el.classList.add('is-squishing');
+    }
+
+    // 03. File Drag & Gulp Simulation
+    const dropStage = document.getElementById('stage-drop');
+    const sampleFile = document.getElementById('sample-file');
+    const gulpMouth = document.getElementById('gulp-mouth');
+    const gulpSvg = document.getElementById('star-gulp-svg');
+
+    sampleFile.addEventListener('dragstart', (e) => {
+      e.dataTransfer.setData('text/plain', 'memo.txt');
+      gulpMouth.setAttribute('rx', '7');
+      gulpMouth.setAttribute('ry', '8');
+      gulpMouth.setAttribute('fill', '#E11D48');
+      dropStage.classList.add('drag-over');
+    });
+
+    sampleFile.addEventListener('dragend', () => {
+      dropStage.classList.remove('drag-over');
+    });
+
+    dropStage.addEventListener('dragover', (e) => {
+      e.preventDefault();
+      dropStage.classList.add('drag-over');
+      gulpMouth.setAttribute('rx', '7');
+      gulpMouth.setAttribute('ry', '8');
+      gulpMouth.setAttribute('fill', '#E11D48');
+    });
+
+    dropStage.addEventListener('dragleave', () => {
+      dropStage.classList.remove('drag-over');
+      gulpMouth.setAttribute('rx', '4');
+      gulpMouth.setAttribute('ry', '2.5');
+      gulpMouth.setAttribute('fill', '#111111');
+    });
+
+    dropStage.addEventListener('drop', (e) => {
+      e.preventDefault();
+      dropStage.classList.remove('drag-over');
+      executeGulp();
+    });
+
+    function simulateDropGulp() {
+      executeGulp();
+    }
+
+    function executeGulp() {
+      // Gulp animation: mouth opens wide, star bounces, swallows
+      gulpMouth.setAttribute('rx', '8');
+      gulpMouth.setAttribute('ry', '9');
+      gulpMouth.setAttribute('fill', '#E11D48');
+      gulpSvg.style.transform = 'scale(1.18) translateY(-4px)';
+
+      setTimeout(() => {
+        gulpMouth.setAttribute('rx', '3');
+        gulpMouth.setAttribute('ry', '1.5');
+        gulpMouth.setAttribute('fill', '#111111');
+        gulpSvg.style.transform = 'scale(0.92) translateY(2px)';
+      }, 350);
+
+      setTimeout(() => {
+        gulpMouth.setAttribute('rx', '4');
+        gulpMouth.setAttribute('ry', '2.5');
+        gulpSvg.style.transform = 'scale(1)';
+        const toast = document.getElementById('toast');
+        toast.textContent = 'Gulp! File accepted onto shelf';
+        toast.classList.add('show');
+        setTimeout(() => toast.classList.remove('show'), 2000);
+      }, 700);
+    }
+
+    // 04. Music Beat Pulse Toggle
+    let isPulsing = true;
+    function toggleBeatPulse() {
+      isPulsing = !isPulsing;
+      const el = document.getElementById('star-beat-svg');
+      const btn = document.getElementById('beatToggleBtn');
+      if (isPulsing) {
+        el.classList.add('pulsing-body');
+        btn.textContent = 'Pause Beat Rhythm';
+      } else {
+        el.classList.remove('pulsing-body');
+        btn.textContent = 'Resume Beat Rhythm';
+      }
+    }
+
+    // Copy SVG Snippet
+    function copySnippet(id) {
+      const el = document.getElementById(id);
+      let svg = el.tagName && el.tagName.toLowerCase() === 'svg' ? el : el.querySelector('svg');
+      if (!svg) return;
+      const serializer = new XMLSerializer();
+      let str = serializer.serializeToString(svg);
+      str = str.replace(/class="[^"]*"/g, '');
+
+      navigator.clipboard.writeText(str).then(() => {
+        const toast = document.getElementById('toast');
+        toast.textContent = 'SVG Copied to Clipboard!';
+        toast.classList.add('show');
+        setTimeout(() => toast.classList.remove('show'), 2000);
+      }).catch(err => {
+        alert('Failed to copy SVG: ' + err);
+      });
+    }
+
+    // Initialize Hero Animation on load
+    toggleHeroAnimation();
+  </script>
+</body>
+</html>

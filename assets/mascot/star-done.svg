@@ -1,0 +1,19 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 120 120" width="120" height="120" fill="none">
+  <!-- Puffy Chubby Star: Done / Success Celebration Mood -->
+  <path d="M 60.00 10.00 C 78.00 10.00, 68.90 29.38, 77.63 35.73 C 86.37 42.08, 101.99 27.43, 107.55 44.55 C 113.12 61.67, 91.87 59.00, 88.53 69.27 C 85.19 79.54, 103.95 89.87, 89.39 100.45 C 74.83 111.03, 70.80 90.00, 60.00 90.00 C 49.20 90.00, 45.17 111.03, 30.61 100.45 C 16.05 89.87, 34.81 79.54, 31.47 69.27 C 28.13 59.00, 6.88 61.67, 12.45 44.55 C 18.01 27.43, 33.63 42.08, 42.37 35.73 C 51.10 29.38, 42.00 10.00, 60.00 10.00 Z" fill="#FFAA00" />
+  
+  <!-- Happy Celebration Arc Eyes (^ ^) -->
+  <path d="M 40 55 Q 46 47 52 55" stroke="#111111" stroke-width="3.5" stroke-linecap="round" fill="none" />
+  <path d="M 68 55 Q 74 47 80 55" stroke="#111111" stroke-width="3.5" stroke-linecap="round" fill="none" />
+
+  <!-- Rosy Cheeks -->
+  <circle cx="38" cy="62" r="4.5" fill="#FF7675" opacity="0.65" />
+  <circle cx="82" cy="62" r="4.5" fill="#FF7675" opacity="0.65" />
+
+  <!-- Open Joyful Smile -->
+  <path d="M 52 64 Q 60 76 68 64 Z" fill="#E11D48" stroke="#111111" stroke-width="2.5" stroke-linejoin="round" />
+
+  <!-- Celebration Sparkles -->
+  <path d="M 22 25 Q 26 25 26 21 Q 26 25 30 25 Q 26 25 26 29 Q 26 25 22 25 Z" fill="#FFAA00" stroke="#111111" stroke-width="1.2" />
+  <path d="M 94 28 Q 98 28 98 24 Q 98 28 102 28 Q 98 28 98 32 Q 98 28 94 28 Z" fill="#0A84FF" stroke="#111111" stroke-width="1.2" />
+</svg>
