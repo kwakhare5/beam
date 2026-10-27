@@ -1,0 +1,21 @@
+{
+  "name": "beam",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Offline Windows 11 floating pill: media controls, file shelf, timer, calendar.",
+  "main": "dist/main/index.js",
+  "scripts": {
+    "build": "tsc -p tsconfig.json && vite build",
+    "start": "electron .",
+    "typecheck": "tsc -p tsconfig.json --noEmit && tsc -p tsconfig.renderer.json --noEmit",
+    "verify": "powershell -NoProfile -ExecutionPolicy Bypass -File ./verify.ps1",
+    "dist": "electron-builder"
+  },
+  "devDependencies": {
+    "@types/node": "26.6.5",
+    "electron": "45.0.0",
+    "electron-builder": "26.18.0",
+    "typescript": "7.0.2",
+    "vite": "8.3.5"
+  }
+}

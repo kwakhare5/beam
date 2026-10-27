@@ -205,6 +205,8 @@ helper's WinEventHook sees a foreground change or the foreground window resize/m
 | 2026-10-27 | Artwork lives in `%TEMP%\Beam\art\`, overwritten per track, wiped on quit | The shelf rule bans file copies, not a thumbnail cache; leaving it unbounded is worse |
 | 2026-10-27 | Clipboard stays helper-owned; helper crash breaks paste until restart | Moving `CF_HDROP` ownership to main means reimplementing the same thing; test the restart instead |
 | 2026-10-27 | Renderer picks the contextual tab; `beam:tab:force` removed | The renderer already holds music and timer state; a second decider causes flicker |
+| 2026-10-27 | App ships light and dark themes, toggled in settings | User request 2026-10-27; light palette is the Notion set, dark palette is the existing glass set |
+| 2026-10-27 | Pill is a transparent CSS capsule, not Windows acrylic | Tested 2026-10-27: acrylic paints the window rectangle and ignores the CSS pill radius; at 36px tall the capsule shape matters more than blur |
 | 2026-10-27 | Marketing website out of v1 | DESIGN.md specs one; PRD does not ask for one |
 
 ## 8. Open Decisions

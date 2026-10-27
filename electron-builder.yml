@@ -1,0 +1,9 @@
+appId: com.beam.app
+productName: Beam
+directories:
+  output: release
+files:
+  - dist/**/*
+  - package.json
+win:
+  target: portable

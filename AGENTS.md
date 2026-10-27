@@ -26,6 +26,7 @@ Beam is an offline Windows 11 floating pill that gives 1-click media controls, a
 - Keep the renderer untrusted. Everything touching Win32 goes through the helper.
 - Read `ARCHITECTURE.md` before touching the window, IPC, or helper seams.
 - Follow `DESIGN.md` tokens exactly. No invented colors, radii, or shadows.
+- Review app UI in `showcase/app-preview.html` only. Every phase adds its states to that same file. Never create a second preview file, a new mock, or a per-session HTML file — extend the canonical one.
 - Append a 4-line work card (Problem / Change / Proof / Still broken) to `JOURNAL.md` for every task.
 
 ## 5. What the AI must NEVER do

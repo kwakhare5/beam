@@ -151,7 +151,7 @@
 ## Phase 7 — Settings
 
 - [ ] **7.1 Settings screen**
-  - Startup toggle, hotkey rebind, chime volume with a test button.
+  - Startup toggle, hotkey rebind, chime volume with a test button, and a light/dark theme switch.
   - _Verify:_ each control saves, survives restart, and takes effect immediately.
 
 ---
