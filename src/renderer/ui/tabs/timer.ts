@@ -20,7 +20,7 @@ export function timerPanel(data: TimerData): string {
     (preset) => `<button type="button" class="chip${preset.id === data.preset ? ' active' : ''}">${preset.label}</button>`
   ).join('');
 
-  const content = `<div class="presets">${presets}</div><div class="timer-face"><div class="digits">${esc(data.digits)}</div><div class="panel-sub">${esc(data.note)}</div></div><div class="actions" style="justify-content:center"><button type="button" class="btn primary">${icon('play')}Start</button><button type="button" class="btn ghost">Cancel</button></div>`;
+  const content = `<div class="presets">${presets}</div><div class="timer-face"><div class="digits">${esc(data.digits)}</div><div class="panel-sub">${esc(data.note)}</div></div><div class="actions center"><button type="button" class="btn primary">${icon('play')}Start</button><button type="button" class="btn ghost">Cancel</button></div>`;
 
   return panelBody('timer', content, 'panel-timer');
 }

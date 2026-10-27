@@ -27,6 +27,12 @@
 
 No network. No database. No server. Four parts, three seams.
 
+### Current vs target (2026-10-27)
+
+Implemented: Electron shell, single-instance lock, 184×44 idle capsule, split UI modules/styles, canonical preview, five `verify.ps1` checks, `measure.ps1`.
+
+Target only: `window.ts`, `tray.ts`, `hotkey.ts`, `settings.ts`, `bridge.ts`, `src/shared/`, `native/BeamBridge/`, tray icon, chime, panel open/resize, SMTC, timer, shelf, fullscreen, and the IPC contract below. Expect the present-tense sections below to describe the target until those tasks land.
+
 ---
 
 ## 2. Parts & Responsibilities
@@ -48,21 +54,25 @@ Renderer is untrusted by design: `contextIsolation: true`, `nodeIntegration: fal
 D:\Beam
 ├── package.json              exact-pinned deps
 ├── tsconfig.json
-├── vite.config.ts
+├── tsconfig.renderer.json
+├── vite.config.mts
+├── vite.preview.mts
 ├── electron-builder.yml
 ├── verify.ps1                the one proof command
+├── measure.ps1               memory/CPU proof
+├── README.md
 ├── GLOSSARY.md               UI vocabulary
-├── docs/adr/                 0001–0005 UI decisions
+├── docs/adr/                 0001–0006 UI decisions
 ├── PRD.md  DESIGN.md  ARCHITECTURE.md  TASKS.md  AGENTS.md  JOURNAL.md
 ├── scripts/generate-icons.mjs
 ├── src/
 │   ├── main/
 │   │   ├── index.ts          app lifecycle, single-instance lock
-│   │   ├── window.ts         pill/panel geometry, anchoring, drag, close rules
-│   │   ├── tray.ts           tray icon + menu
-│   │   ├── hotkey.ts         Alt+Space register, fallback, rebind
-│   │   ├── settings.ts       read/write settings.json, defaults, versioned migration
-│   │   └── bridge.ts         spawn helper, JSON-lines client, restart on crash
+│   │   ├── window.ts         (planned) pill/panel geometry, anchoring, drag, close rules
+│   │   ├── tray.ts           (planned) tray icon + menu
+│   │   ├── hotkey.ts         (planned) Alt+Space register, fallback, rebind
+│   │   ├── settings.ts       (planned) read/write settings.json, defaults, versioned migration
+│   │   └── bridge.ts         (planned) spawn helper, JSON-lines client, restart on crash
 │   ├── preload/index.ts      contextBridge surface (the only door)
 │   ├── renderer/
 │   │   ├── ui/
@@ -78,16 +88,17 @@ D:\Beam
 │   │   │   └── tabs/         music, files, timer, calendar, settings
 │   │   ├── styles.css        CSS entry (@import)
 │   │   ├── styles/           tokens, base, pill, panel, controls, tabs
-│   │   └── renderer.ts
-│   └── shared/
+│   │   ├── renderer.ts
+│   │   └── assets.d.ts       .svg/.woff2 module declarations
+│   └── shared/               (planned)
 │       ├── ipc.ts            channel names + payload types
 │       └── bridge.ts         helper command/event types
-├── native/BeamBridge/        C# .NET console project
+├── native/BeamBridge/        (planned) C# .NET console project
 ├── assets/
 │   ├── mascot/*.svg          shipped
 │   ├── fonts/                InterVariable.woff2 + OFL.txt
-│   ├── tray.ico
-│   └── chime.wav             generated, committed
+│   ├── tray.ico              (planned)
+│   └── chime.wav             (planned) generated, committed
 └── showcase/                 brand lab, never shipped
 ```
 
@@ -134,7 +145,7 @@ All channels prefixed `beam:`. Renderer can call, main can push. Payloads are ty
 
 | Direction | Channel | Purpose |
 |---|---|---|
-| renderer → main | `beam:panel:resize` | expand/collapse height |
+| renderer → main | `beam:panel:resize` | resize 184×44 ⇄ 428×308 |
 | renderer → main | `beam:panel:close` | Esc / outside click |
 | renderer → main | `beam:music:command` | toggle / next / prev |
 | renderer → main | `beam:files:add` | paths from a drop |
@@ -171,7 +182,7 @@ drop lands on pill → renderer collects paths → beam:files:add
 ```
 renderer sends beam:timer:start {ms} → main stores deadline = now + ms
 → every 1s main pushes beam:timer:tick {secondsLeft} → renderer prints it
-→ at 0: main plays chime.wav and fires the native Notification, pill pulses
+→ at 0: main plays chime.wav and fires the native Notification; the pill shows the done digits in gold
 → hidden or fullscreen: same path, because the renderer never owns the clock
 ```
 
@@ -205,7 +216,7 @@ helper's WinEventHook sees a foreground change or the foreground window resize/m
 | 2026-10-27 | RAM ceiling raised 100 → 130 MB, PRD amended | User accepted the Electron baseline; 100 MB was not realistic |
 | 2026-10-27 | RAM gate runs immediately after scaffolding (task 0.2), before the helper | Failing the budget after the native spike would waste the hardest work; cheapest point to swap stacks is at the empty window |
 | 2026-10-27 | Electron is confirmed, WinUI is the fallback if the gate fails | User chose Electron; no rewrite until the 60s measurement says otherwise |
-| 2026-10-27 | Hardware acceleration is disabled at startup | GPU on measured 139.2 MB private, over the 130 MB gate; off measured 86.4–86.5 MB with 0.017–0.047% CPU and a verified transparent pill. Re-measure when the panel and helper land. |
+| 2026-10-27 | Hardware acceleration is disabled at startup | GPU on measured 139.2 MB private, over the 130 MB gate; off measured 81.8 MB steady / 84 MB peak / 0.011% CPU at the 184×44 idle window (earlier 86.4–86.5 MB runs were on the 800×60 window). Re-measure when the panel and helper land. |
 | 2026-10-27 | Renderer UI is vanilla shadcn-style, not React shadcn/ui | Avoids React/Tailwind/Radix in a 184×44 utility; keeps the Electron/TS stack. ADR-0004. |
 | 2026-10-27 | `Alt+Space` stays the default despite stealing the system window menu | Explicit user choice |
 | 2026-10-27 | Helper ships self-contained, no .NET prerequisite | Must run on a fresh Windows install |
@@ -230,7 +241,7 @@ UI decisions: ADR-0001 (component boundaries), ADR-0002 (original mascot), ADR-0
 
 ## 8. Open Decisions
 
-None. All decisions closed 2026-10-27; Phase 0 is unblocked.
+Phase 0: 0.1 built, 0.2 measured and passed, 0.3–0.5 not started.
 
 ---
 
@@ -238,7 +249,7 @@ None. All decisions closed 2026-10-27; Phase 0 is unblocked.
 
 | Risk | Honest read | Mitigation |
 |---|---|---|
-| RAM budget | Electron ≤130 MB and helper ≤60 MB, split by user sign-off. Still unproven. | Measure Electron at task 0.2, helper at 0.3. Over either cap → stop and report before building more. |
+| RAM budget | Electron ≤130 MB, helper ≤60 MB. Electron idle measured 81.8 MB steady / 84 MB peak / 0.011% CPU at 184×44; helper unmeasured. | Measure the helper at 0.3. Over either cap → stop and report before building more. |
 | `Alt+Space` steal | Registering it kills the system window menu for every app while Beam runs | Accepted by user 2026-10-27 |
 | Multi-file drag-out | Needs a WinForms message pump inside a windowless process, on its own STA thread | Prove at task 0.4c; fall back to copy-only if it fights |
 | SMTC on some players | Some apps publish partial metadata, no artwork | Show text without art, never crash |

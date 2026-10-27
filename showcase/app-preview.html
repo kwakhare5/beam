@@ -63,7 +63,7 @@
   .f-playing { width: 176px; height: 32px; }
   .f-timer { width: 132px; height: 32px; }
   .f-missing { width: 140px; height: 32px; }
-  .f-open { width: 420px; height: 300px; }
+  .f-open { width: 428px; height: 308px; padding: 4px; box-sizing: border-box; }
 
   .g-compare { display: grid; grid-template-columns: repeat(2, 184px); gap: 32px; padding: 8px 0 24px; }
   .g-compare-item { display: flex; flex-direction: column; gap: 8px; }
@@ -75,7 +75,7 @@
     border: 1px dashed rgba(255, 255, 255, .22); border-radius: 12px;
     background: rgba(255, 255, 255, .02);
   }
-  .compare-window [data-pill] { display: flex; align-items: center; justify-content: center; }
+  .compare-window [data-pill] { display: flex; align-items: center; justify-content: center; height: 32px; }
   .g-compare .pill { pointer-events: none; }
 
   .g-subnav { display: flex; flex-wrap: wrap; gap: 4px; margin-bottom: 16px; }
@@ -249,8 +249,8 @@
             <li>Idle, hover, active, focus</li>
             <li>Disabled, loading, empty</li>
             <li>Error, success, overflow</li>
-            <li>Selected and hidden</li>
-            <li>Control focus <code>1px neutral</code></li>
+            <li>Selected</li>
+            <li>Capsule <code>1px</code> · panel <code>2px</code> focus</li>
             <li>No capsule glow</li>
           </ul>
         </div>

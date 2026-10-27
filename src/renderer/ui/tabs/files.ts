@@ -14,7 +14,7 @@ export function filesPanel(rows: FileRow[], copied = false): string {
   if (!rows.length) {
     return panelBody(
       'files',
-      `<div class="panel-empty-content"><img class="mascot-large" src="${MASCOTS.files}" alt="" /><div class="panel-title">Drop files here</div><div class="panel-sub">Drag files onto the pill</div></div><div class="actions"><button type="button" class="btn primary" disabled>${icon('copy')}Copy All</button><button type="button" class="btn ghost">${icon('plus')}Add</button><button type="button" class="btn danger" disabled>${icon('trash')}Clear</button></div>`,
+      `<div class="panel-empty-content"><img class="mascot-large" src="${MASCOTS.files}" alt="" /><div class="panel-title">Drop files here</div></div><div class="actions"><button type="button" class="btn primary" disabled>${icon('copy')}Copy All</button><button type="button" class="btn ghost">${icon('plus')}Add</button><button type="button" class="btn danger" disabled>${icon('trash')}Clear</button></div>`,
       'panel-empty'
     );
   }

@@ -22,7 +22,7 @@ body {
   display: flex;
   align-items: center;
   justify-content: center;
-  padding: 4px;
+  padding: 6px 4px;
   font-family: var(--font-sans);
   color: var(--foreground);
 }
@@ -44,6 +44,10 @@ body {
   border-radius: var(--r-micro);
   animation: skeleton-pulse 1400ms ease-in-out infinite;
 }
+
+.skeleton-line.w-65 { width: 65%; }
+.skeleton-line.w-40 { width: 40%; }
+.skeleton-line.w-25 { width: 25%; }
 
 @keyframes skeleton-pulse {
   0%,

@@ -87,7 +87,6 @@ while (((Get-Date) - $started).TotalSeconds -lt $durationSeconds) {
 }
 
 $elapsed = ((Get-Date) - $started).TotalSeconds
-$ids = Get-ProcessTreeIds -RootId $app.Id
 $cpuEnd = @{}
 $cpuUsed = 0.0
 

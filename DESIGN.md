@@ -20,9 +20,11 @@ The website and the app are not the same surface, so they do not share one look.
 | **Depth** | flat, `0.5px` hairline borders, no shadows | flat translucent fill, 1px hairline border |
 | **Accent** | system blue `#0a84ff` | brand gold `#FFAA00`, red for errors |
 | **Corners** | 16px cards, capsule buttons | capsule pill, 14px panel, 10px cards |
-| **Motion** | page-level, editorial | 120–150ms, no press scaling |
+| **Motion** | page-level, editorial | 120–150ms; press scale .97 at 120ms |
 
 What they share, so they still read as one brand: the Puffy Chubby Star mascot, Inter, lowercase calm copy, and a single accent rule. Nothing else is forced to match.
+
+**Website is out of v1:** sections 2–4 and the Website column above are reference only. The shipped surface is the app capsule and panel.
 
 ---
 
@@ -113,7 +115,7 @@ Governed by installed skills [`svg-logo-designer`](file:///d:/Beam/.agents/skill
   4. `star-files.svg`: Holding an origami document with a wink for file shelf drops.
   5. `star-timer.svg`: Focused eyes tracking a mini stopwatch for active countdowns.
   6. `star-done.svg`: Rosy cheeks, joyful smile, and 4-point sparkle stars for completed timers.
-- **Showcase Lab & Interactive Micro-Behaviors:** Consolidated single-file interactive suite at [`d:\Beam\showcase\index.html`](file:///d:/Beam/showcase/index.html) demonstrating:
+- **Showcase Lab & Interactive Micro-Behaviors:** Frozen brand lab at `d:\Beam\showcase\index.html`; the canonical app UI preview is `showcase/app-preview.html`. Do not extend `index.html`; offline-compliance fixes such as removing the Google Fonts fetch are allowed.
   1. *Catchlight Eye Tracking*: White specular catchlight dot glides smoothly inside the solid black eye following cursor coordinates (clamped to 2.4px limit).
   2. *Jelly Poke Squish*: Y-axis compression (`scale(1.3, 0.72)`) with spring recovery on click.
   3. *File Drag & Gulp*: Mouth expands on file drag-over and swallows upon drop.
@@ -144,7 +146,7 @@ This section overrides any earlier app size or spacing in this file and in the p
 
 - Rest and hover share one window size. Hover brightens the shell, grows the capsule 104→128, and fades controls in; the window never resizes, so no OS resize flicker.
 - Click expands the same window to 428×308 with a 150ms ease-out, anchored bottom-center and growing upward. Close reverses it.
-- The 4px shadow margin is not content. At idle the capsule is 40px from each window edge (4px shadow + 36px transparent); at hover it is 28px (4px + 24px). The open margin is 4px.
+- The shadow margin is 4px horizontal / 6px vertical and is not content. At idle the 104px capsule sits 40px from each horizontal window edge (4px shadow + 36px transparent); at hover the 128px capsule sits 28px (4px + 24px). The capsule is 32px tall inside the 44px window. The open margin is 4px.
 - Show with `showInactive()`; keep `focusable: true` so Esc and Tab work. Never steal focus on show.
 - Do not copy Wispr's 260×90 margin on an always-on pill: the invisible area would capture clicks.
 
@@ -155,7 +157,7 @@ This section overrides any earlier app size or spacing in this file and in the p
 - Hover: shell brightens `.70→1`, border `.08→.14`, the capsule grows 24px inside the fixed window, the filled 18px transport fades in over 120ms only when playing or paused, and the title truncates at 40px. The mascot pops to `scale(1.06) rotate(-2deg)` over 120ms. No OS resize, no control resize.
 - Idle is `opacity: .70`; hover returns it to 1.
 - The capsule always uses the original master mark; only the line, right slot, and border tone change. The state mascots (`star-music`, `star-files`) appear at 48px in the panel empty states. No custom mini mark.
-- Focus: the focused control gets a 1px neutral ring (`var(--ring)`); the capsule itself has no ring and no glow. The controls stay focusable while visually hidden, and appear on focus.
+- Focus: capsule controls get a 1px neutral inset ring; panel controls get a 2px neutral ring; the capsule itself has no ring and no glow. The controls stay focusable while visually hidden, and appear on focus.
 
 | State | Width | Line | Right slot | Extra |
 |---|---|---|---|---|
@@ -177,7 +179,7 @@ Artist, shortcut, file size, and the word "missing" live in the panel only.
 - Music: 148px art on the left, title/artist/controls on the right (`showcase/sample-art.svg` in the preview), 15/600 title, 12 artist, three 32px controls with 20px icons. No footer.
 - Files: 36px rows; the list scrolls with 5 rows, 32px Copy All / Add / Clear pinned bottom. Missing rows use danger; copied shows a check and label.
 - Timer: 28px preset chips, 40/600 digits, 12px note, 32px Start / Cancel. Center the face group.
-- Calendar: 7×6 grid, 28px cells, 12px numerals, today gold, adjacent month at 45%.
+- Calendar: 7 columns, 4–6 rows (padded to a full week), 28px cells, 11px numerals, today gold, adjacent month at 45%.
 - Settings: five 44px rows, 36×20 switch, 11px keycaps.
 - Music and files empty states use a 48px original mascot and one line of copy; timer and calendar use their normal content. Disabled controls drop to .4; music loading uses three skeleton rows; copied uses the success state.
 
@@ -197,7 +199,7 @@ Artist, shortcut, file size, and the word "missing" live in the panel only.
 - `src/renderer/ui/` is the only UI source: `pill.ts` (one capsule), `panel.ts` (one panel shell and tab host), `panel-body.ts`, `icons.ts` (Lucide sprite), `mascots.ts` (original suite), `html.ts`, `types.ts`, and `tabs/{music,files,timer,calendar,settings}.ts`. `index.ts` is the public API used by the app and the preview.
 - No per-state components. A content state is data (`data-state`); an interaction state is data (`data-hover`), focus, or press.
 - `src/renderer/styles.css` is the entry; `src/renderer/styles/` holds `tokens`, `base`, `pill`, `panel`, `controls`, and `tabs`. Change one file without editing the others.
-- The renderer is vanilla TypeScript. shadcn-style tokens and Lucide only; no React, Tailwind, or Radix. See `docs/adr/0001`–`0005` and `GLOSSARY.md`.
+- The renderer is vanilla TypeScript. shadcn-style tokens and Lucide only; no React, Tailwind, or Radix. See `docs/adr/0001`–`0006` and `GLOSSARY.md`.
 
 ### 7.6 Contrast and states
 

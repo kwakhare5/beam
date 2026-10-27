@@ -54,18 +54,26 @@
 }
 
 .tab[aria-selected='true'] {
-  background: var(--muted);
-  color: var(--foreground);
+  background: var(--secondary);
+  color: var(--primary);
+}
+
+.tab[aria-selected='true']:hover {
+  color: var(--primary);
 }
 
 .tab.settings {
   margin-left: auto;
-  padding: 0 6px;
+  padding: 0 4px;
 }
 
 .tab:focus-visible {
   outline: 2px solid var(--ring);
   outline-offset: 1px;
+}
+
+.panel .icon-btn:focus-visible {
+  box-shadow: inset 0 0 0 2px var(--ring);
 }
 
 .panel-body {

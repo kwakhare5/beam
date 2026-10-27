@@ -15,11 +15,11 @@ Beam is a lightweight floating Windows 11 desktop bar that provides 1-click acce
 ## 3. Core Features (v1 Scope)
 
 ### 1. Floating Pill Shell & Window Anchoring
-- **User Flow:** Sits 12px above the Windows taskbar at bottom-center. Hovering fades quick music controls in place; the window never changes size. Clicking opens the 4-tab panel upward with a snappy 150ms slide. Dragging repositioning persists custom coordinates across app restarts. Clicking outside or pressing `Esc` closes the panel. Automatically hides when a full-screen window (game/movie) is active.
+- **User Flow:** Sits 12px above the Windows taskbar at bottom-center. Hovering fades quick music controls in place and grows the capsule 104→128 inside the 184 window; the window never resizes. Clicking opens the 4 content tabs plus the Settings icon upward as a 420×300 panel with a 150ms grow. Dragging repositioning persists custom coordinates across app restarts. Clicking outside or pressing `Esc` closes the panel. Automatically hides when a full-screen window (game/movie) is active.
 - **Acceptance Criteria:**
   - `alwaysOnTop: true` with automatic hide on fullscreen detection.
   - Draggable with position persisted across app restarts.
-  - Dimmed, subtle mini-pill when idle (no music playing, no timer active).
+  - Dimmed capsule when idle (no music playing, no timer active).
   - System Tray icon (bottom-right near clock) with right-click menu: Settings, Reset Position, Quit.
   - Windows startup launch toggle in settings.
   - Global configurable keyboard shortcut to toggle panel visibility (default `Alt + Space`, rebindable in settings).
@@ -43,7 +43,7 @@ Beam is a lightweight floating Windows 11 desktop bar that provides 1-click acce
   - File existence check disables dragging and badges missing files.
 
 ### 4. Countdown Timer & Presets
-- **User Flow:** User selects a preset (5m, 10m, 25m) or enters custom minutes → resting pill displays live countdown. When time expires, the pill pulses, plays one gentle built-in audio chime, and fires a native Windows notification banner.
+- **User Flow:** User selects a preset (5m, 10m, 25m) or enters custom minutes → resting pill displays live countdown. When time expires, the pill shows the done digits in gold, plays one gentle built-in audio chime, and fires a native Windows notification banner.
 - **Acceptance Criteria:**
   - Accurate countdown timer running in background.
   - Live countdown displayed directly on the resting pill.
