@@ -2,7 +2,7 @@
 
 ## 1. Aesthetic Direction & Vibe
 - **Design Theme:** Minimalist utility website derived directly from audited Helumi design tokens, paired with a Windows 11 dark acrylic desktop bar and interactive mood mascots.
-- **Canonical app preview:** `showcase/app-preview.html` is the single file used to review every app UI state. Every phase extends that file; no other preview or mock file is ever created.
+- **Canonical app preview:** `showcase/app-preview.html` is the single file used to review every app UI state. It loads the app's real stylesheet and shared view functions (`src/renderer/views.ts`), so it must be opened with `npm run ui`, never from disk. Every phase extends that file; no other preview or mock file is ever created.
 - **Background Feel:**
   - **Marketing Web:** Warm light gray canvas (`#f5f5f5`), pure white cards (`#ffffff`), and crisp `0.5px` hairline borders.
   - **Desktop Floating Bar:** Windows 11 dark acrylic glass (`rgba(18, 19, 22, 0.88)`), subtle 1px translucent border, smooth capsule geometry.
