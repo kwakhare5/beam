@@ -1,4 +1,4 @@
-# Capsule interaction: filled transport, hover growth, capsule focus, mascot pop
+# Capsule interaction: filled transport, hover growth, control focus, mascot pop
 
 The outline Lucide transport read as wireframes at 18px. The 216px idle capsule looked long. The focus ring looked orphaned on the play button. The mascot was static.
 

@@ -21,7 +21,7 @@ export function musicPanel(data: MusicData): string {
 
     return panelBody(
       'music',
-      `<div class="art skeleton" aria-hidden="true"></div><div class="panel-music-content"><div class="skeleton-line" style="width:65%"></div><div class="skeleton-line" style="width:40%"></div>${controls}</div>`,
+      `<div class="art skeleton" aria-hidden="true"></div><div class="panel-music-content"><div class="skeleton-line w-65"></div><div class="skeleton-line w-40"></div><div class="skeleton-line w-25"></div>${controls}</div>`,
       'panel-music'
     );
   }
@@ -29,7 +29,7 @@ export function musicPanel(data: MusicData): string {
   if (!data.title) {
     return panelBody(
       'music',
-      `<div class="panel-empty-content"><img class="mascot-large" src="${MASCOTS.music}" alt="" /><div class="panel-title">Nothing playing</div><div class="panel-sub">Play something to see it here</div></div>`,
+      `<div class="panel-empty-content"><img class="mascot-large" src="${MASCOTS.music}" alt="" /><div class="panel-title">Nothing playing</div></div>`,
       'panel-empty'
     );
   }

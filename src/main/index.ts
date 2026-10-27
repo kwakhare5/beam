@@ -30,7 +30,7 @@ if (!gotLock) {
     });
 
     win.once('ready-to-show', () => {
-      win?.show();
+      win?.showInactive();
     });
 
     win.on('closed', () => {
@@ -43,7 +43,7 @@ if (!gotLock) {
   app.on('second-instance', () => {
     if (!win) return;
     if (win.isMinimized()) win.restore();
-    win.show();
+    win.showInactive();
   });
 
   app.whenReady().then(createWindow);

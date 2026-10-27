@@ -5,9 +5,11 @@
 ## 1. What this is
 Beam is an offline Windows 11 floating pill that gives 1-click media controls, a file drop shelf, a countdown timer, and a month calendar. No cloud, no accounts, no network.
 
+**Current (2026-10-27):** the app runs a 184×44 window with the idle capsule only; the panel exists in `showcase/app-preview.html`. Next is task 0.3.
+
 ## 2. Stack
 - Electron + TypeScript + Vite, exact-pinned. Renderer sandboxed, contextIsolation on, nodeIntegration off. The renderer is vanilla TypeScript with shadcn-style tokens and Lucide; no React or Tailwind.
-- `native/BeamBridge/` — windowless C# .NET 10 helper, self-contained single-file publish. Owns SMTC, clipboard, drag-out, fullscreen detection.
+- `native/BeamBridge/` — windowless C# .NET 10 helper (planned), self-contained single-file publish. Owns SMTC, clipboard, drag-out, fullscreen detection.
 - No database, no server, no TCP ports. Main ⇄ helper is stdio JSON lines only.
 - Settings live in `%APPDATA%\Beam\settings.json`.
 
@@ -16,13 +18,13 @@ Beam is an offline Windows 11 floating pill that gives 1-click media controls, a
 - Build: `npm run build`
 - Run: `npm start`
 - Helper build: `dotnet publish native/BeamBridge -r win-x64 --self-contained`
-- Typecheck: `npx tsc --noEmit`
+- Typecheck: `npm run typecheck` (two tsconfigs)
 - Verification runner: `.\verify.ps1` (created at 0.1; run via `powershell.exe` from Git Bash)
 - Done check = `.\verify.ps1` exits 0 with pasted raw terminal output.
 
 ## 4. Hard Rules & Invariants (What the AI must ALWAYS do)
 - One task at a time from `TASKS.md`, top unchecked box. Do not skip the Phase 0 order.
-- Run task 0.2 (RAM/CPU gate) before writing helper or UI code. Over 130 MB private bytes or 0.5% avg CPU → stop and report; WinUI is the fallback stack.
+- 0.2 is done and passed (81.8 MB steady / 84 MB peak / 0.011% CPU). The UI exists; the next task is 0.3 (helper hello).
 - Keep the renderer untrusted. Everything touching Win32 goes through the helper.
 - Read `ARCHITECTURE.md` before touching the window, IPC, or helper seams.
 - Follow `DESIGN.md` tokens exactly. No invented colors, radii, or shadows.
@@ -45,7 +47,7 @@ Beam is an offline Windows 11 floating pill that gives 1-click media controls, a
 - `src/main/`: app lifecycle, window geometry, tray, hotkey, settings, helper client.
 - `src/preload/`: the only bridge exposed to the renderer.
 - `src/renderer/`: `ui/` components (one capsule, one panel shell, per-tab bodies), `styles/` split CSS entry, all visuals.
-- `src/shared/`: IPC channel names, payload types, helper protocol types.
+- `src/shared/` (planned): IPC channel names, payload types, helper protocol types.
 - `native/BeamBridge/`: C# helper. No UI.
 - `assets/mascot/`: locked Puffy Chubby Star SVG suite.
 - `showcase/`: brand lab, never shipped.
@@ -56,7 +58,7 @@ Beam is an offline Windows 11 floating pill that gives 1-click media controls, a
 - Timer counts from a deadline timestamp, never by decrementing. Sleep must not break it.
 - Shelf is wiped on quit by design, and must warn while non-empty.
 - `Alt+Space` and fullscreen hide both need the helper alive; restart logic is max 3 times in 60s.
-- Electron RAM is the top project risk and is still unmeasured.
+- Electron RAM is the top project risk; latest idle measurement is 81.8 MB steady / 84 MB peak / 0.011% CPU at 184×44. The helper cap is still unmeasured.
 
 ## 9. Do Not Touch
 - `assets/mascot/` — finalized brand assets.

@@ -31,8 +31,8 @@
   --r-card: var(--radius);
   --r-panel: calc(var(--radius) + 4px);
   --r-pill: 999px;
-  --shadow-pill: 0 3px 10px rgba(0, 0, 0, 0.45);
-  --shadow-panel: 0 4px 14px rgba(0, 0, 0, 0.5);
+  --shadow-pill: 0 2px 4px rgba(0, 0, 0, 0.45);
+  --shadow-panel: 0 2px 4px rgba(0, 0, 0, 0.5);
   --ease: cubic-bezier(0.22, 1, 0.36, 1);
   --font-sans: Inter, 'Segoe UI Variable Text', 'Segoe UI', sans-serif;
 }
@@ -63,6 +63,6 @@
   --border-hover: rgba(0, 0, 0, 0.12);
   --input: rgba(0, 0, 0, 0.08);
   --ring: #111111;
-  --shadow-pill: 0 3px 10px rgba(0, 0, 0, 0.16);
-  --shadow-panel: 0 4px 14px rgba(0, 0, 0, 0.18);
+  --shadow-pill: 0 2px 4px rgba(0, 0, 0, 0.16);
+  --shadow-panel: 0 2px 4px rgba(0, 0, 0, 0.18);
 }

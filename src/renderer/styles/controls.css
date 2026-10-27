@@ -37,7 +37,7 @@
 }
 
 .icon-btn:disabled {
-  opacity: 0.35;
+  opacity: 0.4;
   pointer-events: none;
 }
 
@@ -121,7 +121,7 @@
   align-items: center;
   justify-content: center;
   height: 28px;
-  padding: 0 10px;
+  padding: 0 8px;
   border: 1px solid var(--border);
   border-radius: var(--r-control);
   background: var(--muted);
@@ -167,7 +167,7 @@
   background: var(--muted);
   position: relative;
   cursor: default;
-  transition: background 120ms var(--ease), border-color 120ms var(--ease);
+  transition: background 120ms var(--ease), border-color 120ms var(--ease), transform 120ms var(--ease);
 }
 
 .switch::after {
@@ -190,6 +190,20 @@
 .switch[aria-checked='true']::after {
   transform: translateX(18px);
   background: var(--primary-foreground);
+}
+
+.switch:hover {
+  background: var(--accent);
+  border-color: var(--border-hover);
+}
+
+.switch[aria-checked='true']:hover {
+  background: var(--primary-hover);
+  border-color: var(--primary-hover);
+}
+
+.switch:active {
+  transform: scale(0.97);
 }
 
 .switch:focus-visible {
@@ -215,4 +229,8 @@
   display: flex;
   gap: 8px;
   flex: none;
+}
+
+.actions.center {
+  justify-content: center;
 }

@@ -5,7 +5,7 @@ The shared language for the Beam desktop surface. Use these terms in code, docs,
 ## Surfaces
 
 **Capsule**:
-The visible surface: 104×32 at idle, 128×32 on hover, 176×32 when playing or paused.
+The visible surface: 104×32 at idle, 128×32 on hover, 176×32 when playing or paused, 132 when the timer runs or is done, 140 when a shelf file is missing.
 _Avoid_: pill, bar, bubble
 
 **Rest window**:
@@ -79,7 +79,7 @@ The filled media glyphs (previous, play/pause, next) in the same 24px Lucide spr
 _Avoid_: filled icon set, second icon library
 
 **Focus ring**:
-A 1px neutral ring on the focused control. The capsule itself has no ring and no glow.
+Capsule controls use a 1px neutral inset ring; panel controls use a 2px neutral ring. The capsule itself has no ring and no glow.
 _Avoid_: capsule ring, gold glow, double ring
 
 **shadcn-style**:

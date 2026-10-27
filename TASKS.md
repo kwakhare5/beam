@@ -4,13 +4,15 @@
 
 **Milestone:** a floating pill that reads Spotify, holds files, runs a timer, and passes `.\verify.ps1` with exit code 0.
 
+**Completed outside the phase order:** the app UI system, the canonical preview, the Compare page, the 420×300 landscape panel spec, and the focus/cleanup pass (`JOURNAL` cards 21–35). The app still runs only the idle capsule; phases below are still the ordered path.
+
 ---
 
 ## Phase 0 — Prove the scary seams (no UI)
 
-- [ ] **0.1 Scaffold the shell**
-  - Electron + TypeScript + Vite. Empty 800×60 frameless transparent window, always on top. Exact-pin versions in `package.json`. Single-instance lock: a second launch wakes the existing pill and exits. Create `verify.ps1` here with only the checks that exist today; each later phase adds its own.
-  - _Verify:_ `.\verify.ps1` exits 0; `npm run build` exits 0; `npm start` shows a blank bar; launching twice leaves one process.
+- [x] **0.1 Scaffold the shell**
+  - Electron + TypeScript + Vite. Empty 184×44 frameless transparent window, always on top. Exact-pin versions in `package.json`. Single-instance lock: a second launch wakes the existing pill and exits. Create `verify.ps1` here with only the checks that exist today; each later phase adds its own.
+  - _Verify:_ `.\verify.ps1` exits 0; `npm run build` exits 0; `npm start` shows the idle capsule; launching twice leaves one process.
 - [x] **0.2 Measure the budget** *(gate — stop here if it fails)*
   - Script sums private bytes and samples CPU over 60s on the empty window. Run this before any helper or UI code exists. Measures the Electron processes only; the helper gets its own 60 MB cap at task 0.3.
   - _Verify:_ prints RSS total and avg CPU. Electron under 130 MB and 0.5% → continue. Over 130 MB → stop, report the numbers, and move to the WinUI fallback before writing more code.
@@ -47,7 +49,7 @@
   - Drag anywhere on the pill. Saved to `settings.json`. Restart restores it. Tray → Reset Position returns to taskbar anchor.
   - _Verify:_ drag, restart, position identical. Reset returns to center.
 - [ ] **1.5 Idle dim**
-  - No music, no timer → pill at 55% opacity, mascot asleep.
+  - No music, no timer → pill at 70% opacity; master mark unchanged.
   - _Verify:_ screenshot diff between active and idle states is visible; opacity value in computed style.
 - [ ] **1.6 Tray**
   - Icon near clock. Menu: Settings, Reset Position, Quit. Quit exits the process cleanly, helper included.
@@ -113,7 +115,7 @@
   - `mm:ss` under 60 min, `h:mm:ss` above. Main owns the deadline and pushes `beam:timer:tick`; the renderer only displays it. Never a decrementing counter.
   - _Verify:_ sleep the machine 2 minutes → countdown is still correct.
 - [ ] **4.3 Done state**
-  - Chime plays once, Windows banner fires, pill pulses, mascot switches to done.
+  - Chime plays once, Windows banner fires; the pill shows the done digits in gold (no glow, no mascot swap).
   - _Verify:_ timer reaches 0 → audible chime + visible banner, exactly one of each.
 - [ ] **4.4 Cancel and replace**
   - Cancel stops it. Starting a new one replaces the running one.
@@ -173,7 +175,6 @@
 - File search by name or content
 - Clipboard history
 - Seek bar
-- Light theme
 - Volume / brightness sliders
 - Bundled custom font
 - Marketing website
