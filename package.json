@@ -7,6 +7,7 @@
   "scripts": {
     "build": "tsc -p tsconfig.json && vite build",
     "start": "electron .",
+    "ui": "vite --config vite.preview.mts",
     "typecheck": "tsc -p tsconfig.json --noEmit && tsc -p tsconfig.renderer.json --noEmit",
     "verify": "powershell -NoProfile -ExecutionPolicy Bypass -File ./verify.ps1",
     "dist": "electron-builder"

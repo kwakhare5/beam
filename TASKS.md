@@ -11,7 +11,7 @@
 - [ ] **0.1 Scaffold the shell**
   - Electron + TypeScript + Vite. Empty 800×60 frameless transparent window, always on top. Exact-pin versions in `package.json`. Single-instance lock: a second launch wakes the existing pill and exits. Create `verify.ps1` here with only the checks that exist today; each later phase adds its own.
   - _Verify:_ `.\verify.ps1` exits 0; `npm run build` exits 0; `npm start` shows a blank bar; launching twice leaves one process.
-- [ ] **0.2 Measure the budget** *(gate — stop here if it fails)*
+- [x] **0.2 Measure the budget** *(gate — stop here if it fails)*
   - Script sums private bytes and samples CPU over 60s on the empty window. Run this before any helper or UI code exists. Measures the Electron processes only; the helper gets its own 60 MB cap at task 0.3.
   - _Verify:_ prints RSS total and avg CPU. Electron under 130 MB and 0.5% → continue. Over 130 MB → stop, report the numbers, and move to the WinUI fallback before writing more code.
 - [ ] **0.3 Helper says hello**

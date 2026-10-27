@@ -47,6 +47,10 @@ body {
   color: var(--ink);
 }
 
+#app {
+  display: contents;
+}
+
 /* ---------- pill ---------- */
 
 .pill {

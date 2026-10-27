@@ -149,3 +149,21 @@ A chronological, append-only record of real product work, completed features, an
 - **Change / decision:** Restored `src/renderer/styles.css` to the pre-Apple tokens and flat surfaces (`rgba(18,19,22,.92)`, `#EDEDED`, `#888`, radius 18/12, no shadow, no highlight gradient, no press scaling). Reverted the matching DESIGN.md tables, removed the Apple rules block, and restored the hairline-only shadow rule. Kept only what was requested separately: the side-by-side gallery grid, the fixed idle mascot, and the two-design-systems table.
 - **Proof:** `grep -E "shadow|inner-light|F5F5F7|98989D|28, 28, 30"` returns no matches in `src/renderer/styles.css` or `DESIGN.md`; `npm run build` exits 0.
 - **Still broken / unproven:** Inter and Lucide are still not vendored. Task 0.2 still unmeasured. No new design direction is approved yet.
+
+#### Work card 25: One source of UI markup shared by the app and the preview
+- **Problem / tension:** The preview hand-copied every pill and panel state, so the sample and the app were two separate implementations that would drift; `renderer.ts` was three lines and the app shell had no real UI.
+- **Change / decision:** Added `src/renderer/views.ts` with the icon sprite, `pill()`, and `panel()` (all text escaped); `renderer.ts` now draws the idle pill from it; `showcase/app-preview.html` renders all 14 pill states and 5 panels by calling the same functions instead of holding markup; added `npm run ui` (`vite.preview.mts`) because a file:// page cannot import TS; `#app { display: contents }` keeps the pill filling the body.
+- **Proof:** `.\verify.ps1` → PASS typecheck, PASS build, PASS launch, PASS single instance, ALL CHECKS PASSED, exit 0. Offscreen Electron capture of the served gallery reported 14 pills, 5 panels, 18 icon symbols; screenshots at scratchpad/preview.png, preview-panels.png, preview-light.png, preview-bottom.png.
+- **Still broken / unproven:** Preview now needs `npm run ui` instead of a double-click. Real window behaviour (hover resize, transparency, drag) is still absent (tasks 1.x). Task 0.2 RAM/CPU gate still unmeasured. Inter and Lucide remain unvendored.
+
+#### Work card 26: RAM/CPU gate measured — memory over budget
+- **Problem / tension:** Task 0.2 had never been measured, and the whole stack choice depends on Electron's real baseline. Measuring late risks building the helper and UI on a failing foundation.
+- **Change / decision:** Added `measure.ps1`: builds, launches the app, walks the Electron process tree, samples private bytes and RSS every 5s for 60s, computes average CPU across all 16 logical processors, prints the numbers, and cleans up its own process tree. No product code changed.
+- **Proof:** Peak private 139.2 MB (steady 137.4 MB) against a 130 MB limit; RSS 276.7 MB; average CPU 0.014% against 0.5%. Four processes: 69.2 + 33.8 + 24.8 + 11.6 MB. Exit 1, `BUDGET FAILED`. CPU passes; memory fails by 9.2 MB.
+- **Still broken / unproven:** Task 0.2 is not ticked. Need a decision: test software rendering (removes the ~25 MB GPU process, risks CPU and transparency), raise the ceiling to 150 MB, or move to the WinUI fallback. The idle measurement is also the floor — opening the 360×460 panel will add renderer memory.
+
+#### Work card 27: Software rendering clears the 0.2 gate
+- **Problem / tension:** With GPU acceleration on, the empty app measured 139.2 MB peak private bytes against the 130 MB ceiling — a fail by 9.2 MB, and the panel would only add more.
+- **Change / decision:** Added `app.disableHardwareAcceleration()` at the top of `src/main/index.ts`, before the single-instance lock and window creation. Two independent 60s runs, plus an Electron capture harness with the same window options to check the transparent capsule.
+- **Proof:** Run 1 peak 86.4 MB / steady 84.6 MB / CPU 0.047%; run 2 peak 86.5 MB / steady 84.7 MB / CPU 0.017%; both `BUDGET PASSED`, exit 0. `.\verify.ps1` → PASS typecheck, PASS build, PASS launch, PASS single instance, ALL CHECKS PASSED. Screenshot `scratchpad/app-shot.png` shows the 800×60 rounded transparent pill with mascot and text.
+- **Still broken / unproven:** Software rendering has no GPU compositing; re-measure CPU with the 360×460 panel open and at task 8.1. The helper's 60 MB cap is still unmeasured. Task 0.3 is next.

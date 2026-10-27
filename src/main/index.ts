@@ -1,6 +1,8 @@
 import { app, BrowserWindow } from 'electron';
 import { join } from 'node:path';
 
+app.disableHardwareAcceleration();
+
 const gotLock = app.requestSingleInstanceLock();
 
 if (!gotLock) {

@@ -63,6 +63,8 @@
     width: 260px; height: 40px; border: 1px dashed rgba(255,255,255,.22);
     border-radius: 999px; display: grid; place-items: center; font-size: 11px; color: #7d7d7d;
   }
+
+  [data-pill], [data-panel] { width: 100%; height: 100%; }
 </style>
 </head>
 <body data-theme="dark">
@@ -71,8 +73,9 @@
   <div class="g-head">
     <h1>Beam — app UI preview</h1>
     <p>
-      This is the only UI file. It loads the app's real stylesheet
-      (<code>src/renderer/styles.css</code>), so a change here is a change to the app.
+      This file renders the app's own view functions (<code>src/renderer/views.ts</code>) over the real
+      stylesheet (<code>src/renderer/styles.css</code>), so a change here is a change to the app.
+      Open it with <code>npm run ui</code> — it cannot load from disk.
       Every state at real size: 200×36 idle, 260×40 hover, 360×460 open.
     </p>
     <div class="g-theme">
@@ -81,28 +84,6 @@
     </div>
   </div>
 
-  <!-- icon sprite -->
-  <svg width="0" height="0" style="position:absolute" aria-hidden="true">
-    <symbol id="i-play" viewBox="0 0 24 24"><polygon points="6 3 20 12 6 21" fill="currentColor" stroke="none"/></symbol>
-    <symbol id="i-pause" viewBox="0 0 24 24"><rect x="6" y="4" width="4" height="16" rx="1" fill="currentColor" stroke="none"/><rect x="14" y="4" width="4" height="16" rx="1" fill="currentColor" stroke="none"/></symbol>
-    <symbol id="i-prev" viewBox="0 0 24 24"><polygon points="19 20 9 12 19 4" fill="currentColor" stroke="none"/><rect x="4" y="5" width="2" height="14" rx="1" fill="currentColor" stroke="none"/></symbol>
-    <symbol id="i-next" viewBox="0 0 24 24"><polygon points="5 4 15 12 5 20" fill="currentColor" stroke="none"/><rect x="18" y="5" width="2" height="14" rx="1" fill="currentColor" stroke="none"/></symbol>
-    <symbol id="i-music" viewBox="0 0 24 24"><path d="M9 18V5l12-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="18" cy="16" r="3"/></symbol>
-    <symbol id="i-files" viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6"/></symbol>
-    <symbol id="i-timer" viewBox="0 0 24 24"><circle cx="12" cy="13" r="8"/><path d="M12 9v4l2 2M9 2h6"/></symbol>
-    <symbol id="i-calendar" viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="17" rx="2"/><path d="M3 9h18M8 2v4M16 2v4"/></symbol>
-    <symbol id="i-sliders" viewBox="0 0 24 24"><path d="M4 7h16M4 17h16"/><circle cx="9" cy="7" r="2.4"/><circle cx="15" cy="17" r="2.4"/></symbol>
-    <symbol id="i-x" viewBox="0 0 24 24"><path d="M6 6l12 12M18 6L6 18"/></symbol>
-    <symbol id="i-alert" viewBox="0 0 24 24"><path d="M12 3l9 16H3z"/><path d="M12 9v5"/><circle cx="12" cy="17" r=".8" fill="currentColor" stroke="none"/></symbol>
-    <symbol id="i-copy" viewBox="0 0 24 24"><rect x="9" y="9" width="11" height="11" rx="2"/><path d="M5 15V5a2 2 0 0 1 2-2h10"/></symbol>
-    <symbol id="i-trash" viewBox="0 0 24 24"><path d="M4 7h16M9 7V5h6v2M6 7l1 13h10l1-13"/></symbol>
-    <symbol id="i-file" viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6"/></symbol>
-    <symbol id="i-folder" viewBox="0 0 24 24"><path d="M3 7a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v9a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/></symbol>
-    <symbol id="i-monitor" viewBox="0 0 24 24"><rect x="2" y="4" width="20" height="13" rx="2"/><path d="M8 21h8M12 17v4"/></symbol>
-    <symbol id="i-check" viewBox="0 0 24 24"><path d="M20 6L9 17l-5-5"/></symbol>
-    <symbol id="i-plus" viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></symbol>
-  </svg>
-
   <!-- ================= COLLAPSED ================= -->
   <section class="g-section">
     <h2>1 · Collapsed pill — dark</h2>
@@ -110,123 +91,52 @@
 
     <div class="g-row">
       <div class="g-label"><b>Idle</b><span>no music, no timer</span><code>200×36 · opacity .55</code></div>
-      <div class="f-idle">
-        <div class="pill" data-size="idle" data-state="idle">
-          <img class="mascot" src="../assets/mascot/star-idle.svg" alt="" />
-          <div class="meta"><div class="title">Beam</div><div class="artist">Alt+Space</div></div>
-        </div>
-      </div>
+      <div class="f-idle"><div data-pill="idle"></div></div>
     </div>
 
     <div class="g-row">
       <div class="g-label"><b>Hover</b><span>controls fade in, window grows</span><code>260×40 · 120ms</code></div>
-      <div class="f-hover">
-        <div class="pill" data-size="hover" data-state="hover">
-          <svg class="mascot"><use href="#i-music"/></svg>
-          <div class="meta"><div class="title">Nothing playing</div><div class="artist">Hover to control</div></div>
-          <div class="controls">
-            <button class="icon-btn"><svg><use href="#i-prev"/></svg></button>
-            <button class="icon-btn primary"><svg><use href="#i-play"/></svg></button>
-            <button class="icon-btn"><svg><use href="#i-next"/></svg></button>
-          </div>
-        </div>
-      </div>
+      <div class="f-hover"><div data-pill="hover"></div></div>
     </div>
 
     <div class="g-row">
       <div class="g-label"><b>Playing</b><span>SMTC track</span><code>title 13 / artist 11</code></div>
-      <div class="f-hover">
-        <div class="pill" data-size="hover" data-state="playing">
-          <img class="mascot" src="../assets/mascot/star-music.svg" alt="" />
-          <div class="meta"><div class="title">Midnight City</div><div class="artist">M83 · Spotify</div></div>
-          <div class="controls">
-            <button class="icon-btn"><svg><use href="#i-prev"/></svg></button>
-            <button class="icon-btn primary"><svg><use href="#i-pause"/></svg></button>
-            <button class="icon-btn"><svg><use href="#i-next"/></svg></button>
-          </div>
-        </div>
-      </div>
+      <div class="f-hover"><div data-pill="playing"></div></div>
     </div>
 
     <div class="g-row">
       <div class="g-label"><b>Paused</b><span>same layout, muted title</span><code>no layout shift</code></div>
-      <div class="f-hover">
-        <div class="pill" data-size="hover" data-state="paused">
-          <img class="mascot" src="../assets/mascot/star-music.svg" alt="" style="opacity:.55" />
-          <div class="meta"><div class="title" style="color:var(--muted)">Midnight City</div><div class="artist">Paused · Spotify</div></div>
-          <div class="controls">
-            <button class="icon-btn"><svg><use href="#i-prev"/></svg></button>
-            <button class="icon-btn primary"><svg><use href="#i-play"/></svg></button>
-            <button class="icon-btn"><svg><use href="#i-next"/></svg></button>
-          </div>
-        </div>
-      </div>
+      <div class="f-hover"><div data-pill="paused"></div></div>
     </div>
 
     <div class="g-row">
       <div class="g-label"><b>Timer running</b><span>deadline driven</span><code>tabular-nums</code></div>
-      <div class="f-hover">
-        <div class="pill" data-size="hover" data-state="timer">
-          <img class="mascot" src="../assets/mascot/star-timer.svg" alt="" />
-          <div class="meta"><div class="title">Focus</div><div class="artist">ends 19:42</div></div>
-          <div class="digits accent">18:24</div>
-        </div>
-      </div>
+      <div class="f-hover"><div data-pill="timer"></div></div>
     </div>
 
     <div class="g-row">
       <div class="g-label"><b>Timer done</b><span>pulse + one chime + banner</span><code>gold ring</code></div>
-      <div class="f-hover">
-        <div class="pill" data-size="hover" data-state="done">
-          <img class="mascot" src="../assets/mascot/star-done.svg" alt="" />
-          <div class="meta"><div class="title">Time's up</div><div class="artist">Focus finished</div></div>
-          <div class="digits accent">00:00</div>
-        </div>
-      </div>
+      <div class="f-hover"><div data-pill="done"></div></div>
     </div>
 
     <div class="g-row">
       <div class="g-label"><b>Shelf empty</b><span>paths only, never copies</span><code>badge · 0</code></div>
-      <div class="f-hover">
-        <div class="pill" data-size="hover" data-state="files">
-          <img class="mascot" src="../assets/mascot/star-files.svg" alt="" />
-          <div class="meta"><div class="title">Drop files here</div><div class="artist">Nothing on the shelf</div></div>
-          <span class="badge">0 files</span>
-        </div>
-      </div>
+      <div class="f-hover"><div data-pill="filesEmpty"></div></div>
     </div>
 
     <div class="g-row">
       <div class="g-label"><b>Shelf with files</b><span>cap 50</span><code>count badge</code></div>
-      <div class="f-hover">
-        <div class="pill" data-size="hover" data-state="files">
-          <img class="mascot" src="../assets/mascot/star-files.svg" alt="" />
-          <div class="meta"><div class="title">invoice.pdf</div><div class="artist">+2 more · 12.4 MB</div></div>
-          <span class="badge">3 files</span>
-        </div>
-      </div>
+      <div class="f-hover"><div data-pill="filesFull"></div></div>
     </div>
 
     <div class="g-row">
       <div class="g-label"><b>Drag over</b><span>accept state</span><code>gold dashed border</code></div>
-      <div class="f-hover">
-        <div class="pill" data-size="hover" data-state="drag">
-          <img class="mascot" src="../assets/mascot/star-files.svg" alt="" />
-          <div class="meta"><div class="title">Release to add</div><div class="artist">3 files detected</div></div>
-          <span class="badge accent">+3</span>
-        </div>
-      </div>
+      <div class="f-hover"><div data-pill="drag"></div></div>
     </div>
 
     <div class="g-row">
       <div class="g-label"><b>Missing file</b><span>drag disabled</span><code>danger</code></div>
-      <div class="f-hover">
-        <div class="pill" data-size="hover" data-state="files">
-          <img class="mascot" src="../assets/mascot/star-files.svg" alt="" style="opacity:.45" />
-          <div class="meta"><div class="title">invoice.pdf</div><div class="artist" style="color:var(--danger)">File moved or deleted</div></div>
-          <span class="badge warn">missing</span>
-        </div>
-      </div>
+      <div class="f-hover"><div data-pill="missing"></div></div>
     </div>
 
     <div class="g-row">
@@ -236,17 +146,7 @@
 
     <div class="g-row">
       <div class="g-label"><b>Keyboard focus</b><span>Tab reaches every control</span><code>2px gold ring</code></div>
-      <div class="f-hover">
-        <div class="pill" data-size="hover" data-state="hover">
-          <img class="mascot" src="../assets/mascot/star-music.svg" alt="" />
-          <div class="meta"><div class="title">Midnight City</div><div class="artist">M83 · Spotify</div></div>
-          <div class="controls">
-            <button class="icon-btn"><svg><use href="#i-prev"/></svg></button>
-            <button class="icon-btn primary" style="outline:2px solid var(--accent); outline-offset:2px"><svg><use href="#i-pause"/></svg></button>
-            <button class="icon-btn"><svg><use href="#i-next"/></svg></button>
-          </div>
-        </div>
-      </div>
+      <div class="f-hover"><div data-pill="focus"></div></div>
     </div>
   </section>
 
@@ -259,143 +159,27 @@
 
       <div class="g-panel-item">
         <span>Music tab</span>
-        <div class="f-open">
-          <div class="panel">
-            <div class="tabs">
-              <button class="tab" aria-selected="true"><svg><use href="#i-music"/></svg>Music</button>
-              <button class="tab"><svg><use href="#i-files"/></svg>Files</button>
-              <button class="tab"><svg><use href="#i-timer"/></svg>Timer</button>
-              <button class="tab"><svg><use href="#i-calendar"/></svg>Calendar</button>
-              <button class="tab settings"><svg><use href="#i-sliders"/></svg></button>
-            </div>
-            <div class="panel-body">
-              <div class="art"></div>
-              <div>
-                <div class="panel-title">Midnight City</div>
-                <div class="panel-sub">M83 · Hurry Up, We're Dreaming · Spotify</div>
-              </div>
-              <div class="controls" style="opacity:1; justify-content:center; gap:22px; margin-top:auto">
-                <button class="icon-btn"><svg><use href="#i-prev"/></svg></button>
-                <button class="icon-btn primary"><svg style="width:24px;height:24px"><use href="#i-play"/></svg></button>
-                <button class="icon-btn"><svg><use href="#i-next"/></svg></button>
-              </div>
-              <div class="panel-sub" style="text-align:center">No seek bar in v1</div>
-            </div>
-          </div>
-        </div>
+        <div class="f-open"><div data-panel="music"></div></div>
       </div>
 
       <div class="g-panel-item">
         <span>Files tab</span>
-        <div class="f-open">
-          <div class="panel">
-            <div class="tabs">
-              <button class="tab"><svg><use href="#i-music"/></svg>Music</button>
-              <button class="tab" aria-selected="true"><svg><use href="#i-files"/></svg>Files</button>
-              <button class="tab"><svg><use href="#i-timer"/></svg>Timer</button>
-              <button class="tab"><svg><use href="#i-calendar"/></svg>Calendar</button>
-              <button class="tab settings"><svg><use href="#i-sliders"/></svg></button>
-            </div>
-            <div class="panel-body">
-              <div class="row"><svg><use href="#i-file"/></svg><span class="name">invoice.pdf</span><span class="size">1.2 MB</span></div>
-              <div class="row"><svg><use href="#i-file"/></svg><span class="name">brief-final-v2.docx</span><span class="size">240 KB</span></div>
-              <div class="row"><svg><use href="#i-folder"/></svg><span class="name">screenshots</span><span class="size">folder</span></div>
-              <div class="row missing"><svg><use href="#i-alert"/></svg><span class="name">old-notes.txt</span><span class="size">missing</span></div>
-              <div class="actions">
-                <button class="btn primary"><svg><use href="#i-copy"/></svg>Copy All</button>
-                <button class="btn ghost"><svg><use href="#i-plus"/></svg>Add</button>
-                <button class="btn danger"><svg><use href="#i-trash"/></svg>Clear</button>
-              </div>
-            </div>
-          </div>
-        </div>
+        <div class="f-open"><div data-panel="files"></div></div>
       </div>
 
       <div class="g-panel-item">
         <span>Timer tab</span>
-        <div class="f-open">
-          <div class="panel">
-            <div class="tabs">
-              <button class="tab"><svg><use href="#i-music"/></svg>Music</button>
-              <button class="tab"><svg><use href="#i-files"/></svg>Files</button>
-              <button class="tab" aria-selected="true"><svg><use href="#i-timer"/></svg>Timer</button>
-              <button class="tab"><svg><use href="#i-calendar"/></svg>Calendar</button>
-              <button class="tab settings"><svg><use href="#i-sliders"/></svg></button>
-            </div>
-            <div class="panel-body">
-              <div class="presets">
-                <button class="btn ghost">5 min</button>
-                <button class="btn">10 min</button>
-                <button class="btn ghost">25 min</button>
-                <button class="btn ghost">Custom</button>
-              </div>
-              <div class="timer-face">
-                <div class="digits accent">10:00</div>
-                <div class="panel-sub">press start</div>
-              </div>
-              <div class="actions" style="justify-content:center">
-                <button class="btn primary"><svg><use href="#i-play"/></svg>Start</button>
-                <button class="btn ghost">Cancel</button>
-              </div>
-            </div>
-          </div>
-        </div>
+        <div class="f-open"><div data-panel="timer"></div></div>
       </div>
 
       <div class="g-panel-item">
         <span>Calendar tab</span>
-        <div class="f-open">
-          <div class="panel">
-            <div class="tabs">
-              <button class="tab"><svg><use href="#i-music"/></svg>Music</button>
-              <button class="tab"><svg><use href="#i-files"/></svg>Files</button>
-              <button class="tab"><svg><use href="#i-timer"/></svg>Timer</button>
-              <button class="tab" aria-selected="true"><svg><use href="#i-calendar"/></svg>Calendar</button>
-              <button class="tab settings"><svg><use href="#i-sliders"/></svg></button>
-            </div>
-            <div class="panel-body">
-              <div class="cal-head"><span data-cal-title>Month</span><span class="panel-sub">local time</span></div>
-              <div class="cal-grid" data-calendar></div>
-            </div>
-          </div>
-        </div>
+        <div class="f-open"><div data-panel="calendar"></div></div>
       </div>
 
       <div class="g-panel-item">
         <span>Settings tab</span>
-        <div class="f-open">
-          <div class="panel">
-            <div class="tabs">
-              <button class="tab"><svg><use href="#i-music"/></svg>Music</button>
-              <button class="tab"><svg><use href="#i-files"/></svg>Files</button>
-              <button class="tab"><svg><use href="#i-timer"/></svg>Timer</button>
-              <button class="tab"><svg><use href="#i-calendar"/></svg>Calendar</button>
-              <button class="tab settings" aria-selected="true"><svg><use href="#i-sliders"/></svg></button>
-            </div>
-            <div class="panel-body">
-              <div class="setting">
-                <div>Start with Windows<span class="hint">launches the pill at login</span></div>
-                <div class="switch on"></div>
-              </div>
-              <div class="setting">
-                <div>Toggle shortcut<span class="hint">click to rebind</span></div>
-                <span class="kbd">Alt + Space</span>
-              </div>
-              <div class="setting">
-                <div>Chime volume<span class="hint">plays once when the timer ends</span></div>
-                <span class="kbd">70%</span>
-              </div>
-              <div class="setting">
-                <div>Theme<span class="hint">light or dark, remembered</span></div>
-                <span class="kbd">Dark</span>
-              </div>
-              <div class="setting">
-                <div>Reset position<span class="hint">back to the taskbar anchor</span></div>
-                <button class="btn ghost">Reset</button>
-              </div>
-            </div>
-          </div>
-        </div>
+        <div class="f-open"><div data-panel="settings"></div></div>
       </div>
 
     </div>
@@ -407,36 +191,15 @@
     <p class="g-help">Same classes, different tokens. Switch the whole page with the buttons at the top.</p>
     <div class="g-row">
       <div class="g-label"><b>Idle</b><span>light tokens</span><code>rgba(255,255,255,.92)</code></div>
-      <div class="f-idle" data-theme="light">
-        <div class="pill" data-size="idle" data-state="idle">
-          <img class="mascot" src="../assets/mascot/star-idle.svg" alt="" />
-          <div class="meta"><div class="title">Beam</div><div class="artist">Alt+Space</div></div>
-        </div>
-      </div>
+      <div class="f-idle" data-theme="light"><div data-pill="idle"></div></div>
     </div>
     <div class="g-row">
       <div class="g-label"><b>Playing</b><span>light tokens</span><code>ink #111 / muted #6B6B6B</code></div>
-      <div class="f-hover" data-theme="light">
-        <div class="pill" data-size="hover" data-state="playing">
-          <img class="mascot" src="../assets/mascot/star-music.svg" alt="" />
-          <div class="meta"><div class="title">Midnight City</div><div class="artist">M83 · Spotify</div></div>
-          <div class="controls">
-            <button class="icon-btn"><svg><use href="#i-prev"/></svg></button>
-            <button class="icon-btn primary"><svg><use href="#i-pause"/></svg></button>
-            <button class="icon-btn"><svg><use href="#i-next"/></svg></button>
-          </div>
-        </div>
-      </div>
+      <div class="f-hover" data-theme="light"><div data-pill="playing"></div></div>
     </div>
     <div class="g-row">
       <div class="g-label"><b>Timer done</b><span>light tokens</span><code>same gold accent</code></div>
-      <div class="f-hover" data-theme="light">
-        <div class="pill" data-size="hover" data-state="done">
-          <img class="mascot" src="../assets/mascot/star-done.svg" alt="" />
-          <div class="meta"><div class="title">Time's up</div><div class="artist">Focus finished</div></div>
-          <div class="digits accent">00:00</div>
-        </div>
-      </div>
+      <div class="f-hover" data-theme="light"><div data-pill="done"></div></div>
     </div>
   </section>
 
@@ -506,8 +269,64 @@
   </section>
 </div>
 
-<script>
-  // theme switch for the whole gallery
+<script type="module">
+  import { iconSprite, panel, pill } from '../src/renderer/views.ts';
+
+  document.body.insertAdjacentHTML('afterbegin', iconSprite());
+
+  const states = {
+    idle: { size: 'idle', state: 'idle', title: 'Beam', artist: 'Alt+Space', mascot: 'idle' },
+    hover: {
+      size: 'hover', state: 'hover', title: 'Nothing playing', artist: 'Hover to control',
+      mascotIcon: 'music', controls: true, primaryIcon: 'play'
+    },
+    playing: {
+      size: 'hover', state: 'playing', title: 'Midnight City', artist: 'M83 · Spotify',
+      mascot: 'music', controls: true, primaryIcon: 'pause'
+    },
+    paused: {
+      size: 'hover', state: 'paused', title: 'Midnight City', artist: 'Paused · Spotify',
+      mascot: 'music', mascotOpacity: 0.55, mutedTitle: true, controls: true, primaryIcon: 'play'
+    },
+    timer: { size: 'hover', state: 'timer', title: 'Focus', artist: 'ends 19:42', mascot: 'timer', digits: '18:24' },
+    done: { size: 'hover', state: 'done', title: "Time's up", artist: 'Focus finished', mascot: 'done', digits: '00:00' },
+    filesEmpty: { size: 'hover', state: 'files', title: 'Drop files here', artist: 'Nothing on the shelf', mascot: 'files', badge: '0 files' },
+    filesFull: { size: 'hover', state: 'files', title: 'invoice.pdf', artist: '+2 more · 12.4 MB', mascot: 'files', badge: '3 files' },
+    drag: {
+      size: 'hover', state: 'drag', title: 'Release to add', artist: '3 files detected',
+      mascot: 'files', badge: '+3', badgeTone: 'accent'
+    },
+    missing: {
+      size: 'hover', state: 'files', title: 'invoice.pdf', artist: 'File moved or deleted',
+      mascot: 'files', mascotOpacity: 0.45, dangerArtist: true, badge: 'missing', badgeTone: 'warn'
+    },
+    focus: {
+      size: 'hover', state: 'hover', title: 'Midnight City', artist: 'M83 · Spotify',
+      mascot: 'music', controls: true, primaryIcon: 'pause', primaryFocus: true
+    }
+  };
+
+  for (const el of document.querySelectorAll('[data-pill]')) {
+    el.innerHTML = pill(states[el.dataset.pill]);
+  }
+
+  const demo = {
+    music: { title: 'Midnight City', subtitle: "M83 · Hurry Up, We're Dreaming · Spotify" },
+    files: [
+      { name: 'invoice.pdf', size: '1.2 MB' },
+      { name: 'brief-final-v2.docx', size: '240 KB' },
+      { name: 'screenshots', size: 'folder', kind: 'folder' },
+      { name: 'old-notes.txt', size: 'missing', missing: true }
+    ],
+    timer: { digits: '10:00', note: 'press start', preset: '10' },
+    calendar: new Date(),
+    settings: { startup: true, shortcut: 'Alt + Space', volume: '70%', theme: 'Dark' }
+  };
+
+  for (const el of document.querySelectorAll('[data-panel]')) {
+    el.innerHTML = panel(el.dataset.panel, demo);
+  }
+
   for (const btn of document.querySelectorAll('[data-theme-btn]')) {
     btn.addEventListener('click', () => {
       const theme = btn.dataset.themeBtn;
@@ -515,36 +334,6 @@
       document.body.dataset.theme = theme;
       document.querySelectorAll('[data-theme-btn]').forEach((b) => b.classList.toggle('on', b === btn));
     });
-  }
-
-  // calendar for the current month
-  const grid = document.querySelector('[data-calendar]');
-  if (grid) {
-    const now = new Date();
-    const year = now.getFullYear();
-    const month = now.getMonth();
-    const first = new Date(year, month, 1);
-    const start = first.getDay();
-    const days = new Date(year, month + 1, 0).getDate();
-    const prevDays = new Date(year, month, 0).getDate();
-    const title = document.querySelector('[data-cal-title]');
-    title.textContent = now.toLocaleString(undefined, { month: 'long', year: 'numeric' });
-
-    const cells = [];
-    for (let i = start - 1; i >= 0; i--) {
-      cells.push({ n: prevDays - i, other: true });
-    }
-    for (let d = 1; d <= days; d++) {
-      cells.push({ n: d, today: d === now.getDate() });
-    }
-    while (cells.length % 7 !== 0) {
-      cells.push({ n: cells.length % 7, other: true });
-    }
-
-    const dows = ['S', 'M', 'T', 'W', 'T', 'F', 'S'];
-    grid.innerHTML =
-      dows.map((d) => `<div class="cal-dow">${d}</div>`).join('') +
-      cells.map((c) => `<div class="cal-cell${c.other ? ' other' : ''}${c.today ? ' today' : ''}">${c.n}</div>`).join('');
   }
 </script>
 </body>
