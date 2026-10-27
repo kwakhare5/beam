@@ -1,0 +1,12 @@
+node_modules/
+dist/
+out/
+release/
+native/**/bin/
+native/**/obj/
+.scratch/
+.commandcode/
+.agents/
+.freebuff/
+*.log
+*.tsbuildinfo

@@ -1,0 +1,23 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 120 120" width="120" height="120" fill="none">
+  <!-- Puffy Chubby Star: Music Mood (DJ Headphones) -->
+  <path d="M 60.00 10.00 C 78.00 10.00, 68.90 29.38, 77.63 35.73 C 86.37 42.08, 101.99 27.43, 107.55 44.55 C 113.12 61.67, 91.87 59.00, 88.53 69.27 C 85.19 79.54, 103.95 89.87, 89.39 100.45 C 74.83 111.03, 70.80 90.00, 60.00 90.00 C 49.20 90.00, 45.17 111.03, 30.61 100.45 C 16.05 89.87, 34.81 79.54, 31.47 69.27 C 28.13 59.00, 6.88 61.67, 12.45 44.55 C 18.01 27.43, 33.63 42.08, 42.37 35.73 C 51.10 29.38, 42.00 10.00, 60.00 10.00 Z" fill="#FFAA00" />
+  
+  <!-- Headphones Headband -->
+  <path d="M 32 36 Q 60 14 88 36" stroke="#111111" stroke-width="4.5" stroke-linecap="round" fill="none" />
+  <!-- Left Ear Cup -->
+  <rect x="23" y="32" width="10" height="18" rx="5" fill="#111111" />
+  <!-- Right Ear Cup -->
+  <rect x="87" y="32" width="10" height="18" rx="5" fill="#111111" />
+
+  <!-- Blissful Closed Groove Eyes (◠ ◠) -->
+  <path d="M 43 57 Q 49 50 55 57" stroke="#111111" stroke-width="3" stroke-linecap="round" fill="none" />
+  <path d="M 65 57 Q 71 50 77 57" stroke="#111111" stroke-width="3" stroke-linecap="round" fill="none" />
+
+  <!-- Singing / Whistling Small Mouth -->
+  <ellipse cx="60" cy="67" rx="3.5" ry="4.5" fill="#111111" />
+
+  <!-- Floating Music Note -->
+  <path d="M 96 46 L 96 38 L 105 35 L 105 43" stroke="#111111" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" fill="none" />
+  <circle cx="94" cy="46" r="2.5" fill="#111111" />
+  <circle cx="103" cy="43" r="2.5" fill="#111111" />
+</svg>
