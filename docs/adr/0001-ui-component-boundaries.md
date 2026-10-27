@@ -1,0 +1,3 @@
+# One capsule, one panel shell, per-tab bodies
+
+The renderer was a single `views.ts` that mixed the capsule, the panel shell, the icon sprite, and all five tab bodies. Every change touched the same file, and a separate component per content state would have duplicated markup and copy. The UI now lives in `src/renderer/ui/`: `pill.ts`, `panel.ts`, `panel-body.ts`, `icons.ts`, `mascots.ts`, `html.ts`, `types.ts`, and `tabs/{music,files,timer,calendar,settings}.ts`, with `index.ts` as the public API. There is one capsule parameterized by content state, one panel shell, and per-tab bodies only because their content differs. States remain data (`data-state`, `data-hover`), not components.

@@ -1,0 +1,3 @@
+# Vanilla shadcn-style tokens, not React shadcn/ui
+
+shadcn/ui is a React + Tailwind + Radix component collection; this app is Electron + TypeScript with a vanilla renderer. Adding React, Tailwind, and Radix to a 220×44 always-on utility would be a stack rewrite and a new performance measurement. We adopt the shadcn vocabulary and conventions instead: CSS variables named `--background`, `--foreground`, `--card`, `--popover`, `--primary`, `--secondary`, `--muted`, `--accent`, `--destructive`, `--border`, `--input`, and `--ring`; an 8px grid; Lucide icons; accessible roles and states. The renderer stays vanilla, split into `src/renderer/ui/` and `src/renderer/styles/`. Revisit only if the app becomes a React surface.

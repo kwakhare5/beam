@@ -1,0 +1,130 @@
+/* ---------- capsule ---------- */
+
+.pill {
+  --pill-w: 104px;
+  --pill-hover-w: 128px;
+  width: var(--pill-w);
+  height: 100%;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 0 8px;
+  border-radius: var(--r-pill);
+  background: var(--card);
+  border: 1px solid var(--border);
+  box-shadow: var(--shadow-pill);
+  color: var(--card-foreground);
+  transition:
+    opacity 140ms var(--ease),
+    background 140ms var(--ease),
+    border-color 140ms var(--ease),
+    width 120ms var(--ease);
+}
+
+.pill[data-state='idle'] {
+  opacity: 0.7;
+  justify-content: center;
+}
+
+.pill[data-state='idle'] .meta {
+  flex: 0 1 auto;
+}
+
+.pill[data-state='playing'],
+.pill[data-state='paused'] {
+  --pill-w: 176px;
+  --pill-hover-w: 176px;
+}
+
+.pill[data-state='timer'],
+.pill[data-state='done'] {
+  --pill-w: 132px;
+  --pill-hover-w: 132px;
+}
+
+.pill[data-state='missing'] {
+  --pill-w: 140px;
+  --pill-hover-w: 140px;
+}
+
+.pill:hover,
+.pill[data-hover='true'] {
+  width: var(--pill-hover-w);
+  opacity: 1;
+  border-color: var(--border-hover);
+}
+
+.pill[data-state='drag'] {
+  border-color: var(--primary);
+  border-style: dashed;
+}
+
+.pill[data-state='paused'] .title {
+  color: var(--muted-foreground);
+}
+
+.pill[data-state='missing'] .title {
+  color: var(--destructive);
+}
+
+.mascot {
+  width: 24px;
+  height: 24px;
+  flex: none;
+  display: block;
+  transform-origin: center;
+  transition: transform 120ms var(--ease);
+}
+
+.pill:hover .mascot,
+.pill[data-hover='true'] .mascot {
+  transform: scale(1.06) rotate(-2deg);
+}
+
+.meta {
+  flex: 1;
+  min-width: 0;
+}
+
+.title {
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: -0.01em;
+  line-height: 1.2;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.digits {
+  font-size: 15px;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+  letter-spacing: 0.02em;
+  color: var(--primary-text);
+  flex: none;
+}
+
+.controls {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  flex: none;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 120ms var(--ease);
+}
+
+.pill:hover .controls,
+.pill[data-hover='true'] .controls,
+.pill:focus-within .controls {
+  opacity: 1;
+  pointer-events: auto;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .pill:hover .mascot,
+  .pill[data-hover='true'] .mascot {
+    transform: none;
+  }
+}
