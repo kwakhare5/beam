@@ -69,7 +69,7 @@ Beam is a lightweight floating Windows 11 desktop bar that provides 1-click acce
 - **Clipboard History Manager:** Cut to future releases.
 - **Cloud Accounts, Sync & Multi-Device Sharing:** Fully out of scope; Beam is 100% offline.
 - **Music Scrubbing / Timeline Seeker:** Cut from V1 to prevent audio desync bugs.
-- **Light Theme Toggle:** Single dark mode for V1.
+- **Light Theme Toggle:** moved into V1 on 2026-10-27; the app ships light and dark themes, switchable in settings and remembered across restarts.
 - **Hardware Controls (Monitor Brightness / Volume Sliders):** Hardware-dependent, cut from V1.
 
 ---

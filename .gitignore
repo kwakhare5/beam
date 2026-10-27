@@ -7,6 +7,5 @@ native/**/obj/
 .scratch/
 .commandcode/
 .agents/
-.freebuff/
 *.log
 *.tsbuildinfo
