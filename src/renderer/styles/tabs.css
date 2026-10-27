@@ -1,0 +1,172 @@
+/* ---------- music ---------- */
+
+.music-controls {
+  justify-content: center;
+  gap: 16px;
+  opacity: 1;
+  visibility: visible;
+  pointer-events: auto;
+}
+
+.music-controls .icon-btn {
+  width: 32px;
+  height: 32px;
+}
+
+.music-controls .icon-btn svg {
+  width: 20px;
+  height: 20px;
+}
+
+/* ---------- files ---------- */
+
+.file-list {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  min-height: 0;
+  overflow-y: auto;
+  scrollbar-width: thin;
+  scrollbar-color: var(--muted) transparent;
+}
+
+.row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  height: 36px;
+  flex: none;
+  padding: 0 10px;
+  border-radius: var(--r-control);
+  background: var(--secondary);
+  font-size: 12px;
+}
+
+.row svg {
+  width: 16px;
+  height: 16px;
+  flex: none;
+  color: var(--muted-foreground);
+}
+
+.row .name {
+  flex: 1;
+  min-width: 0;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.row .size {
+  font-size: 11px;
+  color: var(--muted-foreground);
+  flex: none;
+}
+
+.row.missing {
+  color: var(--destructive);
+}
+
+.row.missing svg {
+  color: var(--destructive);
+}
+
+.row[aria-disabled='true'] {
+  cursor: default;
+}
+
+/* ---------- timer ---------- */
+
+.panel-timer {
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.presets {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+  flex: none;
+}
+
+.timer-face {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+}
+
+.timer-face .digits {
+  font-size: 40px;
+  letter-spacing: -0.02em;
+}
+
+/* ---------- calendar ---------- */
+
+.cal-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.cal-grid {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  gap: 4px;
+  flex: 1;
+}
+
+.cal-dow {
+  display: grid;
+  place-items: center;
+  padding: 2px 0;
+  font-size: 10px;
+  color: var(--muted-foreground);
+}
+
+.cal-cell {
+  display: grid;
+  place-items: center;
+  min-height: 28px;
+  border-radius: var(--r-micro);
+  font-size: 11px;
+  color: var(--foreground);
+}
+
+.cal-cell.other {
+  color: var(--muted-foreground);
+  opacity: 0.45;
+}
+
+.cal-cell.today {
+  background: var(--primary);
+  color: var(--primary-foreground);
+  font-weight: 600;
+}
+
+/* ---------- settings ---------- */
+
+.setting {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  min-height: 44px;
+  padding: 0 2px;
+  border-bottom: 1px solid var(--border);
+  font-size: 13px;
+}
+
+.setting:last-of-type {
+  border-bottom: 0;
+}
+
+.setting .hint {
+  display: block;
+  margin-top: 2px;
+  font-size: 11px;
+  color: var(--muted-foreground);
+}

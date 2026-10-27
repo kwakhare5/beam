@@ -7,325 +7,378 @@
 <link rel="stylesheet" href="../src/renderer/styles.css" />
 <style>
   /* gallery-only layout. nothing here is shipped. */
-  body { display: block; overflow: auto; background: #1b1d21; color: #ededed; padding: 36px 32px 90px; }
-  .g-wrap { max-width: 1160px; margin: 0 auto; }
-  .g-head h1 { font-size: 22px; margin: 0 0 6px; letter-spacing: -.02em; }
-  .g-head p { margin: 0; font-size: 13px; color: #9a9a9a; line-height: 1.6; max-width: 760px; }
-  .g-theme { display: flex; gap: 8px; margin: 18px 0 6px; }
-  .g-theme button {
-    font: inherit; font-size: 12px; color: #ededed; background: rgba(255,255,255,.06);
-    border: 1px solid rgba(255,255,255,.14); border-radius: 999px; padding: 6px 14px; cursor: pointer;
-  }
-  .g-theme button.on { background: rgba(255,255,255,.2); }
+  body { display: block; overflow: auto; background: #1b1d21; color: #ededed; padding: 0; }
+  .g-wrap { max-width: 1160px; margin: 0 auto; padding: 0 32px 64px; }
 
-  .g-section {
-    margin-top: 44px;
+  .g-nav {
+    position: sticky; top: 0; z-index: 10;
+    display: flex; align-items: center; gap: 4px;
+    padding: 12px 0;
+    background: rgba(27, 29, 33, .96);
+    border-bottom: 1px solid rgba(255, 255, 255, .08);
+  }
+  .g-brand { margin-right: 12px; font-size: 13px; font-weight: 600; white-space: nowrap; }
+  .g-nav-btn {
+    height: 32px; padding: 0 12px;
+    border: 1px solid transparent; border-radius: var(--r-control);
+    background: none; color: #9a9a9a;
+    font: inherit; font-size: 12px; cursor: pointer;
+  }
+  .g-nav-btn:hover { background: rgba(255, 255, 255, .06); color: #ededed; }
+  .g-nav-btn[aria-current='page'] { background: rgba(255, 255, 255, .1); color: #ededed; }
+  .g-theme { margin-left: auto; display: flex; gap: 4px; }
+  .g-theme button {
+    height: 28px; padding: 0 10px;
+    border: 1px solid rgba(255, 255, 255, .14); border-radius: var(--r-control);
+    background: rgba(255, 255, 255, .06); color: #ededed;
+    font: inherit; font-size: 11px; cursor: pointer;
+  }
+  .g-theme button.on { background: rgba(255, 255, 255, .2); }
+
+  .g-page { padding-top: 24px; }
+  .g-page[hidden] { display: none; }
+  .g-head h2 { margin: 0 0 4px; font-size: 20px; letter-spacing: -.01em; }
+  .g-head p { margin: 0 0 16px; max-width: 820px; font-size: 13px; line-height: 1.6; color: #9a9a9a; }
+  .g-help code { font-size: 12px; color: #cfcfcf; }
+
+  .g-grid {
     display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
-    gap: 14px;
+    grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+    gap: 16px;
     align-items: start;
   }
-  .g-section > h2,
-  .g-section > p.g-help { grid-column: 1 / -1; margin-bottom: 0; }
-
   .g-row {
     display: flex; flex-direction: column; gap: 12px; align-items: flex-start;
-    padding: 14px; border: 1px solid rgba(255,255,255,.08); border-radius: 16px;
-    background: rgba(255,255,255,.03);
+    padding: 16px;
+    border: 1px solid rgba(255, 255, 255, .08); border-radius: var(--r-panel);
+    background: rgba(255, 255, 255, .03);
   }
-  .g-row:first-of-type { border-top: 0; }
   .g-label { order: 2; }
   .g-label b { display: block; font-size: 12px; font-weight: 600; }
-  .g-label span { display: block; font-size: 11px; color: #8a8a8a; margin-top: 3px; line-height: 1.5; }
+  .g-label span { display: block; margin-top: 3px; font-size: 11px; line-height: 1.5; color: #8a8a8a; }
   .g-label code { font-size: 10px; color: #6f6f6f; }
 
-  .f-idle { width: 200px; height: 36px; }
-  .f-hover { width: 260px; height: 40px; }
-  .f-open { width: 360px; height: 460px; }
+  .f-idle { width: 104px; height: 32px; }
+  .f-hover { width: 128px; height: 32px; }
+  .f-playing { width: 176px; height: 32px; }
+  .f-timer { width: 132px; height: 32px; }
+  .f-missing { width: 140px; height: 32px; }
+  .f-open { width: 420px; height: 300px; }
 
-  .g-panels {
-    grid-column: 1 / -1;
-    display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(392px, 1fr));
-    gap: 26px;
+  .g-compare { display: grid; grid-template-columns: repeat(2, 184px); gap: 32px; padding: 8px 0 24px; }
+  .g-compare-item { display: flex; flex-direction: column; gap: 8px; }
+  .g-compare-label { font-size: 12px; font-weight: 600; }
+  .g-compare-note { font-size: 11px; color: #8a8a8a; }
+  .compare-window {
+    width: 184px; height: 44px;
+    display: flex; align-items: center; justify-content: center;
+    border: 1px dashed rgba(255, 255, 255, .22); border-radius: 12px;
+    background: rgba(255, 255, 255, .02);
   }
-  .g-spec { grid-column: 1 / -1; }
-  .g-panel-item { display: flex; flex-direction: column; gap: 8px; }
-  .g-panel-item > span { font-size: 12px; color: #8a8a8a; }
+  .compare-window [data-pill] { display: flex; align-items: center; justify-content: center; }
+  .g-compare .pill { pointer-events: none; }
 
-  .g-spec { display: grid; grid-template-columns: repeat(auto-fill, minmax(230px, 1fr)); gap: 14px; }
-  .g-card { background: rgba(255,255,255,.04); border: 1px solid rgba(255,255,255,.08); border-radius: 12px; padding: 14px 16px; }
-  .g-card h3 { font-size: 11px; text-transform: uppercase; letter-spacing: .08em; color: #8b8b8b; margin: 0 0 8px; }
+  .g-subnav { display: flex; flex-wrap: wrap; gap: 4px; margin-bottom: 16px; }
+  .g-subnav button {
+    height: 32px; padding: 0 12px;
+    border: 1px solid rgba(255, 255, 255, .12); border-radius: var(--r-control);
+    background: none; color: #9a9a9a;
+    font: inherit; font-size: 12px; cursor: pointer;
+  }
+  .g-subnav button:hover { background: rgba(255, 255, 255, .06); color: #ededed; }
+  .g-subnav button[aria-pressed='true'] { background: rgba(255, 255, 255, .1); border-color: rgba(255, 255, 255, .16); color: #ededed; }
+
+  .g-panel-stage { display: grid; place-items: center; padding: 8px 0 24px; }
+
+  .g-spec { display: grid; grid-template-columns: repeat(auto-fill, minmax(230px, 1fr)); gap: 16px; }
+  .g-card { padding: 16px; border: 1px solid rgba(255, 255, 255, .08); border-radius: var(--r-card); background: rgba(255, 255, 255, .04); }
+  .g-card h3 { margin: 0 0 8px; font-size: 11px; letter-spacing: .08em; text-transform: uppercase; color: #8b8b8b; }
   .g-card ul { margin: 0; padding-left: 16px; font-size: 12px; line-height: 1.75; color: #cfcfcf; }
   .g-card code { font-size: 11px; color: #e9c46a; }
 
-  .ghost-frame {
-    width: 260px; height: 40px; border: 1px dashed rgba(255,255,255,.22);
-    border-radius: 999px; display: grid; place-items: center; font-size: 11px; color: #7d7d7d;
-  }
-
-  [data-pill], [data-panel] { width: 100%; height: 100%; }
+  [data-pill], #panel-stage { width: 100%; height: 100%; }
 </style>
 </head>
 <body data-theme="dark">
 <div class="g-wrap">
 
-  <div class="g-head">
-    <h1>Beam — app UI preview</h1>
-    <p>
-      This file renders the app's own view functions (<code>src/renderer/views.ts</code>) over the real
-      stylesheet (<code>src/renderer/styles.css</code>), so a change here is a change to the app.
-      Open it with <code>npm run ui</code> — it cannot load from disk.
-      Every state at real size: 200×36 idle, 260×40 hover, 360×460 open.
-    </p>
+  <nav class="g-nav" aria-label="Preview pages">
+    <span class="g-brand">Beam — app UI preview</span>
+    <button type="button" class="g-nav-btn" data-page-btn="compare" aria-current="page">Compare</button>
+    <button type="button" class="g-nav-btn" data-page-btn="capsule">Capsule</button>
+    <button type="button" class="g-nav-btn" data-page-btn="panels">Panels</button>
+    <button type="button" class="g-nav-btn" data-page-btn="rules">Rules</button>
     <div class="g-theme">
-      <button data-theme-btn="dark" class="on">dark theme</button>
-      <button data-theme-btn="light">light theme</button>
+      <button type="button" data-theme-btn="dark" class="on">dark</button>
+      <button type="button" data-theme-btn="light">light</button>
     </div>
-  </div>
+  </nav>
 
-  <!-- ================= COLLAPSED ================= -->
-  <section class="g-section">
-    <h2>1 · Collapsed pill — dark</h2>
-    <p class="g-help">Idle is 200×36 and dimmed. Hover grows to 260×40 and reveals controls. Everything below is a real state, not a variant.</p>
-
-    <div class="g-row">
-      <div class="g-label"><b>Idle</b><span>no music, no timer</span><code>200×36 · opacity .55</code></div>
-      <div class="f-idle"><div data-pill="idle"></div></div>
-    </div>
-
-    <div class="g-row">
-      <div class="g-label"><b>Hover</b><span>controls fade in, window grows</span><code>260×40 · 120ms</code></div>
-      <div class="f-hover"><div data-pill="hover"></div></div>
-    </div>
-
-    <div class="g-row">
-      <div class="g-label"><b>Playing</b><span>SMTC track</span><code>title 13 / artist 11</code></div>
-      <div class="f-hover"><div data-pill="playing"></div></div>
-    </div>
-
-    <div class="g-row">
-      <div class="g-label"><b>Paused</b><span>same layout, muted title</span><code>no layout shift</code></div>
-      <div class="f-hover"><div data-pill="paused"></div></div>
-    </div>
-
-    <div class="g-row">
-      <div class="g-label"><b>Timer running</b><span>deadline driven</span><code>tabular-nums</code></div>
-      <div class="f-hover"><div data-pill="timer"></div></div>
-    </div>
-
-    <div class="g-row">
-      <div class="g-label"><b>Timer done</b><span>pulse + one chime + banner</span><code>gold ring</code></div>
-      <div class="f-hover"><div data-pill="done"></div></div>
-    </div>
-
-    <div class="g-row">
-      <div class="g-label"><b>Shelf empty</b><span>paths only, never copies</span><code>badge · 0</code></div>
-      <div class="f-hover"><div data-pill="filesEmpty"></div></div>
-    </div>
-
-    <div class="g-row">
-      <div class="g-label"><b>Shelf with files</b><span>cap 50</span><code>count badge</code></div>
-      <div class="f-hover"><div data-pill="filesFull"></div></div>
-    </div>
-
-    <div class="g-row">
-      <div class="g-label"><b>Drag over</b><span>accept state</span><code>gold dashed border</code></div>
-      <div class="f-hover"><div data-pill="drag"></div></div>
-    </div>
-
-    <div class="g-row">
-      <div class="g-label"><b>Missing file</b><span>drag disabled</span><code>danger</code></div>
-      <div class="f-hover"><div data-pill="missing"></div></div>
-    </div>
-
-    <div class="g-row">
-      <div class="g-label"><b>Hidden by fullscreen</b><span>window is gone, not invisible</span><code>no pill drawn</code></div>
-      <div class="ghost-frame">hidden — hotkey or tray brings it back</div>
-    </div>
-
-    <div class="g-row">
-      <div class="g-label"><b>Keyboard focus</b><span>Tab reaches every control</span><code>2px gold ring</code></div>
-      <div class="f-hover"><div data-pill="focus"></div></div>
-    </div>
-  </section>
-
-  <!-- ================= PANELS ================= -->
-  <section class="g-section">
-    <h2>2 · Open panel — 360×460</h2>
-    <p class="g-help">Tap the pill (or Alt+Space). Same stylesheet, same tokens. Tab bar is 4 tabs plus settings on the right.</p>
-
-    <div class="g-panels">
-
-      <div class="g-panel-item">
-        <span>Music tab</span>
-        <div class="f-open"><div data-panel="music"></div></div>
+  <main>
+    <section class="g-page" data-page="compare">
+      <div class="g-head">
+        <h2>1 · Compare</h2>
+        <p class="g-help">
+          Same <code>Beam</code> content, two states. The 184×44 window is fixed; the capsule is <code>104×32</code> idle and <code>128×32</code> hover — a 24px growth, 40px each side at idle and 28px at hover. Static snapshots, no pointer interaction.
+        </p>
       </div>
 
-      <div class="g-panel-item">
-        <span>Files tab</span>
-        <div class="f-open"><div data-panel="files"></div></div>
+      <div class="g-compare">
+        <div class="g-compare-item">
+          <span class="g-compare-label">Idle · 104</span>
+          <div class="compare-window"><div data-pill="compareIdle"></div></div>
+          <span class="g-compare-note">40px each side · opacity .70</span>
+        </div>
+        <div class="g-compare-item">
+          <span class="g-compare-label">Hover · 128</span>
+          <div class="compare-window"><div data-pill="compareHover"></div></div>
+          <span class="g-compare-note">28px each side · opacity 1 · +24px</span>
+        </div>
+      </div>
+    </section>
+
+    <section class="g-page" data-page="capsule" hidden>
+      <div class="g-head">
+        <h2>2 · Capsule</h2>
+        <p class="g-help">
+          One line; the capsule grows 24px on hover inside a fixed window. Controls fade in only for playing or paused media.
+          Capsule <code>104×32</code> idle / <code>128×32</code> hover / <code>176×32</code> playing; rest window <code>184×44</code>. Inter and Lucide are vendored.
+        </p>
       </div>
 
-      <div class="g-panel-item">
-        <span>Timer tab</span>
-        <div class="f-open"><div data-panel="timer"></div></div>
+      <div class="g-grid">
+        <div class="g-row">
+          <div class="g-label"><b>Idle</b><span>no music, no timer</span><code>104 · centered · opacity .70</code></div>
+          <div class="f-idle"><div data-pill="idle"></div></div>
+        </div>
+        <div class="g-row">
+          <div class="g-label"><b>Idle · hover</b><span>the compare pair, same content</span><code>128 · centered</code></div>
+          <div class="f-hover"><div data-pill="idleHover"></div></div>
+        </div>
+        <div class="g-row">
+          <div class="g-label"><b>Playing · hover</b><span>SMTC track</span><code>176 · filled transport</code></div>
+          <div class="f-playing"><div data-pill="playing"></div></div>
+        </div>
+        <div class="g-row">
+          <div class="g-label"><b>Paused · hover</b><span>same line, muted ink</span><code>176 · muted ink</code></div>
+          <div class="f-playing"><div data-pill="paused"></div></div>
+        </div>
+        <div class="g-row">
+          <div class="g-label"><b>Timer running</b><span>deadline driven</span><code>132 · tabular-nums</code></div>
+          <div class="f-timer"><div data-pill="timer"></div></div>
+        </div>
+        <div class="g-row">
+          <div class="g-label"><b>Timer done</b><span>gold digits</span><code>132 · gold digits</code></div>
+          <div class="f-timer"><div data-pill="done"></div></div>
+        </div>
+        <div class="g-row">
+          <div class="g-label"><b>Shelf empty</b><span>paths only, never copies</span><code>104 · 0 files</code></div>
+          <div class="f-idle"><div data-pill="filesEmpty"></div></div>
+        </div>
+        <div class="g-row">
+          <div class="g-label"><b>Shelf with files</b><span>cap 50</span><code>104 · 3 files</code></div>
+          <div class="f-idle"><div data-pill="filesFull"></div></div>
+        </div>
+        <div class="g-row">
+          <div class="g-label"><b>Drag over</b><span>accept state</span><code>104 · gold dashed</code></div>
+          <div class="f-idle"><div data-pill="drag"></div></div>
+        </div>
+        <div class="g-row">
+          <div class="g-label"><b>Missing file</b><span>drag disabled</span><code>140 · danger ink</code></div>
+          <div class="f-missing"><div data-pill="missing"></div></div>
+        </div>
+      </div>
+    </section>
+
+    <section class="g-page" data-page="panels" hidden>
+      <div class="g-head">
+        <h2>3 · Panels</h2>
+        <p class="g-help">
+          Panel <code>420×300</code>, open window <code>428×308</code>. Tabs 40, body padding 8, no footer. Art left, text right. Grow from the pill over 150ms, bottom-center.
+          Pick one state; no scrolling through every panel.
+        </p>
       </div>
 
-      <div class="g-panel-item">
-        <span>Calendar tab</span>
-        <div class="f-open"><div data-panel="calendar"></div></div>
+      <div class="g-subnav" role="group" aria-label="Panel states">
+        <button type="button" data-panel-key="music" aria-pressed="true">Music</button>
+        <button type="button" data-panel-key="files" aria-pressed="false">Files</button>
+        <button type="button" data-panel-key="timer" aria-pressed="false">Timer</button>
+        <button type="button" data-panel-key="calendar" aria-pressed="false">Calendar</button>
+        <button type="button" data-panel-key="settings" aria-pressed="false">Settings</button>
+        <button type="button" data-panel-key="musicEmpty" aria-pressed="false">Music empty</button>
+        <button type="button" data-panel-key="musicLoading" aria-pressed="false">Music loading</button>
+        <button type="button" data-panel-key="filesEmpty" aria-pressed="false">Files empty</button>
+        <button type="button" data-panel-key="filesCopied" aria-pressed="false">Files copied</button>
       </div>
 
-      <div class="g-panel-item">
-        <span>Settings tab</span>
-        <div class="f-open"><div data-panel="settings"></div></div>
+      <div class="g-panel-stage">
+        <div class="f-open"><div id="panel-stage"></div></div>
+      </div>
+    </section>
+
+    <section class="g-page" data-page="rules" hidden>
+      <div class="g-head">
+        <h2>4 · Rules</h2>
+        <p class="g-help">The tokens and states this file enforces. Shadcn-style variables; vanilla TypeScript; Lucide.</p>
       </div>
 
-    </div>
-  </section>
-
-  <!-- ================= LIGHT ================= -->
-  <section class="g-section">
-    <h2>3 · Light theme</h2>
-    <p class="g-help">Same classes, different tokens. Switch the whole page with the buttons at the top.</p>
-    <div class="g-row">
-      <div class="g-label"><b>Idle</b><span>light tokens</span><code>rgba(255,255,255,.92)</code></div>
-      <div class="f-idle" data-theme="light"><div data-pill="idle"></div></div>
-    </div>
-    <div class="g-row">
-      <div class="g-label"><b>Playing</b><span>light tokens</span><code>ink #111 / muted #6B6B6B</code></div>
-      <div class="f-hover" data-theme="light"><div data-pill="playing"></div></div>
-    </div>
-    <div class="g-row">
-      <div class="g-label"><b>Timer done</b><span>light tokens</span><code>same gold accent</code></div>
-      <div class="f-hover" data-theme="light"><div data-pill="done"></div></div>
-    </div>
-  </section>
-
-  <!-- ================= SPEC ================= -->
-  <section class="g-section">
-    <h2>4 · Rules this file enforces</h2>
-    <div class="g-spec">
-      <div class="g-card">
-        <h3>Sizes</h3>
-        <ul>
-          <li>Idle <code>200×36</code></li>
-          <li>Hover <code>260×40</code></li>
-          <li>Open <code>360×460</code></li>
-          <li>Pill radius <code>999px</code></li>
-          <li>Panel radius <code>18px</code></li>
-        </ul>
+      <div class="g-spec">
+        <div class="g-card">
+          <h3>Sizes</h3>
+          <ul>
+            <li>Capsule <code>104 idle / 128 hover / 176 playing</code></li>
+            <li>Rest window <code>184×44</code></li>
+            <li>Panel <code>420×300</code></li>
+            <li>Open window <code>428×308</code></li>
+            <li>Radii <code>6 / 8 / 10 / 14</code>; hit <code>24</code></li>
+          </ul>
+        </div>
+        <div class="g-card">
+          <h3>Type &amp; icons</h3>
+          <ul>
+            <li>Inter variable, vendored</li>
+            <li>Capsule <code>12 / 600</code>; panel <code>15 / 600</code></li>
+            <li>Timer <code>15 / 40 / 600</code>; tabular</li>
+            <li>Lucide outline UI; filled transport</li>
+            <li>Icons <code>18 / 20 / 16 / 14</code></li>
+          </ul>
+        </div>
+        <div class="g-card">
+          <h3>States</h3>
+          <ul>
+            <li>Idle, hover, active, focus</li>
+            <li>Disabled, loading, empty</li>
+            <li>Error, success, overflow</li>
+            <li>Selected and hidden</li>
+            <li>Control focus <code>1px neutral</code></li>
+            <li>No capsule glow</li>
+          </ul>
+        </div>
+        <div class="g-card">
+          <h3>Motion</h3>
+          <ul>
+            <li>Hover <code>120ms</code></li>
+            <li>Panel grow <code>150ms</code></li>
+            <li>Mascot pop <code>120ms</code></li>
+            <li>Reduced motion honored</li>
+            <li>No done glow</li>
+          </ul>
+        </div>
       </div>
-      <div class="g-card">
-        <h3>Colour</h3>
-        <ul>
-          <li>Accent <code>#FFAA00</code></li>
-          <li>Danger <code>#EF4444</code></li>
-          <li>Dark shell <code>rgba(18,19,22,.92)</code></li>
-          <li>Light shell <code>rgba(255,255,255,.92)</code></li>
-          <li>No third accent</li>
-        </ul>
-      </div>
-      <div class="g-card">
-        <h3>Type</h3>
-        <ul>
-          <li>Inter, vendored locally</li>
-          <li>Title <code>13 / 600</code></li>
-          <li>Artist <code>11 / 400</code></li>
-          <li>Timer <code>15 / 600 tnum</code></li>
-          <li>Panel timer <code>40 / 600 tnum</code></li>
-        </ul>
-      </div>
-      <div class="g-card">
-        <h3>Icons</h3>
-        <ul>
-          <li>Lucide, 18px pill</li>
-          <li>14px inside tabs and buttons</li>
-          <li>1.6px stroke, rounded</li>
-          <li>Inlined SVG, no runtime dep</li>
-          <li>Emoji are banned</li>
-        </ul>
-      </div>
-      <div class="g-card">
-        <h3>Motion</h3>
-        <ul>
-          <li>Hover fade <code>120ms</code></li>
-          <li>Resize <code>150ms</code></li>
-          <li>Ease <code>cubic-bezier(.22,1,.36,1)</code></li>
-          <li>No bounce except mascot</li>
-        </ul>
-      </div>
-      <div class="g-card">
-        <h3>Materials</h3>
-        <ul>
-          <li>Pill: transparent CSS capsule</li>
-          <li>No Windows acrylic on the pill</li>
-          <li>Acrylic ignores CSS radius (tested)</li>
-          <li>Blur would need native shaping</li>
-        </ul>
-      </div>
-    </div>
-  </section>
+    </section>
+  </main>
 </div>
 
 <script type="module">
-  import { iconSprite, panel, pill } from '../src/renderer/views.ts';
+  import { iconSprite, panel, pill } from '../src/renderer/ui/index.ts';
 
   document.body.insertAdjacentHTML('afterbegin', iconSprite());
 
   const states = {
-    idle: { size: 'idle', state: 'idle', title: 'Beam', artist: 'Alt+Space', mascot: 'idle' },
-    hover: {
-      size: 'hover', state: 'hover', title: 'Nothing playing', artist: 'Hover to control',
-      mascotIcon: 'music', controls: true, primaryIcon: 'play'
-    },
-    playing: {
-      size: 'hover', state: 'playing', title: 'Midnight City', artist: 'M83 · Spotify',
-      mascot: 'music', controls: true, primaryIcon: 'pause'
-    },
-    paused: {
-      size: 'hover', state: 'paused', title: 'Midnight City', artist: 'Paused · Spotify',
-      mascot: 'music', mascotOpacity: 0.55, mutedTitle: true, controls: true, primaryIcon: 'play'
-    },
-    timer: { size: 'hover', state: 'timer', title: 'Focus', artist: 'ends 19:42', mascot: 'timer', digits: '18:24' },
-    done: { size: 'hover', state: 'done', title: "Time's up", artist: 'Focus finished', mascot: 'done', digits: '00:00' },
-    filesEmpty: { size: 'hover', state: 'files', title: 'Drop files here', artist: 'Nothing on the shelf', mascot: 'files', badge: '0 files' },
-    filesFull: { size: 'hover', state: 'files', title: 'invoice.pdf', artist: '+2 more · 12.4 MB', mascot: 'files', badge: '3 files' },
-    drag: {
-      size: 'hover', state: 'drag', title: 'Release to add', artist: '3 files detected',
-      mascot: 'files', badge: '+3', badgeTone: 'accent'
-    },
-    missing: {
-      size: 'hover', state: 'files', title: 'invoice.pdf', artist: 'File moved or deleted',
-      mascot: 'files', mascotOpacity: 0.45, dangerArtist: true, badge: 'missing', badgeTone: 'warn'
-    },
-    focus: {
-      size: 'hover', state: 'hover', title: 'Midnight City', artist: 'M83 · Spotify',
-      mascot: 'music', controls: true, primaryIcon: 'pause', primaryFocus: true
-    }
+    compareIdle: { state: 'idle', title: 'Beam' },
+    compareHover: { state: 'idle', hover: true, title: 'Beam' },
+    idle: { state: 'idle', title: 'Beam' },
+    idleHover: { state: 'idle', hover: true, title: 'Beam' },
+    playing: { state: 'playing', hover: true, title: 'Midnight City', controls: true, primaryIcon: 'pause' },
+    paused: { state: 'paused', hover: true, title: 'Midnight City', controls: true, primaryIcon: 'play' },
+    timer: { state: 'timer', title: 'Focus', digits: '18:24' },
+    done: { state: 'done', title: "Time's up", digits: '00:00' },
+    filesEmpty: { state: 'files', title: '0 files' },
+    filesFull: { state: 'files', title: '3 files' },
+    drag: { state: 'drag', title: '+3 files' },
+    missing: { state: 'missing', title: 'invoice.pdf' }
   };
 
   for (const el of document.querySelectorAll('[data-pill]')) {
     el.innerHTML = pill(states[el.dataset.pill]);
   }
 
-  const demo = {
-    music: { title: 'Midnight City', subtitle: "M83 · Hurry Up, We're Dreaming · Spotify" },
+  const base = {
+    music: {
+      title: 'Midnight City',
+      subtitle: "M83 · Hurry Up, We're Dreaming · Spotify",
+      art: './sample-art.svg',
+      playing: true
+    },
     files: [
       { name: 'invoice.pdf', size: '1.2 MB' },
       { name: 'brief-final-v2.docx', size: '240 KB' },
       { name: 'screenshots', size: 'folder', kind: 'folder' },
-      { name: 'old-notes.txt', size: 'missing', missing: true }
+      { name: 'old-notes.txt', size: 'missing', missing: true },
+      { name: 'contract.pdf', size: '88 KB' },
+      { name: 'photo.png', size: '2.4 MB' }
     ],
     timer: { digits: '10:00', note: 'press start', preset: '10' },
     calendar: new Date(),
     settings: { startup: true, shortcut: 'Alt + Space', volume: '70%', theme: 'Dark' }
   };
 
-  for (const el of document.querySelectorAll('[data-panel]')) {
-    el.innerHTML = panel(el.dataset.panel, demo);
+  const data = {
+    music: base,
+    files: base,
+    timer: base,
+    calendar: base,
+    settings: base,
+    musicEmpty: { ...base, music: { title: '', subtitle: '' } },
+    musicLoading: { ...base, music: { title: '', subtitle: '', loading: true } },
+    filesEmpty: { ...base, files: [] },
+    filesCopied: { ...base, filesCopied: true }
+  };
+
+  const panelTab = {
+    music: 'music',
+    files: 'files',
+    timer: 'timer',
+    calendar: 'calendar',
+    settings: 'settings',
+    musicEmpty: 'music',
+    musicLoading: 'music',
+    filesEmpty: 'files',
+    filesCopied: 'files'
+  };
+
+  const stage = document.querySelector('#panel-stage');
+  let currentPanel = 'music';
+
+  function renderPanel(key) {
+    currentPanel = key;
+    stage.innerHTML = panel(panelTab[key], data[key]);
+    for (const btn of document.querySelectorAll('[data-panel-key]')) {
+      btn.setAttribute('aria-pressed', String(btn.dataset.panelKey === key));
+    }
   }
+
+  for (const btn of document.querySelectorAll('[data-panel-key]')) {
+    btn.addEventListener('click', () => renderPanel(btn.dataset.panelKey));
+  }
+  renderPanel('music');
+
+  const pages = [...document.querySelectorAll('[data-page]')];
+  const navButtons = [...document.querySelectorAll('[data-page-btn]')];
+
+  function showPage(name) {
+    for (const page of pages) page.hidden = page.dataset.page !== name;
+    for (const btn of navButtons) {
+      btn.setAttribute('aria-current', btn.dataset.pageBtn === name ? 'page' : 'false');
+    }
+    if (name === 'panels') renderPanel(currentPanel);
+  }
+
+  for (const btn of navButtons) {
+    btn.addEventListener('click', () => {
+      const name = btn.dataset.pageBtn;
+      location.hash = name;
+      showPage(name);
+    });
+  }
+
+  window.addEventListener('hashchange', () => {
+    const name = location.hash.slice(1);
+    if (pages.some((page) => page.dataset.page === name)) showPage(name);
+  });
+
+  const initial = location.hash.slice(1);
+  showPage(pages.some((page) => page.dataset.page === initial) ? initial : 'compare');
 
   for (const btn of document.querySelectorAll('[data-theme-btn]')) {
     btn.addEventListener('click', () => {

@@ -1,4 +1,4 @@
-import { iconSprite, pill } from './views';
+import { iconSprite, pill } from './ui';
 
 document.body.insertAdjacentHTML('afterbegin', iconSprite());
 
@@ -6,11 +6,8 @@ const app = document.querySelector<HTMLElement>('#app');
 
 if (app) {
   app.innerHTML = pill({
-    size: 'idle',
     state: 'idle',
-    title: 'Beam',
-    artist: 'Alt+Space',
-    mascot: 'idle'
+    title: 'Beam'
   });
 }
 

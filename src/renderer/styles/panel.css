@@ -1,0 +1,160 @@
+/* ---------- panel shell ---------- */
+
+.panel {
+  width: 100%;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  border-radius: var(--r-panel);
+  background: var(--card);
+  border: 1px solid var(--border);
+  box-shadow: var(--shadow-panel);
+  color: var(--card-foreground);
+  overflow: hidden;
+}
+
+.tabs {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  height: 40px;
+  padding: 0 8px;
+  flex: none;
+  border-bottom: 1px solid var(--border);
+}
+
+.tab {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  height: 32px;
+  padding: 0 8px;
+  border: 0;
+  border-radius: var(--r-control);
+  background: none;
+  font-family: inherit;
+  font-size: 12px;
+  color: var(--muted-foreground);
+  cursor: default;
+  transition: background 120ms var(--ease), color 120ms var(--ease), transform 120ms var(--ease);
+}
+
+.tab svg {
+  width: 14px;
+  height: 14px;
+}
+
+.tab:hover {
+  background: var(--accent);
+  color: var(--accent-foreground);
+}
+
+.tab:active {
+  transform: scale(0.97);
+}
+
+.tab[aria-selected='true'] {
+  background: var(--muted);
+  color: var(--foreground);
+}
+
+.tab.settings {
+  margin-left: auto;
+  padding: 0 6px;
+}
+
+.tab:focus-visible {
+  outline: 2px solid var(--ring);
+  outline-offset: 1px;
+}
+
+.panel-body {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 8px;
+  min-height: 0;
+}
+
+.panel-empty {
+  gap: 8px;
+}
+
+.panel-empty-content {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  text-align: center;
+  min-height: 0;
+}
+
+.panel-title {
+  font-size: 15px;
+  font-weight: 600;
+  letter-spacing: -0.01em;
+}
+
+.panel-sub {
+  font-size: 12px;
+  color: var(--muted-foreground);
+  line-height: 1.4;
+}
+
+.panel-meta {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.mascot-large {
+  width: 48px;
+  height: 48px;
+  display: block;
+}
+
+.art {
+  width: 100%;
+  height: 148px;
+  flex: none;
+  display: block;
+  object-fit: cover;
+  border-radius: 0 0 var(--r-card) var(--r-card);
+  border: 0;
+  border-bottom: 1px solid var(--border);
+  background: var(--secondary);
+}
+
+.art-fallback {
+  display: grid;
+  place-items: center;
+}
+
+.panel-music {
+  padding: 0;
+  gap: 0;
+  flex-direction: row;
+}
+
+.panel-music .art {
+  width: 148px;
+  height: 100%;
+  flex: none;
+  object-fit: cover;
+  border-radius: 0;
+  border: 0;
+  border-right: 1px solid var(--border);
+}
+
+.panel-music-content {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  gap: 8px;
+  padding: 8px;
+  min-height: 0;
+}

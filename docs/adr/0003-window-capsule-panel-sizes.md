@@ -1,0 +1,3 @@
+# Fixed rest window, content-sized open window
+
+The 800×60 window stretched the capsule across the screen, and the 360×460 panel left dead space. We use a 184×44 rest window with a 104×32 idle capsule and a 128×32 hover capsule; the capsule grows 24px inside the fixed window and the window never resizes. The playing state is 176×32; the timer/done are 132; the missing state is 140. A click opens the same window at 428×308 with a 420×300 panel and a 4px shadow margin, anchored bottom-center. Radii are 6 micro, 8 control, 10 card/art, 14 panel, and 999 capsule/switch. The panel body padding is 8; buttons and tabs are 32; there is no footer. The music art sits 148px on the left. The preview sizes must match these values.

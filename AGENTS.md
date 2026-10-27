@@ -6,7 +6,7 @@
 Beam is an offline Windows 11 floating pill that gives 1-click media controls, a file drop shelf, a countdown timer, and a month calendar. No cloud, no accounts, no network.
 
 ## 2. Stack
-- Electron + TypeScript + Vite, exact-pinned. Renderer sandboxed, contextIsolation on, nodeIntegration off.
+- Electron + TypeScript + Vite, exact-pinned. Renderer sandboxed, contextIsolation on, nodeIntegration off. The renderer is vanilla TypeScript with shadcn-style tokens and Lucide; no React or Tailwind.
 - `native/BeamBridge/` — windowless C# .NET 10 helper, self-contained single-file publish. Owns SMTC, clipboard, drag-out, fullscreen detection.
 - No database, no server, no TCP ports. Main ⇄ helper is stdio JSON lines only.
 - Settings live in `%APPDATA%\Beam\settings.json`.
@@ -17,7 +17,7 @@ Beam is an offline Windows 11 floating pill that gives 1-click media controls, a
 - Run: `npm start`
 - Helper build: `dotnet publish native/BeamBridge -r win-x64 --self-contained`
 - Typecheck: `npx tsc --noEmit`
-- Verification runner: `.\verify.ps1` (added at task 8.1; run via `powershell.exe` from Git Bash)
+- Verification runner: `.\verify.ps1` (created at 0.1; run via `powershell.exe` from Git Bash)
 - Done check = `.\verify.ps1` exits 0 with pasted raw terminal output.
 
 ## 4. Hard Rules & Invariants (What the AI must ALWAYS do)
@@ -26,7 +26,7 @@ Beam is an offline Windows 11 floating pill that gives 1-click media controls, a
 - Keep the renderer untrusted. Everything touching Win32 goes through the helper.
 - Read `ARCHITECTURE.md` before touching the window, IPC, or helper seams.
 - Follow `DESIGN.md` tokens exactly. No invented colors, radii, or shadows.
-- Review app UI in `showcase/app-preview.html` only. Every phase adds its states to that same file. Never create a second preview file, a new mock, or a per-session HTML file — extend the canonical one. Open it with `npm run ui`; it imports the app's shared views, so it must be served, not opened from disk.
+- Review app UI in `showcase/app-preview.html` only. Every phase adds its states to that same file. Never create a second preview file, a new mock, or a per-session HTML file — extend the canonical one. Open it with `npm run ui`; it imports the shared UI from `src/renderer/ui/`, so it must be served, not opened from disk.
 - Append a 4-line work card (Problem / Change / Proof / Still broken) to `JOURNAL.md` for every task.
 
 ## 5. What the AI must NEVER do
@@ -44,7 +44,7 @@ Beam is an offline Windows 11 floating pill that gives 1-click media controls, a
 ## 7. Folder Map
 - `src/main/`: app lifecycle, window geometry, tray, hotkey, settings, helper client.
 - `src/preload/`: the only bridge exposed to the renderer.
-- `src/renderer/`: pill, panel, tabs, all visuals.
+- `src/renderer/`: `ui/` components (one capsule, one panel shell, per-tab bodies), `styles/` split CSS entry, all visuals.
 - `src/shared/`: IPC channel names, payload types, helper protocol types.
 - `native/BeamBridge/`: C# helper. No UI.
 - `assets/mascot/`: locked Puffy Chubby Star SVG suite.

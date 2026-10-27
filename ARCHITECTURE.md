@@ -51,7 +51,10 @@ D:\Beam
 ├── vite.config.ts
 ├── electron-builder.yml
 ├── verify.ps1                the one proof command
+├── GLOSSARY.md               UI vocabulary
+├── docs/adr/                 0001–0005 UI decisions
 ├── PRD.md  DESIGN.md  ARCHITECTURE.md  TASKS.md  AGENTS.md  JOURNAL.md
+├── scripts/generate-icons.mjs
 ├── src/
 │   ├── main/
 │   │   ├── index.ts          app lifecycle, single-instance lock
@@ -62,15 +65,27 @@ D:\Beam
 │   │   └── bridge.ts         spawn helper, JSON-lines client, restart on crash
 │   ├── preload/index.ts      contextBridge surface (the only door)
 │   ├── renderer/
-│   │   ├── pill.ts           resting bar, hover controls, idle dim, countdown
-│   │   ├── panel.ts          expand/collapse, tab host, contextual tab
-│   │   └── tabs/{music,files,timer,calendar,settings}.ts
+│   │   ├── ui/
+│   │   │   ├── index.ts      public view API
+│   │   │   ├── pill.ts       one capsule, state data
+│   │   │   ├── panel.ts      one panel shell + tab host
+│   │   │   ├── panel-body.ts tabpanel wrapper
+│   │   │   ├── icons.ts      Lucide sprite + icon()
+│   │   │   ├── icons.generated.ts
+│   │   │   ├── mascots.ts    original mascot map
+│   │   │   ├── html.ts       escape helper
+│   │   │   ├── types.ts      Tab
+│   │   │   └── tabs/         music, files, timer, calendar, settings
+│   │   ├── styles.css        CSS entry (@import)
+│   │   ├── styles/           tokens, base, pill, panel, controls, tabs
+│   │   └── renderer.ts
 │   └── shared/
 │       ├── ipc.ts            channel names + payload types
 │       └── bridge.ts         helper command/event types
 ├── native/BeamBridge/        C# .NET console project
 ├── assets/
 │   ├── mascot/*.svg          shipped
+│   ├── fonts/                InterVariable.woff2 + OFL.txt
 │   ├── tray.ico
 │   └── chime.wav             generated, committed
 └── showcase/                 brand lab, never shipped
@@ -178,7 +193,7 @@ helper's WinEventHook sees a foreground change or the foreground window resize/m
 | 2026-10-27 | Helper over stdio JSON lines | A local port would read as a network surface |
 | 2026-10-27 | Hotkey is `Alt+Space`, rebindable | User choice; 2 keys, matches PRD |
 | 2026-10-27 | Fallback `Ctrl+Shift+Space` if registration fails | `Alt+Space` is the Windows window-menu key and another app may own it |
-| 2026-10-27 | Fixed-size window, hover controls fade in | Resizing on hover flickers on Windows |
+| 2026-10-27 | Fixed-size window; the capsule grows 104→128 on hover | Visible growth inside the window; an OS resize flickers on Windows |
 | 2026-10-27 | Last-touched media session wins | Windows can expose Spotify and a browser at once |
 | 2026-10-27 | Timer beats music when both are active | PRD's contextual rule needs one winner |
 | 2026-10-27 | One timer at a time, no pause, cancel allowed, max 999 min | Smallest thing that satisfies the PRD |
@@ -191,6 +206,7 @@ helper's WinEventHook sees a foreground change or the foreground window resize/m
 | 2026-10-27 | RAM gate runs immediately after scaffolding (task 0.2), before the helper | Failing the budget after the native spike would waste the hardest work; cheapest point to swap stacks is at the empty window |
 | 2026-10-27 | Electron is confirmed, WinUI is the fallback if the gate fails | User chose Electron; no rewrite until the 60s measurement says otherwise |
 | 2026-10-27 | Hardware acceleration is disabled at startup | GPU on measured 139.2 MB private, over the 130 MB gate; off measured 86.4–86.5 MB with 0.017–0.047% CPU and a verified transparent pill. Re-measure when the panel and helper land. |
+| 2026-10-27 | Renderer UI is vanilla shadcn-style, not React shadcn/ui | Avoids React/Tailwind/Radix in a 184×44 utility; keeps the Electron/TS stack. ADR-0004. |
 | 2026-10-27 | `Alt+Space` stays the default despite stealing the system window menu | Explicit user choice |
 | 2026-10-27 | Helper ships self-contained, no .NET prerequisite | Must run on a fresh Windows install |
 | 2026-10-27 | Pill starts on the primary monitor, follows across monitors when dragged, snaps back to primary if that monitor disappears | Prevents an offscreen window |
@@ -207,8 +223,10 @@ helper's WinEventHook sees a foreground change or the foreground window resize/m
 | 2026-10-27 | Clipboard stays helper-owned; helper crash breaks paste until restart | Moving `CF_HDROP` ownership to main means reimplementing the same thing; test the restart instead |
 | 2026-10-27 | Renderer picks the contextual tab; `beam:tab:force` removed | The renderer already holds music and timer state; a second decider causes flicker |
 | 2026-10-27 | App ships light and dark themes, toggled in settings | User request 2026-10-27; light palette is the Notion set, dark palette is the existing glass set |
-| 2026-10-27 | Pill is a transparent CSS capsule, not Windows acrylic | Tested 2026-10-27: acrylic paints the window rectangle and ignores the CSS pill radius; at 36px tall the capsule shape matters more than blur |
+| 2026-10-27 | Pill is a transparent CSS capsule, not Windows acrylic | Tested 2026-10-27: acrylic paints the window rectangle and ignores the CSS pill radius; at 32px tall the capsule shape matters more than blur |
 | 2026-10-27 | Marketing website out of v1 | DESIGN.md specs one; PRD does not ask for one |
+
+UI decisions: ADR-0001 (component boundaries), ADR-0002 (original mascot), ADR-0003 (window, capsule, and panel sizes), ADR-0004 (vanilla shadcn-style), ADR-0005 (capsule interaction).
 
 ## 8. Open Decisions
 
