@@ -14,63 +14,69 @@ internal static class Program
         Console.SetOut(new StreamWriter(Console.OpenStandardOutput(), new UTF8Encoding(false)) { AutoFlush = true });
         Console.SetError(new StreamWriter(Console.OpenStandardError(), new UTF8Encoding(false)) { AutoFlush = true });
 
-        while (Console.In.ReadLine() is { } line)
+        var watcher = new MusicWatcher();
+        try
         {
-            if (string.IsNullOrWhiteSpace(line))
-            {
-                continue;
-            }
+            watcher.StartAsync().GetAwaiter().GetResult();
+        }
+        catch (Exception ex)
+        {
+            Protocol.Log($"smtc unavailable: {ex.Message}");
+        }
 
-            JsonObject? request;
-            try
+        try
+        {
+            while (Console.In.ReadLine() is { } line)
             {
-                request = JsonNode.Parse(line) as JsonObject;
-            }
-            catch (JsonException)
-            {
-                Log("dropped malformed line");
-                continue;
-            }
+                if (string.IsNullOrWhiteSpace(line))
+                {
+                    continue;
+                }
 
-            if (request is null)
-            {
-                Log("dropped non-object line");
-                continue;
-            }
+                JsonObject? request;
+                try
+                {
+                    request = JsonNode.Parse(line) as JsonObject;
+                }
+                catch (JsonException)
+                {
+                    Protocol.Log("dropped malformed line");
+                    continue;
+                }
 
-            if (request["cmd"] is not JsonValue cmdValue || !cmdValue.TryGetValue<string>(out var cmd))
-            {
-                Log("dropped request without cmd");
-                continue;
-            }
+                if (request is null)
+                {
+                    Protocol.Log("dropped non-object line");
+                    continue;
+                }
 
-            switch (cmd)
-            {
-                case "ping":
-                    Respond(request["id"]?.DeepClone());
-                    break;
-                default:
-                    Log($"dropped unknown cmd {cmd}");
-                    break;
+                if (request["cmd"] is not JsonValue cmdValue || !cmdValue.TryGetValue<string>(out var cmd))
+                {
+                    Protocol.Log("dropped request without cmd");
+                    continue;
+                }
+
+                switch (cmd)
+                {
+                    case "ping":
+                        Protocol.Emit(new JsonObject
+                        {
+                            ["id"] = request["id"]?.DeepClone(),
+                            ["pong"] = true,
+                            ["version"] = Version
+                        });
+                        break;
+                    default:
+                        Protocol.Log($"dropped unknown cmd {cmd}");
+                        break;
+                }
             }
+        }
+        finally
+        {
+            watcher.Dispose();
         }
 
         return 0;
-    }
-
-    private static void Respond(JsonNode? id)
-    {
-        var reply = new JsonObject
-        {
-            ["id"] = id,
-            ["pong"] = true,
-            ["version"] = Version
-        };
-        Console.Out.WriteLine(reply.ToJsonString());
-    }
-
-    private static void Log(string message)
-    {
-        Console.Error.WriteLine($"[beam] {message}");
     }
 }

@@ -2,6 +2,8 @@ import { spawn, type ChildProcess } from 'node:child_process';
 
 type HelperReply = { id: number; pong?: boolean; version?: string };
 
+export type HelperEvent = { evt: string; payload?: unknown };
+
 type Pending = {
   resolve: (reply: HelperReply) => void;
   reject: (error: Error) => void;
@@ -13,7 +15,10 @@ export class Bridge {
   private nextId = 1;
   private readonly pending = new Map<number, Pending>();
 
-  constructor(private readonly exePath: string) {}
+  constructor(
+    private readonly exePath: string,
+    private readonly onEvent: (event: HelperEvent) => void = () => {}
+  ) {}
 
   start(): void {
     if (this.child) return;
@@ -52,12 +57,22 @@ export class Bridge {
     return reply.version ?? 'unknown';
   }
 
-  stop(): void {
+  stop(): Promise<void> {
     const child = this.child;
-    if (!child) return;
+    if (!child) return Promise.resolve();
     this.child = null;
-    child.stdin?.end();
-    child.kill();
+    return new Promise((resolve) => {
+      const timer = setTimeout(() => {
+        child.kill();
+        resolve();
+      }, 1500);
+      timer.unref();
+      child.once('exit', () => {
+        clearTimeout(timer);
+        resolve();
+      });
+      child.stdin?.end();
+    });
   }
 
   private send(cmd: string): Promise<HelperReply> {
@@ -80,21 +95,30 @@ export class Bridge {
       newline = this.buffer.indexOf('\n');
       if (!line) continue;
 
-      let reply: HelperReply;
+      let message: HelperReply & Partial<HelperEvent>;
       try {
-        reply = JSON.parse(line) as HelperReply;
+        message = JSON.parse(line) as HelperReply & Partial<HelperEvent>;
       } catch {
         console.error('[bridge] dropped malformed line');
         continue;
       }
 
-      const pending = this.pending.get(reply.id);
+      if (typeof message.id !== 'number') {
+        if (typeof message.evt === 'string') {
+          this.onEvent({ evt: message.evt, payload: message.payload });
+        } else {
+          console.error('[bridge] dropped unknown reply');
+        }
+        continue;
+      }
+
+      const pending = this.pending.get(message.id);
       if (!pending) {
         console.error('[bridge] dropped unknown reply');
         continue;
       }
-      this.pending.delete(reply.id);
-      pending.resolve(reply);
+      this.pending.delete(message.id);
+      pending.resolve(message);
     }
   }
 }

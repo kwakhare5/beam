@@ -1,6 +1,17 @@
 import { app, BrowserWindow } from 'electron';
 import { join } from 'node:path';
-import { Bridge } from './bridge';
+import { Bridge, type HelperEvent } from './bridge';
+
+type MusicPayload = {
+  app: string;
+  title: string;
+  artist: string;
+  album: string;
+  artPath: string | null;
+  playing: boolean;
+  positionMs: number;
+  durationMs: number;
+};
 
 app.disableHardwareAcceleration();
 
@@ -10,7 +21,20 @@ if (!gotLock) {
   app.quit();
 } else {
   let win: BrowserWindow | null = null;
-  const bridge = new Bridge(join(app.getAppPath(), 'native', 'BeamBridge', 'dist', 'BeamBridge.exe'));
+  const onHelperEvent = (event: HelperEvent): void => {
+    if (event.evt !== 'music.changed') return;
+    const music = event.payload as MusicPayload | null;
+    if (!music) {
+      console.log('[music] none');
+      return;
+    }
+    console.log(`[music] ${music.title} - ${music.artist} (${music.app})`);
+    console.log(`[music] art ${music.artPath ?? 'none'}`);
+  };
+  const bridge = new Bridge(
+    join(app.getAppPath(), 'native', 'BeamBridge', 'dist', 'BeamBridge.exe'),
+    onHelperEvent
+  );
 
   function createWindow(): void {
     win = new BrowserWindow({
@@ -57,8 +81,13 @@ if (!gotLock) {
     createWindow();
   });
 
-  app.on('will-quit', () => {
-    bridge.stop();
+  let quitting = false;
+
+  app.on('will-quit', (event) => {
+    if (quitting) return;
+    quitting = true;
+    event.preventDefault();
+    void bridge.stop().finally(() => app.quit());
   });
 
   app.on('window-all-closed', () => {
