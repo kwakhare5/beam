@@ -1,8 +1,8 @@
-import { icon } from '../icons';
-import { esc } from '../html';
-import { MASCOTS } from '../mascots';
+import { icon } from '../../shared/icons';
+import { esc } from '../../shared/html';
+import { MASCOTS } from '../../shared/mascots';
 import { panelBody } from '../panel-body';
-import { middleTruncate } from '../format';
+import { middleTruncate } from '../../shared/format';
 
 export interface FileRow {
   name: string;
@@ -25,14 +25,13 @@ export function filesPanel(rows: FileRow[], copied = false, active = true): stri
     .map((row) => {
       const rowIcon = row.missing ? 'alert' : row.kind === 'folder' ? 'folder' : 'file';
       const truncatedName = middleTruncate(row.name, 26);
-      const pipClass = row.missing ? 'red' : 'green';
-      const badge = row.missing
-        ? '<span class="pill-badge danger" title="File moved or deleted">Missing</span>'
-        : `<span class="pill-badge">${esc(row.kind === 'folder' ? 'Folder' : row.size)}</span>`;
+      const meta = row.missing
+        ? '<span class="row-meta danger" title="File moved or deleted">Missing</span>'
+        : `<span class="row-meta">${esc(row.kind === 'folder' ? 'Folder' : row.size)}</span>`;
       const copy = row.missing
         ? `<button type="button" class="row-action" aria-label="Copy ${esc(row.name)}" disabled>${icon('copy')}</button>`
         : `<button type="button" class="row-action" aria-label="Copy ${esc(row.name)}">${icon('copy')}</button>`;
-      return `<div class="row${row.missing ? ' missing' : ''}" role="listitem"><div class="row-icon-box">${icon(rowIcon)}<span class="status-pip ${pipClass}"></span></div><span class="name" title="${esc(row.name)}">${esc(truncatedName)}</span>${badge}<div class="row-actions">${copy}<button type="button" class="row-action" aria-label="Remove ${esc(row.name)}">${icon('x')}</button></div></div>`;
+      return `<div class="row${row.missing ? ' missing' : ''}" role="listitem"><div class="row-icon-box">${icon(rowIcon)}</div><span class="name" title="${esc(row.name)}">${esc(truncatedName)}</span>${meta}<div class="row-actions">${copy}<button type="button" class="row-action" aria-label="Remove ${esc(row.name)}">${icon('x')}</button></div></div>`;
     })
     .join('');
 

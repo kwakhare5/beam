@@ -5,7 +5,7 @@ The shared language for the Beam desktop surface. Use these terms in code, docs,
 ## Surfaces
 
 **Capsule**:
-The visible surface: a 136×32 bar for idle, timer, done, files and drag; music rests at 100×32 and grows to 136×32 on hover or focus. Idle centers the master mark; music shows the title at rest; timer shows its label and digits.
+The visible surface: a 100×32 bar at rest for idle, playing, paused, timer, done, and files; drag is 136×32. Music, timer, and done grow to 136×32 on hover or focus. Idle centers the master mark and a muted label at 70% star opacity; music shows the title; timer shows digits only; done shows a gold check; files shows a count.
 _Avoid_: pill, bar, bubble
 
 **Rest window**:
@@ -25,8 +25,12 @@ The fill, 1px border, and shadow shared by the capsule and the panel.
 _Avoid_: background, chrome
 
 **Hover emphasis**:
-At idle the label is muted and returns to full ink on hover while the border strengthens. On music the pill grows from 100 to 136, the title fades out, and the transports fade in. The window never resizes.
+Hover brightens the border and reveals actions. The idle label and star brighten in place at 100. Music, timer, and done grow from 100 to 136: music fades star and title for transports, timer adds cancel, done replaces its check with `Done` and dismiss. Idle and files never grow. The window never resizes.
 _Avoid_: hover growth, hover resize, OS resize
+
+**Hover action**:
+The single 28px icon button revealed on hover: cancel on timer, dismiss on done. Music reveals three 28px transports instead. Idle, files, and drag have no hover action.
+_Avoid_: hover button, hidden control
 
 ## Structure
 
@@ -67,7 +71,7 @@ Shifting the open window coordinates to preserve at least 8px margin from displa
 _Avoid_: screen padding, window snapping
 
 **Title / transport swap**:
-The playing capsule shows the track title at rest and swaps it for Previous / Play-Pause / Next on hover or focus while growing from 100 to 136 wide.
+The playing capsule shows the track title at rest in a 50px slot and swaps the star and title for Previous / Play-Pause / Next on hover or focus while growing from 100 to 136 wide.
 _Avoid_: dynamic width, hover growth, text stretching
 
 **Middle-truncation**:
@@ -101,8 +105,12 @@ The single canonical Puffy Chubby Star mark (`beam-mascot.svg`), used at 24px in
 _Avoid_: logo, avatar, fake stars
 
 **Flat surface**:
-A surface with at most one fill or border of its own and no filled parent behind it: no tab pill inside a track, no icon box inside a row. State is shown with color, spacing, and 1px dividers.
+A surface with at most one solid fill or border of its own and no filled parent behind it: no tab pill inside a track, no icon box inside a row, no chip around row metadata. State is shown with color, spacing, and 1px dividers.
 _Avoid_: nested card, double box, track
+
+**Solid fill**:
+Every fill is opaque: `--control`, `--control-hover`, `--surface-hover`, `--card`, or `--primary`. No translucent overlay, glass chip, gradient, inner rim, or glow. Row metadata is plain text, not a badge.
+_Avoid_: glass fill, translucent wash, frosted chip
 
 **Mini mark**:
 A rejected custom glyph that replaced the mascot in the capsule. Do not use.

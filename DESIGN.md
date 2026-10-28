@@ -23,18 +23,16 @@ Defined in [`src/renderer/styles/tokens.css`](file:///d:/Beam/src/renderer/style
 |---|---|---|
 | `--border` | `rgba(255, 255, 255, 0.08)` | 1px border on capsule and panel |
 | `--card` | `#1c1c1e` | Solid dark surface |
-| `--secondary` | `rgba(255, 255, 255, 0.04)` | Faint hover wash, art fallback |
-| `--muted` | `rgba(255, 255, 255, 0.08)` | Chips, buttons, input fills |
+| `--control` | `#2c2c2e` | Solid control fill: buttons, chips, switches, inputs |
+| `--control-hover` | `#3a3a3c` | Solid control hover |
+| `--surface-hover` | `#242426` | Solid row and tab hover |
 | `--foreground` | `#ededed` | Primary text |
 | `--muted-foreground` | `#888888` | Subtitles, metadata, inactive tabs |
-| `--accent` | `rgba(255, 255, 255, 0.12)` | Control hover wash |
 | `--primary` | `#ffaa00` | Brand gold: primary action, selected tab text |
 | `--primary-text` | `#ffaa00` | Gold text: timer digits, done check, today |
-| `--destructive` | `#ef4444` | Missing files, cancel actions |
+| `--destructive` | `#ff453a` | Missing files, cancel text (5:1 on the shell) |
 | `--pip-green` | `#22c55e` | Playing/present status dot |
 | `--pip-amber` | `#f59e0b` | Paused status dot |
-| `--pill-badge` | `rgba(255, 255, 255, 0.06)` | Size and count badges |
-| `--keycap` | `rgba(255, 255, 255, 0.08)` | `Alt` / `Space` keycaps |
 | `--shadow-pill` | `0 1px 2px rgba(0,0,0,.24), 0 2px 4px rgba(0,0,0,.18)` | Capsule lift inside the 4px rest margin |
 | `--shadow-panel` | `0 4px 16px -2px rgba(0,0,0,.45), 0 1px 3px rgba(0,0,0,.3)` | Panel shadow inside the 16px open margin |
 | `--space-1` … `--space-4` | `4 / 8 / 12 / 16px` | The only spacing steps |
@@ -49,23 +47,23 @@ Light overrides every color token in `tokens.css:41-67`. The key differences:
 |---|---|---|
 | `--card` | `#ffffff` | Solid light shell |
 | `--border` | `rgba(0, 0, 0, 0.08)` | Hairline border |
-| `--secondary` | `rgba(0, 0, 0, 0.03)` | Faint hover wash |
+| `--control` | `#ececec` | Solid light control fill |
+| `--control-hover` | `#e0e0e0` | Solid light control hover |
+| `--surface-hover` | `#f5f5f5` | Solid light row and tab hover |
 | `--foreground` | `#111111` | Primary text |
 | `--muted-foreground` | `#6b6b6b` | Secondary text |
 | `--primary-text` | `#8a5a00` | High-contrast gold text |
 | `--destructive` | `#d92d20` | Missing files |
-| `--pill-badge` | `rgba(0, 0, 0, 0.04)` | Badges |
-| `--keycap` | `rgba(0, 0, 0, 0.08)` | Keycaps |
 
 ## 3. Window & Surface Geometry
 
 | | Rest | Hover | Open |
 |---|---|---|---|
 | **Window** | 144×44 | 144×44 | 452×332 |
-| **Visible Surface** | 136×32 capsule · music 100 | 136×32 capsule · music 136 | 420×300 panel |
+| **Visible Surface** | 100×32 capsule · drag 136 | 136×32 capsule · music, timer, done | 420×300 panel |
 
-- **Music Growth:** music rests at `100×32` and grows to `136×32` on hover or focus over 120ms; every other state is `136×32`. There is one `144×44` window for all states, so the window never resizes on hover; the pill grows inside it, centered.
-- **Zero-Flicker Hover:** Hover never resizes the window. It brightens the shell and border and, on music, grows the pill and swaps the title for transports.
+- **Rest & Hover:** every state rests at `100×32`; music, timer, and done grow to `136×32` on hover or focus over 120ms. Idle and files stay `100×32` and only brighten; drag is `136×32` at rest. There is one `144×44` window for all states, so the window never resizes on hover; the pill grows inside it, centered.
+- **Zero-Flicker Hover:** Hover never resizes the window. It brightens the shell and border, grows the three states that have more to show, and swaps the resting fact for their actions. Nothing grows when there is nothing new to reveal.
 - **Smooth Panel Expansion:** On click, the window expands to `452×332` with a 150ms ease-out. The OS window resizes immediately while GPU-accelerated CSS transforms handle the 150ms scale/fade expansion internally; on collapse, CSS animates out over 150ms before the window snaps back to `144×44`.
 - **Screen-Aware Vertical Anchoring:** The panel anchors bottom-center and grows upward when the capsule is in the lower half of the display, and anchors top-center and grows downward when in the upper half.
 - **Edge Clamping:** Horizontal coordinates clamp to keep at least 8px margin from display boundaries.
@@ -74,7 +72,8 @@ Light overrides every color token in `tokens.css:41-67`. The key differences:
 - **Shadow Margins:** 4px horizontal / 6px vertical at rest; 16px on all sides when open, so the panel shadow has room and the margin still counts as an outside click.
 
 ## 4. Radii & Component Hierarchy
-- **One Fill Level:** every surface is flat by default. Never put a filled or bordered box inside another one: no tab pill inside a track, no icon box inside a row. State comes from color, spacing, and 1px dividers. A control may carry one fill or one border, never both a parent fill and its own.
+- **One Fill Level:** every surface is flat by default. Never put a filled or bordered box inside another one: no tab pill inside a track, no icon box inside a row, no chip around row metadata. State comes from color, spacing, and 1px dividers. A control may carry one fill or one border, never both a parent fill and its own.
+- **Solid Fills:** every fill is opaque: `--control`, `--control-hover`, `--surface-hover`, `--card`, or `--primary`. No translucent overlays, no glass chips, no gradient, no inner rim.
 - **Panel Shell:** `16px` (`--r-panel`)
 - **Cards & Album Art:** `12px` (`--r-card`)
 - **Controls, Buttons & Chips:** `8px` (`--r-control`)
@@ -82,41 +81,42 @@ Light overrides every color token in `tokens.css:41-67`. The key differences:
 - **Pills, Capsules & Switches:** `999px` (`--r-pill`)
 
 ## 5. Capsule Specifications
-- **Geometry:** `136×32` for idle, timer, done, files and drag; music `100×32` at rest and `136×32` on hover or focus. Radius 999, padding `0 8px`, 1px hairline border, shell `#1c1c1e`. One `144×44` window for every state.
-- **Mascot Mark:** 24px master mark followed by an 8px gap. Static; no hover transform.
-- **Title / Transport Swap:** The slot is 50px in music rest (30px when the paused glyph is present) and 86px on hover; 88px in the other 136px states. At rest the title fills it and ellipsizes when the name is longer. On hover or focus, the title fades out over 120ms and three 28px transport buttons fade in, centered in the same slot.
-- **Done:** the capsule reads `Done`, a 16px gold check fills the right slot, and the border turns gold. No digits and no glow.
-- **Paused:** a 12px play glyph sits outside the title slot; the title is muted.
-- **Shelf Count:** a non-empty shelf shows its count (`5 files`). A missing file turns the mascot pip red; the row carries the name and `Missing` badge. An empty shelf falls back to idle, so there is no `0 files` state.
+- **Geometry:** `100×32` at rest for idle, playing, paused, timer, done, and files; drag is `136×32`. Music, timer, and done grow to `136×32` on hover or focus. Radius 999, padding `0 8px`, 1px hairline border, shell `#1c1c1e`. One `144×44` window for every state.
+- **Mascot Mark:** 24px master mark followed by an 8px gap. At idle rest it dims to 70% and returns to full on hover. It fades out on music and done hover so the actions keep the 8px edge padding. Static otherwise; no hover transform.
+- **Hover Reveal:** The resting pill shows one fact in a 50px slot: a title, digits, a check, or a count. Music and paused swap the star and title for three 28px transports at `136×32`; their overlay spans the full pill, leaving 18px on each side. Timer keeps its digits and reveals a 28px cancel at the slot end (the slot grows from 50 to 86). Done swaps the 16px check for `Done` plus a 28px dismiss. Idle and files reveal nothing and keep `100×32`.
+- **Done:** at rest the capsule shows the star and a centered 16px gold check with a gold 1px border. On hover or focus the check fades and `Done` plus a 28px dismiss fade in. No digits and no glow.
+- **Paused:** a 12px play glyph sits outside the title slot, leaving 30px for the muted title. On hover the glyph and title fade out for the transports.
+- **Shelf Count:** a non-empty shelf shows its count (`5 files`). A missing file turns the mascot pip red; the row carries the name and red `Missing` text. An empty shelf falls back to idle, so there is no `0 files` state.
 - **Dual-State Collision (Timer + Music):** Countdown takes capsule prominence (`Focus` plus digits) with a 6px gold media pip on the mascot indicating active audio.
 - **Precedence:** drag, then timer, then music, then files, then idle.
 
 | State | Width | Line | Right slot | Extra |
 |---|---|---|---|---|
-| Idle | 136px | `Beam` | — | centered, muted label |
-| Playing | 100 → 136 | track title (50px rest, 86px hover) | — | grows on hover/focus; transports replace title |
-| Paused | 100 → 136 | track title, muted (30px rest, 86px hover) | play glyph | grows on hover/focus; transports replace title |
-| Timer | 136px | `Focus` | `18:24` | tabular digits; media pip when music plays |
-| Done | 136px | `Done` | gold check | gold 1px border |
-| Files | 136px | `5 files` | — | red pip when a file is missing |
+| Idle | 100px | `Beam` | — | centered; star 70%, label muted; hover brightens both |
+| Playing | 100 → 136 | track title (50px rest) | — | hover: star and title fade, transports fade in |
+| Paused | 100 → 136 | track title, muted (30px rest) | play glyph | hover: glyph and title fade, transports fade in |
+| Timer | 100 → 136 | digits only | 28px cancel on hover | tabular digits; media pip when music plays |
+| Done | 100 → 136 | gold check | `Done` + 28px dismiss on hover | gold 1px border |
+| Files | 100px | `5 files` | — | no growth; red pip when a file is missing |
 | Drag | 136px | `+3 files` | — | dashed gold border |
 
 ## 6. Panel Specifications
 - **Panel Dimensions:** `420×300` body inside a `452×332` open window. Radius 16px, 1px border, no footer, 8px body padding.
-- **Tab Bar (40px):** Four equal tabs, flat: no track background, no padding box, no selected fill. Tabs are 28px tall with 14px Lucide icons and 12px labels. The selected tab is gold icon + gold label at weight 500; hover is a faint `--secondary` wash on the tab itself. The settings icon sits at the far right with the same treatment. Tabs are keyboard-navigable (arrows, Home, End).
-- **Music Tab:** 148×148 square art on the left, framed as an inset card (`12px` radius, 1px border). Right column: title and artist with a status pip, a read-only position bar with elapsed/total in 11px tabular digits, and an elevated 38px circular primary play/pause with 16px gap to 30px flanking controls. Empty and loading states use the mascot or skeleton lines.
-- **Files Shelf:** 36px rows separated by 1px dividers, with plain 14px status icons (no icon box), status pips (green present / red missing), 26-character middle-truncated filenames, right-aligned badges for size, `Folder`, or a danger `Missing` badge, and 24px copy/remove buttons that appear on hover or focus. Row hover is a faint `--secondary` wash. Five rows fit; more scroll. Pinned bottom actions: Copy All / Add / Clear All. The empty state is a dashed drop well with an Add files button.
+- **Tab Bar (40px):** Four equal tabs, flat: no track background, no padding box, no selected fill. Tabs are 28px tall with 14px Lucide icons and 12px labels. The selected tab is gold icon + gold label at weight 500; hover is a solid `--surface-hover` fill on the tab itself. The settings icon sits at the far right with the same treatment. Tabs are keyboard-navigable (arrows, Home, End).
+- **Music Tab:** 148×148 square art on the left with a `12px` radius and no border. Right column: title and artist with a status pip, a read-only position bar with elapsed/total in 11px tabular digits, and a solid 38px circular primary play/pause with 16px gap to 30px flanking controls. Empty and loading states use the mascot or skeleton lines.
+- **Files Shelf:** 36px flush rows separated by 1px dividers, with plain 14px status icons (no icon box, no pips), 26-character middle-truncated filenames, right-aligned 11px text for size, `Folder`, or red `Missing`, and 24px copy/remove buttons that appear on hover or focus. Row hover is a solid `--surface-hover` fill. Five rows fit; more scroll. Pinned bottom actions: solid gold Copy All, text Add, red text Clear All. The empty state is a dashed drop well with an Add files button.
 - **Timer Tab:** 28px preset chips; a custom 1–999 minute inline field; 40px digits; 12px note; Start in idle, Cancel in running, Start again and Dismiss in done.
 - **Calendar Tab:** Header with 28px left/right chevrons, month title, and Today. Seven columns; the first day of the week follows the Windows locale (Sunday fallback); two-letter locale weekday headers at 11px; always six week rows, padded with adjacent-month days, so the grid never jumps; today is gold.
-- **Settings Tab:** Five 44px rows separated by 1px dividers, no row gap: Start with Windows switch, toggle shortcut keycaps, chime volume with −/+ and a test button, Dark theme switch, Reset position. 36×20 switch, 20px keycaps, 28px steppers.
+- **Settings Tab:** Five 44px rows separated by 1px dividers, no row gap: Start with Windows switch, toggle shortcut keycaps, chime volume as plain 12px text with −/+ and a test button, Dark theme switch, Reset position. 36×20 switch, 20px keycaps, 28px steppers.
 
 ## 7. Motion, Typography & Code Architecture
 - **Font Stack:** Inter variable vendored in `assets/fonts/` (fallback `Segoe UI Variable Text`, `Segoe UI`, `sans-serif`). Tabular numerals for timer and position digits.
-- **Type Scale:** `11 / 12 / 13 / 15 / 40px` only. Capsule title 12/600, capsule digits 15/600, panel title 15/600, settings rows and calendar title 13, hints and badges 11, timer digits 40. No 10px text.
+- **Type Scale:** `11 / 12 / 13 / 15 / 40px` only. Capsule title 12/600, capsule digits 15/600, panel title 15/600, settings rows and calendar title 13, hints and row metadata 11, timer digits 40. No 10px text.
 - **Spacing Scale:** `4 / 8 / 12 / 16px` (`--space-1`…`--space-4`). One 8px gap between panel body blocks; list internals use 4px.
-- **Motion Scale:** 120ms hover and title/transport crossfade, 120ms music width growth, 150ms panel grow, 100ms press (`scale(0.96)`). Transitions animate opacity, transform, background, border-color, box-shadow, and the music capsule width; no other layout property animates. `prefers-reduced-motion` is honored.
+- **Motion Scale:** 120ms hover and content/action crossfade, 120ms width growth for music, timer, and done, 150ms panel grow, 100ms press (`scale(0.96)`). Transitions animate opacity, transform, background, border-color, box-shadow, the capsule width, and the timer action width; no other layout property animates. `prefers-reduced-motion` is honored.
 - **Public API:** `src/renderer/ui/index.ts` exporting pure HTML component functions (`pill`, `panel`, `iconSprite`, `middleTruncate`).
-- **Styles Architecture:** Split into `tokens.css`, `base.css`, `pill.css`, `panel.css`, `controls.css`, `tabs.css` under `src/renderer/styles/`.
+- **Code Architecture:** `ui/capsule/` owns the capsule, `ui/panel/` owns the shell and tab navigation, `ui/panel/tabs/` owns one module per tab, and `ui/shared/` owns escaping, formatting, icons, and the mascot path.
+- **Styles Architecture:** One file per component under `src/renderer/styles/`: `tokens.css`, `base.css`, `capsule.css`, `panel/shell.css`, `panel/body.css`, `controls/buttons.css`, `controls/fields.css`, `controls/indicators.css`, and one file per tab under `tabs/`.
 
 ---
 

@@ -4,7 +4,7 @@
 
 **Milestone:** a floating pill that reads Spotify, holds files, runs a timer, and passes `.\verify.ps1` with exit code 0.
 
-**Completed outside the phase order:** the app UI system, the canonical preview, the Compare page, the 420×300 landscape panel spec, the focus/cleanup pass (`JOURNAL` cards 21–35), the 2026-10-28 UI/UX cleanup (card 43), the one-width capsule + segmented tab redesign (card 44), the state identity + panel completeness pass (cards 45–54), the two-width capsule + flat surface pass (card 47), and the 100/136 music capsule pass (card 52). The app still runs only the idle capsule; phases below are still the ordered path.
+**Completed outside the phase order:** the app UI system, the canonical preview, the Compare page, the 420×300 landscape panel spec, the focus/cleanup pass (`JOURNAL` cards 21–35), the 2026-10-28 UI/UX cleanup (card 43), the one-width capsule + segmented tab redesign (card 44), the state identity + panel completeness pass (cards 45–54), the two-width capsule + flat surface pass (card 47), the 100/136 music capsule pass (card 52), the 100-rest capsule pass (card 55), and the solid-fill component split (card 56). The app still runs only the idle capsule; phases below are still the ordered path.
 
 ---
 
@@ -16,8 +16,8 @@
 - [x] **0.2 Measure the budget** *(gate — stop here if it fails)*
   - Script sums private bytes and samples CPU over 60s on the empty window. Run this before any helper or UI code exists. Measures the Electron processes only; the helper gets its own 60 MB cap at task 0.3.
   - _Verify:_ prints RSS total and avg CPU. Electron under 130 MB and 0.5% → continue. Over 130 MB → stop, report the numbers, and move to the WinUI fallback before writing more code.
-- [ ] **0.3 Helper says hello**
-  - C# project at `native/BeamBridge/`. Reads one JSON line, answers `{"id":1,"pong":true}`. Prove it as a standalone console app first, then wire it into Electron.
+- [x] **0.3 Helper says hello**
+  - C# project at `native/BeamBridge/`. Reads one JSON line, answers `{"id":1,"pong":true,"version":"0.1.0"}`. Standalone exe proven, then wired into Electron. Idle private bytes measured 6.3 MB.
   - _Verify:_ `dotnet publish -r win-x64 --self-contained` exits 0 and produces a single exe; the app console prints `pong`; the helper's private bytes print under 60 MB while idle.
 - [ ] **0.4a Read Spotify**
   - Helper reports `music.changed` with title, artist, app, and an art file path. Artwork is written to `%TEMP%\Beam\art\`, overwritten per track, folder wiped on quit. Play something first.

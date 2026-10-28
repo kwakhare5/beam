@@ -1,5 +1,5 @@
-import { icon } from '../icons';
-import { esc } from '../html';
+import { icon } from '../../shared/icons';
+import { esc } from '../../shared/html';
 import { panelBody } from '../panel-body';
 
 export type TimerMode = 'idle' | 'custom' | 'running' | 'done';

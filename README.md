@@ -4,15 +4,16 @@ Beam is an offline Windows 11 floating capsule for media controls, a file shelf,
 
 ## Current state
 
-- **App:** one 144×44 transparent window showing the **idle capsule only**. The capsule is 136×32 for idle, timer, done, files and drag; music rests at 100×32 and grows to 136×32 on hover, swapping the title for Prev / Pause / Next. One window size for every state. It uses `showInactive()`.
+- **App:** one 144×44 transparent window showing the **idle capsule only**. Every state will rest at 100×32 and show one fact; music, timer, and done grow to 136×32 on hover to reveal their actions, while idle dims its star to 70% and files stay 100. One window size for every state. It uses `showInactive()`.
 - **Preview-only:** the 420×300 panel, the 452×332 open window, the 150ms grow, all tab bodies, transport buttons, and theme switching. They exist in `showcase/app-preview.html`, not in the app.
-- **Not built:** panel wiring, hotkey, tray, settings, helper/`BeamBridge`, SMTC, timer, shelf, fullscreen, IPC, and automated UI tests. Next is task 0.3 (helper hello), then 0.4–0.5 and Phase 1.
+- **Not built:** panel wiring, hotkey, tray, settings, SMTC, timer, shelf, fullscreen, IPC, and automated UI tests. The `BeamBridge` helper exists and answers `ping` at 6.3 MB idle. Next is task 0.4a (read Spotify), then 0.4b–0.5 and Phase 1.
 
 ## Commands
 
 ```powershell
 npm install
 npm run build
+dotnet publish native/BeamBridge -c Release -o native/BeamBridge/dist
 npm start
 npm run typecheck
 .\verify.ps1

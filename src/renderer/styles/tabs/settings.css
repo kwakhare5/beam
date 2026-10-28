@@ -1,0 +1,82 @@
+.panel-settings {
+  gap: 0;
+}
+
+.setting {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-3);
+  min-height: 44px;
+  padding: 0 var(--space-1);
+  border-bottom: 1px solid var(--border);
+  font-size: 13px;
+}
+
+.setting:last-of-type {
+  border-bottom: 0;
+}
+
+.setting .hint {
+  display: block;
+  margin-top: var(--space-1);
+  font-size: 11px;
+  color: var(--muted-foreground);
+}
+
+.stepper {
+  display: flex;
+  align-items: center;
+  gap: var(--space-1);
+  flex: none;
+}
+
+.step {
+  display: grid;
+  place-items: center;
+  width: 28px;
+  height: 28px;
+  padding: 0;
+  border: 1px solid var(--border);
+  border-radius: var(--r-micro);
+  background: var(--control);
+  color: var(--foreground);
+  font: inherit;
+  font-size: 15px;
+  cursor: default;
+  transition: background 120ms var(--ease), border-color 120ms var(--ease);
+}
+
+.step:hover {
+  background: var(--control-hover);
+  border-color: var(--border-hover);
+}
+
+.step:focus-visible {
+  outline: 2px solid var(--ring);
+  outline-offset: 2px;
+}
+
+.step svg {
+  width: 14px;
+  height: 14px;
+}
+
+.setting-value {
+  min-width: 44px;
+  font-size: 12px;
+  font-weight: 500;
+  font-variant-numeric: tabular-nums;
+  text-align: center;
+  color: var(--muted-foreground);
+}
+
+.stepper .setting-value {
+  min-width: 44px;
+  justify-content: center;
+}
+
+.kbd.capturing {
+  border-color: var(--primary);
+  color: var(--primary-text);
+}

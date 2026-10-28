@@ -1,6 +1,13 @@
 @import './styles/tokens.css';
 @import './styles/base.css';
-@import './styles/pill.css';
-@import './styles/panel.css';
-@import './styles/controls.css';
-@import './styles/tabs.css';
+@import './styles/capsule.css';
+@import './styles/panel/shell.css';
+@import './styles/panel/body.css';
+@import './styles/controls/buttons.css';
+@import './styles/controls/fields.css';
+@import './styles/controls/indicators.css';
+@import './styles/tabs/music.css';
+@import './styles/tabs/files.css';
+@import './styles/tabs/timer.css';
+@import './styles/tabs/calendar.css';
+@import './styles/tabs/settings.css';

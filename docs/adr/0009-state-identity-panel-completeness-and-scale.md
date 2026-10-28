@@ -1,11 +1,11 @@
 # State identity, panel completeness, and one visual scale
 
-Status: accepted 2026-10-28. Amends ADR-0003, ADR-0005, ADR-0006, ADR-0007, and ADR-0008. Amended the same day by the two-width pass and the 100/136 music pass: the capsule is 136×32 except music, which rests at 100×32 and grows to 136×32 on hover; the paused rest slot is 30px; the calendar always draws six rows; the tab bar and file rows are flat.
+Status: accepted 2026-10-28. Amends ADR-0003, ADR-0005, ADR-0006, ADR-0007, and ADR-0008. Amended the same day by the two-width pass, the 100/136 music pass, and the 100-rest pass: every capsule state rests at 100×32; music, timer, and done grow to 136×32 on hover; drag is 136; the paused rest slot is 30px; the calendar always draws six rows; the tab bar and file rows are flat.
 
 The capsule states were hard to tell apart, four panel screens were clipped or missing their states, several settings rows looked interactive but were not, and the docs described a product that did not exist. We settled on:
 
-- **Done**: the capsule reads `Done` with a 16px gold check in the right slot and a 1px gold border. No digits, no glow. Running keeps gold `Focus` digits, so done and running no longer look identical, and `00:00` no longer repeats "Time's up".
-- **Paused**: a 12px play glyph sits outside the title slot, which leaves 148px for the title in the music width. Muted ink alone was invisible at rest.
+- **Done**: the capsule shows a centered 16px gold check and a 1px gold border at rest; hover swaps the check for `Done` plus a 28px dismiss. No digits, no glow. Running shows gold digits, so done and running do not look identical, and `00:00` no longer repeats "Time's up".
+- **Paused**: a 12px play glyph sits outside the title slot, which leaves 30px for the title in the 100px rest width. Muted ink alone was invisible at rest.
 - **Shelf capsule**: a non-empty shelf shows its count (`5 files`). A missing file turns the mascot pip red; the panel row carries the name and the `Missing` badge. The `0 files` and missing-filename capsule states are gone because one summary has to win, and picking one missing name out of several was arbitrary.
 - **Precedence** when states overlap: drag, then timer, then music, then files, then idle. Direct manipulation feedback wins for the moment it lasts; timer still beats music.
 - **Music panel**: square 148×148 art plus a read-only position bar with elapsed and total. Seeking stays out of scope. The old 148×236 art box cropped square album art by 37%.

@@ -1,4 +1,4 @@
-import masterMark from '../../../assets/mascot/beam-mascot.svg';
+import masterMark from '../../../../assets/mascot/beam-mascot.svg';
 
 export type MascotName = 'master';
 

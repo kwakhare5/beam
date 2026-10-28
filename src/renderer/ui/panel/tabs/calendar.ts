@@ -1,5 +1,5 @@
-import { esc } from '../html';
-import { icon } from '../icons';
+import { esc } from '../../shared/html';
+import { icon } from '../../shared/icons';
 import { panelBody } from '../panel-body';
 
 type WeekInfoLocale = {

@@ -1,6 +1,6 @@
-import { icon } from '../icons';
-import { esc } from '../html';
-import { MASCOTS } from '../mascots';
+import { icon } from '../../shared/icons';
+import { esc } from '../../shared/html';
+import { MASCOTS } from '../../shared/mascots';
 import { panelBody } from '../panel-body';
 
 export interface MusicData {

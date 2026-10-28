@@ -1,0 +1,17 @@
+/* ---------- status pip ---------- */
+
+.status-pip {
+  width: 6px;
+  height: 6px;
+  border-radius: var(--r-pill);
+  flex: none;
+  display: inline-block;
+}
+
+.status-pip.green {
+  background: var(--pip-green);
+}
+
+.status-pip.amber {
+  background: var(--pip-amber);
+}

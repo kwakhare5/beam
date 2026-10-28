@@ -5,11 +5,11 @@
 ## 1. What this is
 Beam is an offline Windows 11 floating pill that gives 1-click media controls, a file drop shelf, a countdown timer, and a month calendar. No cloud, no accounts, no network.
 
-**Current (2026-10-28):** the app runs a 144×44 window with the idle capsule only (music will rest at 100 and grow to 136 inside the same window); all seven capsule states and five panels exist in `showcase/app-preview.html`. Panel wiring, the helper, and the rest of the app are unbuilt. Next is task 0.3.
+**Current (2026-10-29):** the app runs a 144×44 window with the idle capsule at 100×32 (star at 70%) and owns a live `BeamBridge.exe` child over stdio JSON lines (ping/pong, 6.3 MB idle). Music, timer, and done will rest at 100 and grow to 136 on hover inside the same window, while idle and files stay 100. All seven capsule states and five panels exist in `showcase/app-preview.html`. Panel wiring, SMTC, and the rest of the app are unbuilt. Next is task 0.4a.
 
 ## 2. Stack
 - Electron + TypeScript + Vite, exact-pinned. Renderer sandboxed, contextIsolation on, nodeIntegration off. The renderer is vanilla TypeScript with shadcn-style tokens and Lucide; no React or Tailwind.
-- `native/BeamBridge/` — windowless C# .NET 10 helper (planned), self-contained single-file publish. Owns SMTC, clipboard, drag-out, fullscreen detection.
+- `native/BeamBridge/` — windowless C# .NET 10 helper, self-contained single-file publish. Owns SMTC, clipboard, drag-out, fullscreen detection (only ping is built so far).
 - No database, no server, no TCP ports. Main ⇄ helper is stdio JSON lines only.
 - Settings live in `%APPDATA%\Beam\settings.json`.
 
@@ -24,7 +24,7 @@ Beam is an offline Windows 11 floating pill that gives 1-click media controls, a
 
 ## 4. Hard Rules & Invariants (What the AI must ALWAYS do)
 - One task at a time from `TASKS.md`, top unchecked box. Do not skip the Phase 0 order.
-- 0.2 is done and passed. The rest window is now 144×44 and measures 90 MB steady / 90.7 MB peak / 0.035% CPU. The UI exists; the next task is 0.3 (helper hello).
+- 0.3 is done and passed: the single-file helper answers ping and sits at 6.3 MB private bytes idle; verify now builds it and checks the pong. 0.2's rest window is 144×44 and measures 90 MB steady / 90.7 MB peak / 0.035% CPU. The next task is 0.4a (read Spotify).
 - Keep the renderer untrusted. Everything touching Win32 goes through the helper.
 - Read `ARCHITECTURE.md` before touching the window, IPC, or helper seams.
 - Follow `DESIGN.md` tokens exactly. No invented colors, radii, or shadows.
@@ -46,7 +46,7 @@ Beam is an offline Windows 11 floating pill that gives 1-click media controls, a
 ## 7. Folder Map
 - `src/main/`: app lifecycle and window geometry. Tray, hotkey, settings, and helper client are planned.
 - `src/preload/`: the only bridge exposed to the renderer.
-- `src/renderer/`: `ui/` components (one capsule, one panel shell, per-tab bodies), `styles/` split CSS entry, all visuals.
+- `src/renderer/`: `ui/capsule/` (one capsule), `ui/panel/` (shell + tab nav), `ui/panel/tabs/` (one module per tab), `ui/shared/` (icons, escaping, formatting); `styles/` is one file per component (`capsule.css`, `panel/`, `controls/`, `tabs/`).
 - `src/shared/` (planned): IPC channel names, payload types, helper protocol types.
 - `native/BeamBridge/`: C# helper. No UI.
 - `assets/mascot/`: one locked Puffy Chubby Star file, `beam-mascot.svg`.
@@ -58,7 +58,7 @@ Beam is an offline Windows 11 floating pill that gives 1-click media controls, a
 - Timer counts from a deadline timestamp, never by decrementing. Sleep must not break it.
 - Shelf is wiped on quit by design, and must warn while non-empty.
 - Fullscreen hide needs the helper alive; the hotkey is main-owned. Helper restart logic is max 3 times in 60s.
-- Music rests at 100 inside the 144 window, so 22px of transparent margin on each side still receives clicks. Fix click-through or window sizing at task 1.3.
+- Every state rests at 100 inside the 144 window, so 22px of transparent margin on each side still receives clicks (hover states leave 4px). Fix click-through at task 1.3.
 - Electron RAM is the top project risk; latest idle measurement at 144×44 is 90 MB steady / 90.7 MB peak / 0.035% CPU, under the 130 MB gate. The helper cap is still unmeasured.
 
 ## 9. Do Not Touch
