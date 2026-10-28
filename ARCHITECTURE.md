@@ -102,7 +102,7 @@ D:\Beam
 │   └── shared/               (planned)
 │       ├── ipc.ts            channel names + payload types
 │       └── bridge.ts         helper command/event types
-├── native/BeamBridge/        built at 0.3: .NET 10 console, stdio JSON lines, ping/pong, 6.3 MB idle
+├── native/BeamBridge/        built at 0.3–0.4a: .NET 10 console, stdio JSON lines, ping, SMTC music events + PNG art, 12.4 MB idle
 ├── assets/
 │   ├── mascot/*.svg          shipped
 │   ├── fonts/                InterVariable.woff2 + OFL.txt
@@ -138,9 +138,9 @@ Events (helper → main), unsolicited, no `id`:
 | `music.changed` | `{ app, title, artist, album, artPath, playing, positionMs, durationMs }` or `null`; players that publish no timeline may omit the last two |
 | `fullscreen.changed` | `{ active }` |
 
-Rules: helper never prints anything else to stdout (stderr is for logs). Any malformed line is dropped and logged. Main restarts the helper on exit, max 3 times in 60s, then shows a tray warning (not built yet). The helper exits on stdin EOF, so a killed main cannot orphan it. `files.drag` runs on its own STA thread, so a held drag never blocks `music.get` or the SMTC event stream.
+Rules: helper never prints anything else to stdout (stderr is for logs). Any malformed line is dropped and logged. Main restarts the helper on exit, max 3 times in 60s, then shows a tray warning (not built yet). The helper exits on stdin EOF, so a killed main cannot orphan it; on quit, main closes stdin and waits up to 1.5s for that exit before killing, so the art folder is wiped. `files.drag` runs on its own STA thread, so a held drag never blocks `music.get` or the SMTC event stream.
 
-**Artwork:** the helper saves the current thumbnail to `%TEMP%\Beam\art\<hash>.png`, overwrites it per track, and wipes the folder on quit. This is the one allowed disk write; the file shelf stays paths-only in memory.
+**Artwork:** the helper saves the current thumbnail to `%TEMP%\Beam\art\<hash>.png`, overwrites it per track, and wipes the folder on start and quit. This is the one allowed disk write; the file shelf stays paths-only in memory.
 
 **Clipboard:** Windows keeps `CF_HDROP` alive only while the owning process lives. The helper owns the clipboard, so a helper crash breaks paste until it restarts. Accepted; covered by a restart test in task 8.1.
 
@@ -263,7 +263,7 @@ UI decisions: ADR-0001 (component boundaries), ADR-0002 (original mascot), ADR-0
 
 ## 8. Open Decisions
 
-Phase 0: 0.1 built, 0.2 measured and passed, 0.3 built (ping/pong, 6.3 MB idle), 0.4–0.5 not started.
+Phase 0: 0.1 built, 0.2 measured and passed, 0.3 built (ping/pong), 0.4a built (live SMTC events, PNG art, 12.4 MB idle), 0.4b–0.5 not started.
 
 ---
 
@@ -271,7 +271,7 @@ Phase 0: 0.1 built, 0.2 measured and passed, 0.3 built (ping/pong, 6.3 MB idle),
 
 | Risk | Honest read | Mitigation |
 |---|---|---|
-| RAM budget | Electron ≤130 MB, helper ≤60 MB. Electron idle measured 90 MB steady / 90.7 MB peak / 0.035% CPU at 144×44 on 2026-10-28; helper measured 6.3 MB private idle on 2026-10-29. | Both under cap. Re-measure the helper when SMTC and the event hooks land. Over either cap → stop and report before building more. |
+| RAM budget | Electron ≤130 MB, helper ≤60 MB. Electron idle measured 90 MB steady / 90.7 MB peak / 0.035% CPU at 144×44 on 2026-10-28; helper measured 12.4 MB private idle with SMTC live on 2026-10-29. | Both under cap. Re-measure the helper when clipboard, drag-out, and fullscreen hooks land. Over either cap → stop and report before building more. |
 | Rest margins | The window stays 144 wide for every state, so the 100px rest pill leaves 22px of transparent margin each side that still receives clicks; hover states leave 4px | Decide at task 1.3: forward clicks through the empty margins with `setIgnoreMouseEvents` rather than resizing the window |
 | `Alt+Space` steal | Registering it kills the system window menu for every app while Beam runs | Accepted by user 2026-10-27 |
 | Multi-file drag-out | Needs a WinForms message pump inside a windowless process, on its own STA thread | Prove at task 0.4c; fall back to copy-only if it fights |

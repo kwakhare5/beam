@@ -5,19 +5,19 @@ Remove-Item Env:ELECTRON_RUN_AS_NODE -ErrorAction SilentlyContinue
 $tsc = Join-Path $PSScriptRoot 'node_modules\.bin\tsc.cmd'
 $electron = Join-Path $PSScriptRoot 'node_modules\electron\dist\electron.exe'
 
-Write-Host '[1/7] typecheck'
+Write-Host '[1/8] typecheck'
 & $tsc -p tsconfig.json --noEmit
 if ($LASTEXITCODE -ne 0) { Write-Host 'FAIL typecheck'; exit 1 }
 & $tsc -p tsconfig.renderer.json --noEmit
 if ($LASTEXITCODE -ne 0) { Write-Host 'FAIL typecheck (renderer)'; exit 1 }
 Write-Host 'PASS typecheck'
 
-Write-Host '[2/7] build'
+Write-Host '[2/8] build'
 & npm run build
 if ($LASTEXITCODE -ne 0) { Write-Host 'FAIL build'; exit 1 }
 Write-Host 'PASS build'
 
-Write-Host '[3/7] helper build'
+Write-Host '[3/8] helper build'
 $helperDir = Join-Path $PSScriptRoot 'native\BeamBridge\dist'
 if (Test-Path -LiteralPath $helperDir) { Remove-Item -LiteralPath $helperDir -Recurse -Force }
 & dotnet publish (Join-Path $PSScriptRoot 'native\BeamBridge\BeamBridge.csproj') -c Release -o $helperDir --nologo
@@ -28,7 +28,7 @@ $helperFiles = @(Get-ChildItem -LiteralPath $helperDir -File)
 if ($helperFiles.Count -ne 1) { Write-Host "FAIL helper build: expected one file, found $($helperFiles.Count)"; exit 1 }
 Write-Host 'PASS helper build (single exe)'
 
-Write-Host '[4/7] launch + helper ping'
+Write-Host '[4/8] launch + helper ping'
 $outLog = Join-Path $env:TEMP 'beam-verify.out.log'
 $errLog = Join-Path $env:TEMP 'beam-verify.err.log'
 Remove-Item -LiteralPath $outLog -ErrorAction SilentlyContinue
@@ -49,7 +49,7 @@ if ($appOut -notmatch '\[bridge\] pong 0\.1\.0') {
 }
 Write-Host "PASS launch (pid $($first.Id)) + pong 0.1.0"
 
-Write-Host '[5/7] helper memory'
+Write-Host '[5/8] helper memory'
 $helper = Get-Process BeamBridge -ErrorAction SilentlyContinue
 if (-not $helper) {
   Stop-Process -Id $first.Id -Force -ErrorAction SilentlyContinue
@@ -66,7 +66,7 @@ if ($helperMb -ge 60) {
 }
 Write-Host "PASS helper memory ($helperMb MB idle, cap 60 MB)"
 
-Write-Host '[6/7] single instance'
+Write-Host '[6/8] single instance'
 $second = Start-Process -FilePath $electron -ArgumentList '.' -WorkingDirectory $PSScriptRoot -PassThru
 Start-Sleep -Seconds 4
 if (-not $second.HasExited) {
@@ -83,7 +83,7 @@ if ($first.HasExited) {
 }
 Write-Host 'PASS single instance'
 
-Write-Host '[7/7] UI spec'
+Write-Host '[7/8] UI spec'
 $main = Get-Content (Join-Path $PSScriptRoot 'src\main\index.ts') -Raw
 $base = Get-Content (Join-Path $PSScriptRoot 'src\renderer\styles\base.css') -Raw
 $pill = Get-Content (Join-Path $PSScriptRoot 'src\renderer\styles\capsule.css') -Raw
@@ -281,10 +281,22 @@ if ($uiFail) {
 }
 Write-Host 'PASS UI spec'
 
-Stop-Process -Id $first.Id -Force -ErrorAction SilentlyContinue
-Start-Sleep -Milliseconds 800
-Get-Process electron -ErrorAction SilentlyContinue | Stop-Process -Force
-Get-Process BeamBridge -ErrorAction SilentlyContinue | Stop-Process -Force
+Write-Host '[8/8] quit cleanup'
+$closed = $first.CloseMainWindow()
+if (-not $closed) {
+  Get-Process electron,BeamBridge -ErrorAction SilentlyContinue | Stop-Process -Force
+  Write-Host 'FAIL quit cleanup: window did not close'
+  exit 1
+}
+$appExited = $first.WaitForExit(8000)
+Start-Sleep -Milliseconds 500
+$helperLeft = @(Get-Process BeamBridge -ErrorAction SilentlyContinue).Count
+if (-not $appExited -or $helperLeft -ne 0) {
+  Get-Process electron,BeamBridge -ErrorAction SilentlyContinue | Stop-Process -Force
+  Write-Host "FAIL quit cleanup: appExited=$appExited helperLeft=$helperLeft"
+  exit 1
+}
+Write-Host 'PASS quit cleanup (app and helper exited)'
 
 Write-Host 'ALL CHECKS PASSED'
 exit 0

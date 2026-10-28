@@ -19,8 +19,8 @@
 - [x] **0.3 Helper says hello**
   - C# project at `native/BeamBridge/`. Reads one JSON line, answers `{"id":1,"pong":true,"version":"0.1.0"}`. Standalone exe proven, then wired into Electron. Idle private bytes measured 6.3 MB.
   - _Verify:_ `dotnet publish -r win-x64 --self-contained` exits 0 and produces a single exe; the app console prints `pong`; the helper's private bytes print under 60 MB while idle.
-- [ ] **0.4a Read Spotify**
-  - Helper reports `music.changed` with title, artist, app, and an art file path. Artwork is written to `%TEMP%\Beam\art\`, overwritten per track, folder wiped on quit. Play something first.
+- [x] **0.4a Read Spotify**
+  - Helper reports `music.changed` with title, artist, app, and an art file path. Artwork is written to `%TEMP%\Beam\art\`, overwritten per track, folder wiped on start and quit. Proven with Spotify Web in Chrome (desktop Spotify not installed): `[music] Admirin' You (feat. Preston Pablo) - Karan Aujla, Ikky, Preston Pablo (Chrome)`, 45 KB PNG, folder gone after a graceful quit.
   - _Verify:_ terminal prints the exact track title showing in Spotify; the art path exists while playing and the folder is empty after quit.
 - [ ] **0.4b Copy files as files**
   - Helper puts `CF_HDROP` on the clipboard for 3 real paths.
