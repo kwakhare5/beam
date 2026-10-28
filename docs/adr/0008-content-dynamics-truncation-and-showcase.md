@@ -1,0 +1,5 @@
+# Content dynamics, middle-truncation, and the unified showcase board
+
+Status: accepted; amended 2026-10-28 by ADR-0009, which fixed the title slot, removed the missing-file capsule state, and restored standard sentence casing, and by the 100/136 pass, which set the music title slot to 50px at rest and 86px on hover.
+
+Track titles occupy a 50px slot in the 100px resting capsule and 86px on hover. On hover or focus the title fades out and the transports fade in; nothing jumps and long titles ellipsize. Filenames in shelf rows middle-truncate at 26 characters (`quarterl…inal.xlsx`) so the prefix and extension survive. The shelf capsule shows only a count, with a red mascot pip when a file is missing; the row carries the `Missing` badge and the full name. When a timer and background music run together, the timer owns the capsule (`Focus` plus digits) and a 6px gold media pip marks playback. Copy uses standard sentence case. The default preview page is the unified Showcase Board, and it uses one data set for every capsule and panel so counts, timers, and file names agree.

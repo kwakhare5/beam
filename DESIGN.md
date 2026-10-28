@@ -1,207 +1,153 @@
-# DESIGN.md — Visual System & UI Tokens
+# DESIGN.md — Visual System & Design Specifications
 
-## 1. Aesthetic Direction & Vibe
-- **Design Theme:** Minimalist utility website derived directly from audited Helumi design tokens, paired with a Windows 11 dark glass desktop capsule and interactive mood mascots.
-- **Canonical app preview:** `showcase/app-preview.html` is the single file used to review every app UI state. It loads the app's real stylesheet and shared view functions (`src/renderer/ui/`), so it must be opened with `npm run ui`, never from disk. Every phase extends that file; no other preview or mock file is ever created.
-- **Background Feel:**
-  - **Marketing Web:** Warm light gray canvas (`#f5f5f5`), pure white cards (`#ffffff`), and crisp `0.5px` hairline borders.
-  - **Desktop Floating Bar:** Windows 11 dark glass (`rgba(18, 19, 22, 0.92)`), subtle 1px translucent border, smooth capsule geometry.
-- **Copy Tone:** Editorial, calm, and understated. Section headings are lowercase, punchy, and punctuated with periods (e.g., `meet beam.`, `one bar for everything.`).
-
-### Two design systems, on purpose (2026-10-27)
-
-The website and the app are not the same surface, so they do not share one look. This is deliberate, not drift.
-
-| | Website | Desktop app |
-|---|---|---|
-| **Job** | sells the product | sits over your work all day |
-| **Palette** | Notion warm light: `#f5f5f5`, `#ffffff`, black text | Windows 11 dark glass, plus a light theme toggle |
-| **Type** | Inter for body, Caveat for hand-drawn notes | Inter only, tight scale |
-| **Depth** | flat, `0.5px` hairline borders, no shadows | flat translucent fill, 1px hairline border |
-| **Accent** | system blue `#0a84ff` | brand gold `#FFAA00`, red for errors |
-| **Corners** | 16px cards, capsule buttons | capsule pill, 14px panel, 10px cards |
-| **Motion** | page-level, editorial | 120–150ms; press scale .97 at 120ms |
-
-What they share, so they still read as one brand: the Puffy Chubby Star mascot, Inter, lowercase calm copy, and a single accent rule. Nothing else is forced to match.
-
-**Website is out of v1:** sections 2–4 and the Website column above are reference only. The shipped surface is the app capsule and panel.
+This document defines the two visual systems of Beam:
+1. **Primary: Desktop App UI System (v1 target surface)** — The offline Windows 11 floating capsule and panel. Designed and previewed; app wiring is still in progress.
+2. **Reference: Marketing Website & Brand Lab (Post-v1 / Reference Only)** — The showcase and landing page aesthetic.
 
 ---
 
-## 2. Color Palette (Tokens)
+# PART 1: DESKTOP APP UI SYSTEM (v1 target surface)
 
-### Marketing Web Tokens (Audited from Helumi)
-| Token | Hex / Value | Purpose |
-|---|---|---|
-| `--bg` | `#f5f5f5` | Page background canvas (warm light gray) |
-| `--surface` | `#ffffff` | Cards, floating nav pill, pricing cards, modal sheets |
-| `--fill` | `#e9e8ea` | Sub-wells, preview tracks, recessed stages |
-| `--track` | `#d4d4d4` | Progress tracks, slider backdrops |
-| `--side` | `#f2f2f4` | Sidebar and nested panel background |
-| `--k-line` | `rgba(0, 0, 0, 0.08)` | `0.5px` hairline borders (`box-shadow: 0 0 0 .5px #00000014`) |
-| `--ink` | `#000000` | Primary text and headings |
-| `--ink-2` | `rgba(0, 0, 0, 0.64)` | Subtitles, lede paragraphs, secondary copy |
-| `--ink-3` | `rgba(0, 0, 0, 0.56)` | Captions, timestamps, disabled indicators |
-| `--on-ink` | `#ffffff` | Text on black pills and dark containers |
-| `--sel` | `#0a84ff` | Primary action / selection blue (Apple system blue) |
-| `--folder` | `#5bb0ff` | File shelf folder accents |
-| `--play` | `#ffd23f` | Timer progress / warning yellow |
-| Traffic Close | `#ff5f57` | Window red dot |
-| Traffic Minimize | `#febc2e` | Window yellow dot |
-| Traffic Zoom | `#28c840` | Window green dot |
+## 1. Aesthetic Direction & Craft
+- **Design Theme:** Solid desktop system in the macOS style: opaque shell (`#1c1c1e` dark / `#ffffff` light), brand gold (`#ffaa00`), neutral text (`#ededed`), 1px hairline border, standard filled buttons, keycap shortcuts, status pips, pill badges, and one static mascot.
+- **No Glass:** Surfaces are opaque. No backdrop blur, no translucent shell, no reflections, no inner rims, no glow, no gradients. A soft shadow is allowed only to lift the floating window off the desktop.
+- **Canonical App Preview:** `showcase/app-preview.html` is the single file used to review every app UI state. It loads the app's real stylesheet and shared view functions (`src/renderer/ui/`), so it must be opened with `npm run ui`, never from disk. Every phase extends that file; no other preview or mock file is ever created.
+- **Copy Tone:** Clear, calm, and understated. Standard sentence and title casing (`No music playing`, `Drop files here`, `Done`, `Missing`). No forced lowercase rule.
 
-### Desktop App Tokens (Windows 11 Dark Glass)
+## 2. Desktop App Tokens (CSS Variables)
+
+### Dark Theme (Primary Default)
+Defined in [`src/renderer/styles/tokens.css`](file:///d:/Beam/src/renderer/styles/tokens.css):
+
 | Token | Value | Purpose |
 |---|---|---|
-| Shell Background | `rgba(18, 19, 22, 0.92)` | Translucent pill and panel |
-| Shell Border | `rgba(255, 255, 255, 0.08)` | 1px border on pill and panel boundaries |
-| Panel Surface | `rgba(255, 255, 255, 0.04)` | Tab container, card wells, shelf slots |
-| Text Primary | `#EDEDED` | Song titles, timer countdowns, dates |
-| Text Muted | `#888888` | Artist names, shortcut keys, inactive tabs |
-| Destructive | `#EF4444` | Missing file warning badges, cancel actions |
+| `--border` | `rgba(255, 255, 255, 0.08)` | 1px border on capsule and panel |
+| `--card` | `#1c1c1e` | Solid dark surface |
+| `--secondary` | `rgba(255, 255, 255, 0.04)` | Faint hover wash, art fallback |
+| `--muted` | `rgba(255, 255, 255, 0.08)` | Chips, buttons, input fills |
+| `--foreground` | `#ededed` | Primary text |
+| `--muted-foreground` | `#888888` | Subtitles, metadata, inactive tabs |
+| `--accent` | `rgba(255, 255, 255, 0.12)` | Control hover wash |
+| `--primary` | `#ffaa00` | Brand gold: primary action, selected tab text |
+| `--primary-text` | `#ffaa00` | Gold text: timer digits, done check, today |
+| `--destructive` | `#ef4444` | Missing files, cancel actions |
+| `--pip-green` | `#22c55e` | Playing/present status dot |
+| `--pip-amber` | `#f59e0b` | Paused status dot |
+| `--pill-badge` | `rgba(255, 255, 255, 0.06)` | Size and count badges |
+| `--keycap` | `rgba(255, 255, 255, 0.08)` | `Alt` / `Space` keycaps |
+| `--shadow-pill` | `0 1px 2px rgba(0,0,0,.24), 0 2px 4px rgba(0,0,0,.18)` | Capsule lift inside the 4px rest margin |
+| `--shadow-panel` | `0 4px 16px -2px rgba(0,0,0,.45), 0 1px 3px rgba(0,0,0,.3)` | Panel shadow inside the 16px open margin |
+| `--space-1` … `--space-4` | `4 / 8 / 12 / 16px` | The only spacing steps |
+| `--ease` | `cubic-bezier(0.16, 1, 0.3, 1)` | Standard easing |
+| `--ease-spring` | `cubic-bezier(0.34, 1.56, 0.64, 1)` | Press easing |
+| `--font-sans` | `Inter, 'Segoe UI Variable Text', 'Segoe UI', sans-serif` | Type stack |
 
----
+### Light Theme (User Toggle)
+Light overrides every color token in `tokens.css:41-67`. The key differences:
 
-### Desktop App Tokens — Light Theme (user toggle, 2026-10-27)
 | Token | Value | Purpose |
 |---|---|---|
-| Light Shell | `rgba(255, 255, 255, 0.92)` | Translucent light pill and panel |
-| Light Shell Border | `rgba(0, 0, 0, 0.08)` | 1px border on light surfaces |
-| Light Panel Surface | `rgba(0, 0, 0, 0.03)` | Tab container, cards, shelf slots |
-| Light Text Primary | `#111111` | Song titles, timer countdowns, dates |
-| Light Text Muted | `#6B6B6B` | Artist names, shortcut keys, inactive tabs |
-| Light Destructive | `#D92D20` | Missing file badges on light surfaces |
+| `--card` | `#ffffff` | Solid light shell |
+| `--border` | `rgba(0, 0, 0, 0.08)` | Hairline border |
+| `--secondary` | `rgba(0, 0, 0, 0.03)` | Faint hover wash |
+| `--foreground` | `#111111` | Primary text |
+| `--muted-foreground` | `#6b6b6b` | Secondary text |
+| `--primary-text` | `#8a5a00` | High-contrast gold text |
+| `--destructive` | `#d92d20` | Missing files |
+| `--pill-badge` | `rgba(0, 0, 0, 0.04)` | Badges |
+| `--keycap` | `rgba(0, 0, 0, 0.08)` | Keycaps |
 
+## 3. Window & Surface Geometry
 
-## 3. Typography & Hierarchy
-
-- **Primary UI Font (app + website):** `Inter` variable, vendored in `assets/fonts/` and loaded locally. Stack: `"Inter", "Segoe UI Variable Text", "Segoe UI", sans-serif`. No network fetch; the SIL OFL license ships next to the file.
-- **Numbers:** Inter `tabular-nums` for the timer and any live counter. No second mono font in v1.
-- **Editorial Hand-Drawn Font (website only):** `Caveat` (weight 600) for notes, arrow callouts, and doodle captions. Never used in the app.
-- **Scale:**
-  - `Hero H1`: 48px / weight 600 / line-height 1.1 / tracking `-0.045em` (lowercase + period)
-  - `Section H2`: 28px–32px / weight 600 / line-height 1.2 / tracking `-0.03em` (lowercase + period)
-  - `H3 / Lede`: 18px–20px / weight 500 / color `var(--ink-2)`
-  - `Body`: 16px / weight 400 / line-height 1.5 / color `var(--ink)`
-  - `Caption / Meta`: 12px–14px / color `var(--ink-3)`
-
----
-
-## 4. Layout, Spacing & Motion
-- **Container Width:** Max content `880px` (`--content`); wrapper with gutters `928px` (`.wrap`).
-- **Spacing Scale:** 8px base grid (`4px`, `8px`, `12px`, `16px`, `24px`, `32px`, `48px`, `64px`, `80px`).
-- **Section Rhythm:** 64px vertical spacing between content blocks.
-- **Border Radius:**
-  - Cards & Stages: `16px` (`--radius`)
-  - Sub-cards & Nested panels: `10px` (`--radius-sm`)
-  - Buttons, Nav, and Pill Shells: `999px` (capsule geometry)
-- **Hairline Shadows (No heavy drop-shadows):**
-  - Hairline border: `box-shadow: 0 0 0 0.5px rgba(0, 0, 0, 0.08)`
-  - Active card border: `box-shadow: 0 0 0 1px rgba(0, 0, 0, 0.12)`
-- **Motion & Easing:**
-  - Standard ease: `cubic-bezier(.22, 1, .36, 1)`
-  - Mascot bounce / spring: `cubic-bezier(.34, 1.56, .64, 1)`
-
----
-
-## 5. Mascot & Vector Doodle System
-Governed by installed skills [`svg-logo-designer`](file:///d:/Beam/.agents/skills/svg-logo-designer/SKILL.md) and [`illustration-style`](file:///d:/Beam/.agents/skills/illustration-style/SKILL.md):
-- **Official Character:** **Puffy Chubby Star** — Honey Gold (`#FFAA00`) 5-point polar harmonic cubic Bézier spline with 10 perpendicular tangent handles ($C^2$ smooth curvature).
-- **Asset Format:** Pure vector SVG only (zero raster bitmaps or heavy Lottie runtimes, 100% transparent backgrounds).
-- **Core Suite Files in `d:\Beam\assets\mascot\`:**
-  1. `beam-mascot.svg`: Master mark with signature wink chevron (`>`) on left, solid black circle (`r=6`) with inner white specular catchlight (`r=2`) on right, and subtle smile.
-  2. `star-idle.svg`: Sleeping curved eyes (`◠ ◠`) and floating sleep Z for docked/idle pill state.
-  3. `star-music.svg`: DJ headphones and whistling mouth for SMTC music playback.
-  4. `star-files.svg`: Holding an origami document with a wink for file shelf drops.
-  5. `star-timer.svg`: Focused eyes tracking a mini stopwatch for active countdowns.
-  6. `star-done.svg`: Rosy cheeks, joyful smile, and 4-point sparkle stars for completed timers.
-- **Showcase Lab & Interactive Micro-Behaviors:** Frozen brand lab at `d:\Beam\showcase\index.html`; the canonical app UI preview is `showcase/app-preview.html`. Do not extend `index.html`; offline-compliance fixes such as removing the Google Fonts fetch are allowed.
-  1. *Catchlight Eye Tracking*: White specular catchlight dot glides smoothly inside the solid black eye following cursor coordinates (clamped to 2.4px limit).
-  2. *Jelly Poke Squish*: Y-axis compression (`scale(1.3, 0.72)`) with spring recovery on click.
-  3. *File Drag & Gulp*: Mouth expands on file drag-over and swallows upon drop.
-  4. *Music Beat Pulse*: 120 BPM rhythmic body tilt and scale pulse during playback.
-  5. *Deep Sleep Breathing*: 4-second ease-in-out lung cycle with floating Z particles.
-
----
-
-## 6. Anti-Slop Checklist (Never Do)
-- [ ] No generic purple/cyan dark-mode neon gradients.
-- [ ] No blurry heavy drop-shadows (use crisp 0.5px hairline box-shadows).
-- [ ] No uppercase shouting headings (use calm lowercase editorial with periods).
-- [ ] No heavy Lottie or video runtimes where pure SVG does the job.
-- [ ] No missing loading states or unstyled scrollbars.
-
----
-
-## 7. App UI System (locked 2026-10-27)
-
-This section overrides any earlier app size or spacing in this file and in the preview. The app is one always-on window; the capsule grows 24px on hover inside it, and the window never resizes.
-
-### 7.1 Window and capsule
-
-| | Idle | Hover | Open |
+| | Rest | Hover | Open |
 |---|---|---|---|
-| Window | 184×44 | 184×44 | 428×308 |
-| Visible surface | 104×32 capsule | 128×32 capsule | 420×300 panel |
+| **Window** | 144×44 | 144×44 | 452×332 |
+| **Visible Surface** | 136×32 capsule · music 100 | 136×32 capsule · music 136 | 420×300 panel |
 
-- Rest and hover share one window size. Hover brightens the shell, grows the capsule 104→128, and fades controls in; the window never resizes, so no OS resize flicker.
-- Click expands the same window to 428×308 with a 150ms ease-out, anchored bottom-center and growing upward. Close reverses it.
-- The shadow margin is 4px horizontal / 6px vertical and is not content. At idle the 104px capsule sits 40px from each horizontal window edge (4px shadow + 36px transparent); at hover the 128px capsule sits 28px (4px + 24px). The capsule is 32px tall inside the 44px window. The open margin is 4px.
-- Show with `showInactive()`; keep `focusable: true` so Esc and Tab work. Never steal focus on show.
-- Do not copy Wispr's 260×90 margin on an always-on pill: the invisible area would capture clicks.
+- **Music Growth:** music rests at `100×32` and grows to `136×32` on hover or focus over 120ms; every other state is `136×32`. There is one `144×44` window for all states, so the window never resizes on hover; the pill grows inside it, centered.
+- **Zero-Flicker Hover:** Hover never resizes the window. It brightens the shell and border and, on music, grows the pill and swaps the title for transports.
+- **Smooth Panel Expansion:** On click, the window expands to `452×332` with a 150ms ease-out. The OS window resizes immediately while GPU-accelerated CSS transforms handle the 150ms scale/fade expansion internally; on collapse, CSS animates out over 150ms before the window snaps back to `144×44`.
+- **Screen-Aware Vertical Anchoring:** The panel anchors bottom-center and grows upward when the capsule is in the lower half of the display, and anchors top-center and grows downward when in the upper half.
+- **Edge Clamping:** Horizontal coordinates clamp to keep at least 8px margin from display boundaries.
+- **Click Isolation:** Transport buttons stop propagation and toggle playback directly; only clicks on the mascot, title, or empty capsule body trigger panel expansion.
+- **Lightweight Dismissal:** `Esc`, tray toggle, or clicking outside collapses the window without stealing active window focus.
+- **Shadow Margins:** 4px horizontal / 6px vertical at rest; 16px on all sides when open, so the panel shadow has room and the margin still counts as an outside click.
 
-### 7.2 Capsule
+## 4. Radii & Component Hierarchy
+- **One Fill Level:** every surface is flat by default. Never put a filled or bordered box inside another one: no tab pill inside a track, no icon box inside a row. State comes from color, spacing, and 1px dividers. A control may carry one fill or one border, never both a parent fill and its own.
+- **Panel Shell:** `16px` (`--r-panel`)
+- **Cards & Album Art:** `12px` (`--r-card`)
+- **Controls, Buttons & Chips:** `8px` (`--r-control`)
+- **Micro Badges & Date Cells:** `6px` (`--r-micro`)
+- **Pills, Capsules & Switches:** `999px` (`--r-pill`)
 
-- 104×32 idle, 128×32 hover, 176×32 playing/paused; radius 999, padding 0 8, 1px hairline, shell `rgba(18,19,22,.92)`, one tight shadow `0 3px 10px rgba(0,0,0,.45)`. Width transitions in 120ms; the window stays 184.
-- 24px original master mark (`beam-mascot.svg`), 8px gap. One 12px/600 line. The idle is centered with 11px breathing room each side; the playing title gets 40px at 176. Digits 15px/600 tabular. No second line and no badge.
-- Hover: shell brightens `.70→1`, border `.08→.14`, the capsule grows 24px inside the fixed window, the filled 18px transport fades in over 120ms only when playing or paused, and the title truncates at 40px. The mascot pops to `scale(1.06) rotate(-2deg)` over 120ms. No OS resize, no control resize.
-- Idle is `opacity: .70`; hover returns it to 1.
-- The capsule always uses the original master mark; only the line, right slot, and border tone change. The state mascots (`star-music`, `star-files`) appear at 48px in the panel empty states. No custom mini mark.
-- Focus: capsule controls get a 1px neutral inset ring; panel controls get a 2px neutral ring; the capsule itself has no ring and no glow. The controls stay focusable while visually hidden, and appear on focus.
+## 5. Capsule Specifications
+- **Geometry:** `136×32` for idle, timer, done, files and drag; music `100×32` at rest and `136×32` on hover or focus. Radius 999, padding `0 8px`, 1px hairline border, shell `#1c1c1e`. One `144×44` window for every state.
+- **Mascot Mark:** 24px master mark followed by an 8px gap. Static; no hover transform.
+- **Title / Transport Swap:** The slot is 50px in music rest (30px when the paused glyph is present) and 86px on hover; 88px in the other 136px states. At rest the title fills it and ellipsizes when the name is longer. On hover or focus, the title fades out over 120ms and three 28px transport buttons fade in, centered in the same slot.
+- **Done:** the capsule reads `Done`, a 16px gold check fills the right slot, and the border turns gold. No digits and no glow.
+- **Paused:** a 12px play glyph sits outside the title slot; the title is muted.
+- **Shelf Count:** a non-empty shelf shows its count (`5 files`). A missing file turns the mascot pip red; the row carries the name and `Missing` badge. An empty shelf falls back to idle, so there is no `0 files` state.
+- **Dual-State Collision (Timer + Music):** Countdown takes capsule prominence (`Focus` plus digits) with a 6px gold media pip on the mascot indicating active audio.
+- **Precedence:** drag, then timer, then music, then files, then idle.
 
 | State | Width | Line | Right slot | Extra |
 |---|---|---|---|---|
-| Idle | 104 | `Beam` | — | opacity .70 |
-| Playing | 176 | track title | — | controls on hover |
-| Paused | 176 | track title, muted | — | play icon |
-| Timer | 132 | `Focus` | `18:24` | tabular |
-| Done | 132 | `Time's up` | `00:00` | gold digits |
-| Files | 104 | `3 files` | — | — |
-| Drag | 104 | `+3 files` | — | dashed gold border |
-| Missing | 140 | file name, danger ink | — | drag disabled |
+| Idle | 136px | `Beam` | — | centered, muted label |
+| Playing | 100 → 136 | track title (50px rest, 86px hover) | — | grows on hover/focus; transports replace title |
+| Paused | 100 → 136 | track title, muted (30px rest, 86px hover) | play glyph | grows on hover/focus; transports replace title |
+| Timer | 136px | `Focus` | `18:24` | tabular digits; media pip when music plays |
+| Done | 136px | `Done` | gold check | gold 1px border |
+| Files | 136px | `5 files` | — | red pip when a file is missing |
+| Drag | 136px | `+3 files` | — | dashed gold border |
 
-Artist, shortcut, file size, and the word "missing" live in the panel only.
+## 6. Panel Specifications
+- **Panel Dimensions:** `420×300` body inside a `452×332` open window. Radius 16px, 1px border, no footer, 8px body padding.
+- **Tab Bar (40px):** Four equal tabs, flat: no track background, no padding box, no selected fill. Tabs are 28px tall with 14px Lucide icons and 12px labels. The selected tab is gold icon + gold label at weight 500; hover is a faint `--secondary` wash on the tab itself. The settings icon sits at the far right with the same treatment. Tabs are keyboard-navigable (arrows, Home, End).
+- **Music Tab:** 148×148 square art on the left, framed as an inset card (`12px` radius, 1px border). Right column: title and artist with a status pip, a read-only position bar with elapsed/total in 11px tabular digits, and an elevated 38px circular primary play/pause with 16px gap to 30px flanking controls. Empty and loading states use the mascot or skeleton lines.
+- **Files Shelf:** 36px rows separated by 1px dividers, with plain 14px status icons (no icon box), status pips (green present / red missing), 26-character middle-truncated filenames, right-aligned badges for size, `Folder`, or a danger `Missing` badge, and 24px copy/remove buttons that appear on hover or focus. Row hover is a faint `--secondary` wash. Five rows fit; more scroll. Pinned bottom actions: Copy All / Add / Clear All. The empty state is a dashed drop well with an Add files button.
+- **Timer Tab:** 28px preset chips; a custom 1–999 minute inline field; 40px digits; 12px note; Start in idle, Cancel in running, Start again and Dismiss in done.
+- **Calendar Tab:** Header with 28px left/right chevrons, month title, and Today. Seven columns; the first day of the week follows the Windows locale (Sunday fallback); two-letter locale weekday headers at 11px; always six week rows, padded with adjacent-month days, so the grid never jumps; today is gold.
+- **Settings Tab:** Five 44px rows separated by 1px dividers, no row gap: Start with Windows switch, toggle shortcut keycaps, chime volume with −/+ and a test button, Dark theme switch, Reset position. 36×20 switch, 20px keycaps, 28px steppers.
 
-### 7.3 Panel
+## 7. Motion, Typography & Code Architecture
+- **Font Stack:** Inter variable vendored in `assets/fonts/` (fallback `Segoe UI Variable Text`, `Segoe UI`, `sans-serif`). Tabular numerals for timer and position digits.
+- **Type Scale:** `11 / 12 / 13 / 15 / 40px` only. Capsule title 12/600, capsule digits 15/600, panel title 15/600, settings rows and calendar title 13, hints and badges 11, timer digits 40. No 10px text.
+- **Spacing Scale:** `4 / 8 / 12 / 16px` (`--space-1`…`--space-4`). One 8px gap between panel body blocks; list internals use 4px.
+- **Motion Scale:** 120ms hover and title/transport crossfade, 120ms music width growth, 150ms panel grow, 100ms press (`scale(0.96)`). Transitions animate opacity, transform, background, border-color, box-shadow, and the music capsule width; no other layout property animates. `prefers-reduced-motion` is honored.
+- **Public API:** `src/renderer/ui/index.ts` exporting pure HTML component functions (`pill`, `panel`, `iconSprite`, `middleTruncate`).
+- **Styles Architecture:** Split into `tokens.css`, `base.css`, `pill.css`, `panel.css`, `controls.css`, `tabs.css` under `src/renderer/styles/`.
 
-- 420×300, radius 14, shell `.92`, 1px hairline, one tight shadow that fits the 4px margin. No footer; the body is the full 260px.
-- Tab bar 40px: real Lucide 14px plus 12px labels; active tab uses the surface, settings is the icon at the right. Body padding 8, gaps 8.
-- Music: 148px art on the left, title/artist/controls on the right (`showcase/sample-art.svg` in the preview), 15/600 title, 12 artist, three 32px controls with 20px icons. No footer.
-- Files: 36px rows; the list scrolls with 5 rows, 32px Copy All / Add / Clear pinned bottom. Missing rows use danger; copied shows a check and label.
-- Timer: 28px preset chips, 40/600 digits, 12px note, 32px Start / Cancel. Center the face group.
-- Calendar: 7 columns, 4–6 rows (padded to a full week), 28px cells, 11px numerals, today gold, adjacent month at 45%.
-- Settings: five 44px rows, 36×20 switch, 11px keycaps.
-- Music and files empty states use a 48px original mascot and one line of copy; timer and calendar use their normal content. Disabled controls drop to .4; music loading uses three skeleton rows; copied uses the success state.
+---
 
-### 7.4 Type, icons, colour, motion
+# PART 2: MARKETING WEBSITE & BRAND LAB (Post-v1 / Reference Only)
 
-- Inter variable vendored in `assets/fonts/`; fallback Segoe UI. One family: 12/13/15/40, tabular numerals for time.
-- Lucide 24px source: filled media shapes for transport, 2px outline for UI; 18 in the capsule, 20 in music controls, 16 in rows, 14 in tabs and buttons. No approximated paths beyond the four media shapes.
-- Gold is the only brand color (`--primary`): current tab, primary button, timer digits, today, and done digits. The shadcn `--accent` is a neutral hover surface, not a second brand color. Danger only for missing or errors.
-- Every interactive element has default, hover, active (`scale(.97)`), focus (focused control 1px neutral; panel controls 2px neutral; no capsule ring), disabled (0.4), and loading. Hover brightens the surface and grows the capsule 24px inside the fixed window; controls never resize.
-- Motion: 120ms hover, 150ms panel grow, 120ms mascot pop. No done glow, no ambient mascot animation. `prefers-reduced-motion` disables the pop and movement; uses a crossfade or instant change.
-- Spacing 4/8/12/16/24; radii 6/8/10/14/999. No arbitrary values, no nested cards, no gradient text, no decorative blur, no footer.
-- CSS uses the shadcn-style variable vocabulary (`--background`, `--foreground`, `--card`, `--popover`, `--primary`, `--secondary`, `--muted`, `--accent`, `--destructive`, `--border`, `--input`, `--ring`) from `src/renderer/styles/tokens.css`.
+> [!NOTE]
+> The marketing website is post-v1 and not part of the desktop app runtime or build. Never ship assets from `showcase/`.
 
-### 7.5 Code structure
+## 8. Marketing Website Direction & Brand Identity
+- **Design Theme:** Notion-like warm light gray canvas (`#f5f5f5`), pure white cards (`#ffffff`), and crisp 0.5px hairline borders.
+- **Editorial Tone:** Calm lowercase copy punctuated with periods (`meet beam.`, `one bar for everything.`).
+- **Hand-Drawn Accent Font:** `Caveat` (weight 600) for notes, arrow callouts, and doodle captions (website only; never in desktop app).
 
-- `showcase/app-preview.html` has four sticky pages (Compare, Capsule, Panels, Rules) and a panel sub-nav; the hash selects a page. Compare is the default: two static 104/128 capsules with the same `Beam` content inside 184×44 frames, pointer-events off. The Capsule page has 10 content cards including the idle-hover pair; Panels is 420×300; Rules documents the 1px neutral control focus. The music sample uses `showcase/sample-art.svg`.
-- `src/renderer/ui/` is the only UI source: `pill.ts` (one capsule), `panel.ts` (one panel shell and tab host), `panel-body.ts`, `icons.ts` (Lucide sprite), `mascots.ts` (original suite), `html.ts`, `types.ts`, and `tabs/{music,files,timer,calendar,settings}.ts`. `index.ts` is the public API used by the app and the preview.
-- No per-state components. A content state is data (`data-state`); an interaction state is data (`data-hover`), focus, or press.
-- `src/renderer/styles.css` is the entry; `src/renderer/styles/` holds `tokens`, `base`, `pill`, `panel`, `controls`, and `tabs`. Change one file without editing the others.
-- The renderer is vanilla TypeScript. shadcn-style tokens and Lucide only; no React, Tailwind, or Radix. See `docs/adr/0001`–`0006` and `GLOSSARY.md`.
+### Marketing Web Tokens
+| Token | Hex / Value | Purpose |
+|---|---|---|
+| `--bg` | `#f5f5f5` | Page background canvas (warm light gray) |
+| `--surface` | `#ffffff` | Cards, floating nav pill, pricing cards |
+| `--fill` | `#e9e8ea` | Sub-wells, preview tracks, recessed stages |
+| `--track` | `#d4d4d4` | Progress tracks, slider backdrops |
+| `--side` | `#f2f2f4` | Sidebar and nested panel background |
+| `--k-line` | `rgba(0, 0, 0, 0.08)` | 0.5px hairline borders |
+| `--ink` | `#000000` | Primary text and headings |
+| `--ink-2` | `rgba(0, 0, 0, 0.64)` | Subtitles, lede paragraphs, secondary copy |
+| `--ink-3` | `rgba(0, 0, 0, 0.56)` | Captions, timestamps, disabled indicators |
+| `--sel` | `#0a84ff` | Primary action / selection blue (Apple system blue) |
+| `--folder` | `#5bb0ff` | File shelf folder accents |
+| `--play` | `#ffd23f` | Timer progress / warning yellow |
 
-### 7.6 Contrast and states
-
-- Body text ≥4.5:1; large text ≥3:1. `#888` on `#121316` and `#6B6B6B` on white both pass. Gold text on light uses `#8A5A00`.
-- Do not ship a state with only one of hover, focus, active, disabled, loading, or success. The preview must show every state in this section.
+## 9. Mascot Suite & Vector Assets
+Governed by installed skills [`svg-logo-designer`](file:///d:/Beam/.agents/skills/svg-logo-designer/SKILL.md) and [`illustration-style`](file:///d:/Beam/.agents/skills/illustration-style/SKILL.md):
+- **Character:** **Puffy Chubby Star** — Honey Gold (`#FFAA00`) 5-point polar harmonic cubic Bézier spline with 10 perpendicular tangent handles ($C^2$ smooth curvature).
+- **Format:** Pure vector SVG in `assets/mascot/` (`beam-mascot.svg`). Single canonical brand mascot across all views; the five retired `star-*` variants were deleted 2026-10-28.
+- **Brand Lab:** `showcase/index.html` (frozen reference brand lab; never shipped in production).

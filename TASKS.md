@@ -4,14 +4,14 @@
 
 **Milestone:** a floating pill that reads Spotify, holds files, runs a timer, and passes `.\verify.ps1` with exit code 0.
 
-**Completed outside the phase order:** the app UI system, the canonical preview, the Compare page, the 420×300 landscape panel spec, and the focus/cleanup pass (`JOURNAL` cards 21–35). The app still runs only the idle capsule; phases below are still the ordered path.
+**Completed outside the phase order:** the app UI system, the canonical preview, the Compare page, the 420×300 landscape panel spec, the focus/cleanup pass (`JOURNAL` cards 21–35), the 2026-10-28 UI/UX cleanup (card 43), the one-width capsule + segmented tab redesign (card 44), the state identity + panel completeness pass (cards 45–54), the two-width capsule + flat surface pass (card 47), and the 100/136 music capsule pass (card 52). The app still runs only the idle capsule; phases below are still the ordered path.
 
 ---
 
 ## Phase 0 — Prove the scary seams (no UI)
 
 - [x] **0.1 Scaffold the shell**
-  - Electron + TypeScript + Vite. Empty 184×44 frameless transparent window, always on top. Exact-pin versions in `package.json`. Single-instance lock: a second launch wakes the existing pill and exits. Create `verify.ps1` here with only the checks that exist today; each later phase adds its own.
+  - Electron + TypeScript + Vite. Empty 144×44 frameless transparent window, always on top. Exact-pin versions in `package.json`. Single-instance lock: a second launch wakes the existing pill and exits. Create `verify.ps1` here with only the checks that exist today; each later phase adds its own.
   - _Verify:_ `.\verify.ps1` exits 0; `npm run build` exits 0; `npm start` shows the idle capsule; launching twice leaves one process.
 - [x] **0.2 Measure the budget** *(gate — stop here if it fails)*
   - Script sums private bytes and samples CPU over 60s on the empty window. Run this before any helper or UI code exists. Measures the Electron processes only; the helper gets its own 60 MB cap at task 0.3.
@@ -43,7 +43,7 @@
   - Pill does not take foreground on show. Panel closes without activating another app wrongly.
   - _Verify:_ click a text field in Notepad, hover the pill, typing still goes to Notepad.
 - [ ] **1.3 Expand and collapse**
-  - 150ms slide upward to panel height. Esc, outside click, and tray click all collapse it.
+  - 150ms screen-aware expand to the 452×332 window (420×300 panel, 16px shadow margin). Esc, outside click, and tray click all collapse it.
   - _Verify:_ measured animation duration 130–170ms; all three close paths work.
 - [ ] **1.4 Drag and persist**
   - Drag anywhere on the pill. Saved to `settings.json`. Restart restores it. Tray → Reset Position returns to taskbar anchor.
@@ -75,8 +75,8 @@
   - Play/Pause, Prev, Next fade in on hover. Fixed window size.
   - _Verify:_ all three buttons change Spotify's real playback state.
 - [ ] **2.3 Music tab**
-  - Large art, full metadata, same controls. No seek bar (out of scope).
-  - _Verify:_ art renders with no network requests in DevTools.
+  - 148px square art, full metadata, read-only position bar with elapsed/total, same controls. No seek control (out of scope).
+  - _Verify:_ art renders with no network requests in DevTools; the position bar matches SMTC and cannot be dragged.
 - [ ] **2.4 Session picking**
   - Two players at once → last-touched wins; switching apps in the media popup switches Beam.
   - _Verify:_ Spotify + browser tab, toggle foreground, pill follows.
@@ -95,7 +95,7 @@
   - Existence rechecked on panel open.
   - _Verify:_ delete a dropped file, reopen → row shows "File moved or deleted" and drag is disabled.
 - [ ] **3.3 Copy one / Copy All**
-  - Button per row plus Copy All. Goes through the helper.
+  - Copy button per row (hover or focus, 24px) plus Copy All. Goes through the helper.
   - _Verify:_ Ctrl+V in Explorer pastes the real files.
 - [ ] **3.4 Drag out**
   - Drag a row to Explorer or an email client.
@@ -109,14 +109,14 @@
 ## Phase 4 — Timer
 
 - [ ] **4.1 Presets and custom**
-  - 5 / 10 / 25 min plus a custom minutes field, 1–999.
+  - 5 / 10 / 25 min plus an inline custom minutes field, 1–999.
   - _Verify:_ each preset starts a timer with the right remaining time.
 - [ ] **4.2 Live countdown on the pill**
   - `mm:ss` under 60 min, `h:mm:ss` above. Main owns the deadline and pushes `beam:timer:tick`; the renderer only displays it. Never a decrementing counter.
   - _Verify:_ sleep the machine 2 minutes → countdown is still correct.
 - [ ] **4.3 Done state**
-  - Chime plays once, Windows banner fires; the pill shows the done digits in gold (no glow, no mascot swap).
-  - _Verify:_ timer reaches 0 → audible chime + visible banner, exactly one of each.
+  - Chime plays once, Windows banner fires; the pill reads Done with a gold check and gold border (no digits, no glow, no mascot swap).
+  - _Verify:_ timer reaches 0 → audible chime + visible banner, exactly one of each; the capsule shows the check, not digits.
 - [ ] **4.4 Cancel and replace**
   - Cancel stops it. Starting a new one replaces the running one.
   - _Verify:_ start 5m, start 10m → only 10m runs, pill shows 10:00.
@@ -129,13 +129,16 @@
 ## Phase 5 — Calendar
 
 - [ ] **5.1 Month grid**
-  - Current month, correct weekday offset, local clock only.
-  - _Verify:_ matches Windows calendar for the current month.
+  - Current month, correct weekday offset, local clock only. First day of the week follows the Windows locale, Sunday as fallback.
+  - _Verify:_ matches Windows calendar for the current month and week start.
 - [ ] **5.2 Today highlighted**
   - _Verify:_ today's cell has a visibly distinct style.
 - [ ] **5.3 Month drift**
   - Leave the app open past midnight / month end.
   - _Verify:_ date rolls without a restart.
+- [ ] **5.4 Month navigation**
+  - Chevrons move one month; Today returns to the current month. Today stays highlighted only in its own month.
+  - _Verify:_ arrows cross a year boundary correctly; Today restores after several months.
 
 ---
 
@@ -153,7 +156,7 @@
 ## Phase 7 — Settings
 
 - [ ] **7.1 Settings screen**
-  - Startup toggle, hotkey rebind, chime volume with a test button, and a light/dark theme switch.
+  - Five rows: startup toggle, hotkey rebind, chime volume with −/+ and a test button, Dark theme switch, and Reset position.
   - _Verify:_ each control saves, survives restart, and takes effect immediately.
 
 ---

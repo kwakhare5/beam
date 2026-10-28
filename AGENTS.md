@@ -5,7 +5,7 @@
 ## 1. What this is
 Beam is an offline Windows 11 floating pill that gives 1-click media controls, a file drop shelf, a countdown timer, and a month calendar. No cloud, no accounts, no network.
 
-**Current (2026-10-27):** the app runs a 184×44 window with the idle capsule only; the panel exists in `showcase/app-preview.html`. Next is task 0.3.
+**Current (2026-10-28):** the app runs a 144×44 window with the idle capsule only (music will rest at 100 and grow to 136 inside the same window); all seven capsule states and five panels exist in `showcase/app-preview.html`. Panel wiring, the helper, and the rest of the app are unbuilt. Next is task 0.3.
 
 ## 2. Stack
 - Electron + TypeScript + Vite, exact-pinned. Renderer sandboxed, contextIsolation on, nodeIntegration off. The renderer is vanilla TypeScript with shadcn-style tokens and Lucide; no React or Tailwind.
@@ -24,7 +24,7 @@ Beam is an offline Windows 11 floating pill that gives 1-click media controls, a
 
 ## 4. Hard Rules & Invariants (What the AI must ALWAYS do)
 - One task at a time from `TASKS.md`, top unchecked box. Do not skip the Phase 0 order.
-- 0.2 is done and passed (81.8 MB steady / 84 MB peak / 0.011% CPU). The UI exists; the next task is 0.3 (helper hello).
+- 0.2 is done and passed. The rest window is now 144×44 and measures 90 MB steady / 90.7 MB peak / 0.035% CPU. The UI exists; the next task is 0.3 (helper hello).
 - Keep the renderer untrusted. Everything touching Win32 goes through the helper.
 - Read `ARCHITECTURE.md` before touching the window, IPC, or helper seams.
 - Follow `DESIGN.md` tokens exactly. No invented colors, radii, or shadows.
@@ -44,21 +44,22 @@ Beam is an offline Windows 11 floating pill that gives 1-click media controls, a
 - Design tokens & vibe: follow `DESIGN.md`.
 
 ## 7. Folder Map
-- `src/main/`: app lifecycle, window geometry, tray, hotkey, settings, helper client.
+- `src/main/`: app lifecycle and window geometry. Tray, hotkey, settings, and helper client are planned.
 - `src/preload/`: the only bridge exposed to the renderer.
 - `src/renderer/`: `ui/` components (one capsule, one panel shell, per-tab bodies), `styles/` split CSS entry, all visuals.
 - `src/shared/` (planned): IPC channel names, payload types, helper protocol types.
 - `native/BeamBridge/`: C# helper. No UI.
-- `assets/mascot/`: locked Puffy Chubby Star SVG suite.
-- `showcase/`: brand lab, never shipped.
+- `assets/mascot/`: one locked Puffy Chubby Star file, `beam-mascot.svg`.
+- `showcase/`: brand lab plus the canonical app preview, never shipped.
 
 ## 8. Gotchas & Known Traps
-- `Alt+Space` is registered as the hotkey and steals the system window menu while Beam runs. Accepted by the user; fall back to `Ctrl+Shift+Space` if registration fails.
+- `Alt+Space` is the planned hotkey (task 1.8) and will steal the system window menu while Beam runs. Accepted by the user; fall back to `Ctrl+Shift+Space` if registration fails.
 - Global hotkey and tray depend on the window never taking foreground on show.
 - Timer counts from a deadline timestamp, never by decrementing. Sleep must not break it.
 - Shelf is wiped on quit by design, and must warn while non-empty.
-- `Alt+Space` and fullscreen hide both need the helper alive; restart logic is max 3 times in 60s.
-- Electron RAM is the top project risk; latest idle measurement is 81.8 MB steady / 84 MB peak / 0.011% CPU at 184×44. The helper cap is still unmeasured.
+- Fullscreen hide needs the helper alive; the hotkey is main-owned. Helper restart logic is max 3 times in 60s.
+- Music rests at 100 inside the 144 window, so 22px of transparent margin on each side still receives clicks. Fix click-through or window sizing at task 1.3.
+- Electron RAM is the top project risk; latest idle measurement at 144×44 is 90 MB steady / 90.7 MB peak / 0.035% CPU, under the 130 MB gate. The helper cap is still unmeasured.
 
 ## 9. Do Not Touch
 - `assets/mascot/` — finalized brand assets.

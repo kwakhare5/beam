@@ -15,7 +15,9 @@ const map = {
   folder: 'folder',
   monitor: 'monitor',
   check: 'check',
-  plus: 'plus'
+  plus: 'plus',
+  chevronLeft: 'chevron-left',
+  chevronRight: 'chevron-right'
 };
 
 const iconDir = resolve('node_modules/lucide-static/icons');
