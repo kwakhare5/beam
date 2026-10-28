@@ -15,7 +15,7 @@ Beam is a lightweight floating Windows 11 desktop bar that provides 1-click acce
 ## 3. Core Features (v1 Scope)
 
 ### 1. Floating Pill Shell & Window Anchoring
-- **User Flow:** Sits 12px above the Windows taskbar at bottom-center. Hovering fades quick music controls in place and grows the capsule 104→128 inside the 184 window; the window never resizes. Clicking opens the 4 content tabs plus the Settings icon upward as a 420×300 panel with a 150ms grow. Dragging repositioning persists custom coordinates across app restarts. Clicking outside or pressing `Esc` closes the panel. Automatically hides when a full-screen window (game/movie) is active.
+- **User Flow:** Sits 12px above the Windows taskbar at bottom-center. Hovering swaps the track title for Prev / Pause / Next in place and brightens the shell; the capsule is 136px wide for idle, timer, done, files and drag, music rests at 100px and grows to 136px on hover, and one 144×44 window holds every state. Clicking opens the four content tabs plus Settings as a 420×300 panel inside a 452×332 window with a 150ms grow; the panel opens downward in the upper half of the display and upward in the lower half. Dragging repositioning persists custom coordinates across app restarts. Clicking outside or pressing `Esc` closes the panel. Automatically hides when a full-screen window (game/movie) is active.
 - **Acceptance Criteria:**
   - `alwaysOnTop: true` with automatic hide on fullscreen detection.
   - Draggable with position persisted across app restarts.
@@ -32,10 +32,10 @@ Beam is a lightweight floating Windows 11 desktop bar that provides 1-click acce
   - Integrates locally with Windows System Media Transport Controls (SMTC) with $0 API cost and no developer accounts.
   - Displays track title, artist name, and album artwork.
   - Play/Pause and Next/Previous track buttons function reliably.
-  - Seek/scrub bar excluded for V1 to prevent SMTC desynchronization issues.
+  - A read-only position bar shows elapsed and total time; seeking is excluded for V1 to prevent SMTC desynchronization issues.
 
 ### 3. File Drop Shelf (In-Memory Stash + 1-Click Clipboard Copy)
-- **User Flow:** User drags files from any folder onto Beam → files park on the shelf with a count badge (e.g. "3 files"). User can drag them out into another app/folder, or click "Copy to Clipboard" / "Copy All" and immediately paste with `Ctrl + V`. If an original file is deleted from disk, the shelf displays a "File moved or deleted" warning badge.
+- **User Flow:** User drags files from any folder onto Beam → files park on the shelf with a count badge (e.g. "3 files"). User can drag them out into another app/folder, copy one row, or click "Copy All" and immediately paste with `Ctrl + V`. If an original file is deleted from disk, the shelf displays a "Missing" badge on that row and a red pip on the capsule.
 - **Acceptance Criteria:**
   - In-memory file path references only (0 MB disk duplication, instant response).
   - Multi-file drop support with compact list and "Clear All" button.
@@ -43,17 +43,18 @@ Beam is a lightweight floating Windows 11 desktop bar that provides 1-click acce
   - File existence check disables dragging and badges missing files.
 
 ### 4. Countdown Timer & Presets
-- **User Flow:** User selects a preset (5m, 10m, 25m) or enters custom minutes → resting pill displays live countdown. When time expires, the pill shows the done digits in gold, plays one gentle built-in audio chime, and fires a native Windows notification banner.
+- **User Flow:** User selects a preset (5m, 10m, 25m) or enters custom minutes → resting pill displays live countdown. When time expires, the pill reads "Done" with a gold check and gold border, plays one gentle built-in audio chime, and fires a native Windows notification banner.
 - **Acceptance Criteria:**
   - Accurate countdown timer running in background.
   - Live countdown displayed directly on the resting pill.
   - Audio alert (1 clean, gentle chime) and Windows desktop notification banner upon completion.
 
 ### 5. Read-Only Month Calendar
-- **User Flow:** User clicks Calendar tab → sees current month grid with today's date clearly highlighted.
+- **User Flow:** User clicks Calendar tab → sees the current month grid with today's date clearly highlighted, and can move to adjacent months with the chevrons or return with Today. The calendar shows dates; it does not create or edit events.
 - **Acceptance Criteria:**
-  - Clean month/day grid derived from local system clock.
-  - Today's date highlighted.
+  - Clean month/day grid derived from local system clock; first day of the week follows the Windows locale, Sunday as fallback.
+  - Today's date highlighted only in its own month.
+  - Previous/next month navigation and a Today shortcut.
   - 100% offline, zero account sign-ins, zero sync requirements.
 
 ### 6. Smart Contextual Tab Switching
@@ -69,7 +70,7 @@ Beam is a lightweight floating Windows 11 desktop bar that provides 1-click acce
 - **Clipboard History Manager:** Cut to future releases.
 - **Cloud Accounts, Sync & Multi-Device Sharing:** Fully out of scope; Beam is 100% offline.
 - **Music Scrubbing / Timeline Seeker:** Cut from V1 to prevent audio desync bugs.
-- **Light Theme Toggle:** moved into V1 on 2026-10-27; the app ships light and dark themes, switchable in settings and remembered across restarts.
+- **Light Theme Toggle:** moved into V1 on 2026-10-27; v1 will ship light and dark themes, switchable in settings and remembered across restarts.
 - **Hardware Controls (Monitor Brightness / Volume Sliders):** Hardware-dependent, cut from V1.
 
 ---

@@ -1,56 +1,54 @@
 /* ---------- capsule ---------- */
 
 .pill {
-  --pill-w: 104px;
-  --pill-hover-w: 128px;
-  width: var(--pill-w);
+  width: 136px;
   height: 100%;
   display: flex;
   align-items: center;
-  gap: 8px;
-  padding: 0 8px;
+  gap: var(--space-2);
+  padding: 0 var(--space-2);
   border-radius: var(--r-pill);
   background: var(--card);
   border: 1px solid var(--border);
   box-shadow: var(--shadow-pill);
   color: var(--card-foreground);
   transition:
-    opacity 140ms var(--ease),
-    background 140ms var(--ease),
-    border-color 140ms var(--ease),
-    width 120ms var(--ease);
-}
-
-.pill[data-state='idle'] {
-  opacity: 0.7;
-  justify-content: center;
-}
-
-.pill[data-state='idle'] .meta {
-  flex: 0 1 auto;
+    width 120ms var(--ease),
+    border-color 120ms var(--ease),
+    box-shadow 120ms var(--ease);
 }
 
 .pill[data-state='playing'],
 .pill[data-state='paused'] {
-  --pill-w: 176px;
-  --pill-hover-w: 176px;
+  width: 100px;
 }
 
-.pill[data-state='timer'],
-.pill[data-state='done'] {
-  --pill-w: 132px;
-  --pill-hover-w: 132px;
+.pill.has-controls:hover,
+.pill.has-controls:focus-within,
+.pill.has-controls[data-hover='true'] {
+  width: 136px;
 }
 
-.pill[data-state='missing'] {
-  --pill-w: 140px;
-  --pill-hover-w: 140px;
+.pill[data-state='idle'] {
+  color: var(--muted-foreground);
+  justify-content: center;
+}
+
+.pill[data-state='idle']:hover,
+.pill[data-state='idle'][data-hover='true'] {
+  color: var(--card-foreground);
+}
+
+.pill[data-state='idle'] .slot {
+  flex: 0 1 auto;
+}
+
+.pill[data-state='idle'] .meta {
+  flex: none;
 }
 
 .pill:hover,
 .pill[data-hover='true'] {
-  width: var(--pill-hover-w);
-  opacity: 1;
   border-color: var(--border-hover);
 }
 
@@ -59,12 +57,56 @@
   border-style: dashed;
 }
 
+.pill[data-state='done'] {
+  border-color: var(--primary);
+}
+
 .pill[data-state='paused'] .title {
   color: var(--muted-foreground);
 }
 
-.pill[data-state='missing'] .title {
-  color: var(--destructive);
+.pill[data-state='done'] .state-icon {
+  color: var(--primary-text);
+}
+
+.mascot-wrap {
+  position: relative;
+  width: 24px;
+  height: 24px;
+  flex: none;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.media-pip {
+  position: absolute;
+  bottom: -1px;
+  right: -1px;
+  width: 6px;
+  height: 6px;
+  border-radius: var(--r-pill);
+  background: var(--primary);
+  box-shadow: 0 0 0 1.5px var(--card);
+}
+
+.media-pip.danger {
+  background: var(--destructive);
+}
+
+.state-icon {
+  width: 12px;
+  height: 12px;
+  flex: none;
+  display: grid;
+  place-items: center;
+  color: var(--muted-foreground);
+}
+
+.state-icon svg {
+  width: 12px;
+  height: 12px;
+  display: block;
 }
 
 .mascot {
@@ -72,26 +114,28 @@
   height: 24px;
   flex: none;
   display: block;
-  transform-origin: center;
-  transition: transform 120ms var(--ease);
 }
 
-.pill:hover .mascot,
-.pill[data-hover='true'] .mascot {
-  transform: scale(1.06) rotate(-2deg);
+.slot {
+  position: relative;
+  flex: 1;
+  min-width: 0;
+  height: 100%;
+  display: flex;
+  align-items: center;
 }
 
 .meta {
   flex: 1;
   min-width: 0;
+  transition: opacity 120ms var(--ease);
 }
 
 .title {
   font-size: 12px;
   font-weight: 600;
-  letter-spacing: -0.01em;
+  letter-spacing: -0.015em;
   line-height: 1.2;
-  max-width: 40px;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -107,25 +151,60 @@
 }
 
 .controls {
+  position: absolute;
+  inset: 0;
   display: flex;
   align-items: center;
-  gap: 4px;
-  flex: none;
+  justify-content: center;
+  gap: var(--space-2);
   opacity: 0;
   pointer-events: none;
   transition: opacity 120ms var(--ease);
 }
 
-.pill:hover .controls,
-.pill[data-hover='true'] .controls,
-.pill:focus-within .controls {
-  opacity: 1;
-  pointer-events: auto;
+.controls .icon-btn {
+  width: 28px;
+  height: 28px;
+  flex: none;
+  border-radius: var(--r-pill);
 }
 
-@media (prefers-reduced-motion: reduce) {
-  .pill:hover .mascot,
-  .pill[data-hover='true'] .mascot {
-    transform: none;
+.controls .icon-btn svg {
+  width: 16px;
+  height: 16px;
+}
+
+.controls .icon-btn.primary {
+  background: var(--muted);
+}
+
+.controls .icon-btn:hover {
+  background: var(--accent);
+  opacity: 1;
+}
+
+.controls .icon-btn:active {
+  transform: scale(0.96);
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .pill.has-controls:hover .meta {
+    opacity: 0;
   }
+
+  .pill.has-controls:hover .controls {
+    opacity: 1;
+    pointer-events: auto;
+  }
+}
+
+.pill.has-controls[data-hover='true'] .meta,
+.pill.has-controls:focus-within .meta {
+  opacity: 0;
+}
+
+.pill.has-controls[data-hover='true'] .controls,
+.pill.has-controls:focus-within .controls {
+  opacity: 1;
+  pointer-events: auto;
 }

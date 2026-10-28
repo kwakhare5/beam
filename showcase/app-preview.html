@@ -8,11 +8,11 @@
 <style>
   /* gallery-only layout. nothing here is shipped. */
   body { display: block; overflow: auto; background: #1b1d21; color: #ededed; padding: 0; }
-  .g-wrap { max-width: 1160px; margin: 0 auto; padding: 0 32px 64px; }
+  .g-wrap { max-width: 1200px; margin: 0 auto; padding: 0 32px 64px; }
 
   .g-nav {
     position: sticky; top: 0; z-index: 10;
-    display: flex; align-items: center; gap: 4px;
+    display: flex; flex-wrap: wrap; align-items: center; gap: 4px;
     padding: 12px 0;
     background: rgba(27, 29, 33, .96);
     border-bottom: 1px solid rgba(255, 255, 255, .08);
@@ -56,27 +56,31 @@
   .g-label { order: 2; }
   .g-label b { display: block; font-size: 12px; font-weight: 600; }
   .g-label span { display: block; margin-top: 3px; font-size: 11px; line-height: 1.5; color: #8a8a8a; }
-  .g-label code { font-size: 10px; color: #6f6f6f; }
+  .g-label code { font-size: 11px; color: #6f6f6f; }
 
-  .f-idle { width: 104px; height: 32px; }
-  .f-hover { width: 128px; height: 32px; }
-  .f-playing { width: 176px; height: 32px; }
-  .f-timer { width: 132px; height: 32px; }
-  .f-missing { width: 140px; height: 32px; }
-  .f-open { width: 428px; height: 308px; padding: 4px; box-sizing: border-box; }
+  .f-pill { width: 136px; height: 32px; }
+  .f-pill.is-rest { width: 100px; }
+  .f-open { width: 452px; height: 332px; padding: 16px; box-sizing: border-box; }
 
-  .g-compare { display: grid; grid-template-columns: repeat(2, 184px); gap: 32px; padding: 8px 0 24px; }
+  .g-options { display: flex; flex-direction: column; gap: 12px; padding: 8px 0 24px; }
+  .g-option { display: flex; flex-direction: column; gap: 10px; padding-bottom: 14px; border-bottom: 1px solid rgba(255, 255, 255, .08); }
+  .g-option:last-child { border-bottom: 0; }
+  .g-option-head { display: flex; align-items: baseline; gap: 12px; font-size: 12px; }
+  .g-option-head b { font-size: 15px; }
+  .g-option-head span { color: #8a8a8a; }
+  .g-option-head code { margin-left: auto; color: var(--primary); font-size: 11px; }
+  .g-option-pills { display: flex; flex-wrap: wrap; gap: 20px; }
+  .g-option-pills .pill { pointer-events: none; }
   .g-compare-item { display: flex; flex-direction: column; gap: 8px; }
   .g-compare-label { font-size: 12px; font-weight: 600; }
   .g-compare-note { font-size: 11px; color: #8a8a8a; }
   .compare-window {
-    width: 184px; height: 44px;
+    width: 144px; height: 44px;
     display: flex; align-items: center; justify-content: center;
     border: 1px dashed rgba(255, 255, 255, .22); border-radius: 12px;
     background: rgba(255, 255, 255, .02);
   }
   .compare-window [data-pill] { display: flex; align-items: center; justify-content: center; height: 32px; }
-  .g-compare .pill { pointer-events: none; }
 
   .g-subnav { display: flex; flex-wrap: wrap; gap: 4px; margin-bottom: 16px; }
   .g-subnav button {
@@ -89,6 +93,7 @@
   .g-subnav button[aria-pressed='true'] { background: rgba(255, 255, 255, .1); border-color: rgba(255, 255, 255, .16); color: #ededed; }
 
   .g-panel-stage { display: grid; place-items: center; padding: 8px 0 24px; }
+  .g-stage-note { text-align: center; font-size: 11px; color: #8a8a8a; }
 
   .g-spec { display: grid; grid-template-columns: repeat(auto-fill, minmax(230px, 1fr)); gap: 16px; }
   .g-card { padding: 16px; border: 1px solid rgba(255, 255, 255, .08); border-radius: var(--r-card); background: rgba(255, 255, 255, .04); }
@@ -96,7 +101,25 @@
   .g-card ul { margin: 0; padding-left: 16px; font-size: 12px; line-height: 1.75; color: #cfcfcf; }
   .g-card code { font-size: 11px; color: #e9c46a; }
 
-  [data-pill], #panel-stage { width: 100%; height: 100%; }
+  .g-section-title { display: flex; align-items: center; gap: 12px; margin: 24px 0 12px; }
+  .g-section-title h3 { margin: 0; font-size: 15px; font-weight: 600; letter-spacing: -.01em; }
+  .g-badge { font-size: 11px; padding: 2px 8px; border-radius: var(--r-pill); background: rgba(255, 255, 255, .08); color: #9a9a9a; }
+  .g-board-capsules { display: grid; grid-template-columns: repeat(auto-fill, minmax(250px, 1fr)); gap: 16px; }
+  .g-board-card { display: flex; flex-direction: column; gap: 8px; padding: 12px; border-radius: var(--r-card); background: rgba(255, 255, 255, .02); border: 1px solid rgba(255, 255, 255, .06); }
+  .g-card-meta { display: flex; align-items: center; justify-content: space-between; font-size: 11px; color: #9a9a9a; }
+  .g-card-meta code { font-size: 11px; padding: 1px 4px; border-radius: 4px; background: rgba(255, 255, 255, .06); color: var(--primary); }
+  .g-board-panels { display: grid; grid-template-columns: repeat(auto-fill, minmax(468px, 1fr)); gap: 24px; }
+  .g-board-panel-card { display: flex; flex-direction: column; gap: 8px; }
+
+  .g-light-stage {
+    display: flex; flex-wrap: wrap; align-items: center; gap: 16px;
+    padding: 20px;
+    border-radius: 12px;
+    background: #f5f5f5;
+  }
+  .g-light-stage .compare-window { border-color: rgba(0, 0, 0, .18); background: rgba(0, 0, 0, .03); }
+
+  [data-pill], #panel-stage, [id^="board-panel-"] { width: 100%; height: 100%; }
 </style>
 </head>
 <body data-theme="dark">
@@ -104,7 +127,8 @@
 
   <nav class="g-nav" aria-label="Preview pages">
     <span class="g-brand">Beam — app UI preview</span>
-    <button type="button" class="g-nav-btn" data-page-btn="compare" aria-current="page">Compare</button>
+    <button type="button" class="g-nav-btn" data-page-btn="board" aria-current="page">Showcase Board</button>
+    <button type="button" class="g-nav-btn" data-page-btn="compare">Compare</button>
     <button type="button" class="g-nav-btn" data-page-btn="capsule">Capsule</button>
     <button type="button" class="g-nav-btn" data-page-btn="panels">Panels</button>
     <button type="button" class="g-nav-btn" data-page-btn="rules">Rules</button>
@@ -115,24 +139,129 @@
   </nav>
 
   <main>
-    <section class="g-page" data-page="compare">
+    <section class="g-page" data-page="board">
       <div class="g-head">
-        <h2>1 · Compare</h2>
+        <h2>1 · Showcase Board</h2>
+        <p class="g-help">All capsule states and all five panels in one canvas. Tab bars are live here; calendar and timer controls are live on the Panels page. Every sample uses the same data.</p>
+      </div>
+
+      <div class="g-section-title">
+        <h3>Capsule States · 32px height</h3>
+        <span class="g-badge">144×44 window · 100 rest / 136 hover</span>
+      </div>
+      <div class="g-board-capsules">
+        <div class="g-board-card">
+          <div class="g-card-meta"><span>idle · rest</span><code>136×32</code></div>
+          <div class="compare-window"><div data-pill="idle"></div></div>
+        </div>
+        <div class="g-board-card">
+          <div class="g-card-meta"><span>idle · hover (brightens)</span><code>136×32</code></div>
+          <div class="compare-window"><div data-pill="idleHover"></div></div>
+        </div>
+        <div class="g-board-card">
+          <div class="g-card-meta"><span>playing · rest (title)</span><code>100×32</code></div>
+          <div class="compare-window"><div data-pill="playingRest"></div></div>
+        </div>
+        <div class="g-board-card">
+          <div class="g-card-meta"><span>playing · hover (transport)</span><code>136×32</code></div>
+          <div class="compare-window"><div data-pill="playing"></div></div>
+        </div>
+        <div class="g-board-card">
+          <div class="g-card-meta"><span>paused · rest (glyph)</span><code>100×32</code></div>
+          <div class="compare-window"><div data-pill="pausedRest"></div></div>
+        </div>
+        <div class="g-board-card">
+          <div class="g-card-meta"><span>paused · hover (transport)</span><code>136×32</code></div>
+          <div class="compare-window"><div data-pill="paused"></div></div>
+        </div>
+        <div class="g-board-card">
+          <div class="g-card-meta"><span>timer · countdown + pip</span><code>136×32</code></div>
+          <div class="compare-window"><div data-pill="timer"></div></div>
+        </div>
+        <div class="g-board-card">
+          <div class="g-card-meta"><span>done · check + gold border</span><code>136×32</code></div>
+          <div class="compare-window"><div data-pill="done"></div></div>
+        </div>
+        <div class="g-board-card">
+          <div class="g-card-meta"><span>files · shelf count</span><code>136×32</code></div>
+          <div class="compare-window"><div data-pill="filesFull"></div></div>
+        </div>
+        <div class="g-board-card">
+          <div class="g-card-meta"><span>files · one missing</span><code>136×32</code></div>
+          <div class="compare-window"><div data-pill="filesMissing"></div></div>
+        </div>
+        <div class="g-board-card">
+          <div class="g-card-meta"><span>drag · accept state</span><code>136×32</code></div>
+          <div class="compare-window"><div data-pill="drag"></div></div>
+        </div>
+      </div>
+
+      <div class="g-section-title" style="margin-top: 36px;">
+        <h3>Open Panels · 420×300 body</h3>
+        <span class="g-badge">452×332 open frame</span>
+      </div>
+      <div class="g-board-panels">
+        <div class="g-board-panel-card">
+          <div class="g-card-meta"><span>music · now playing</span><code>420×300</code></div>
+          <div class="f-open"><div id="board-panel-music"></div></div>
+        </div>
+        <div class="g-board-panel-card">
+          <div class="g-card-meta"><span>files · shelf (copy & remove on hover)</span><code>420×300</code></div>
+          <div class="f-open"><div id="board-panel-files"></div></div>
+        </div>
+        <div class="g-board-panel-card">
+          <div class="g-card-meta"><span>timer · idle</span><code>420×300</code></div>
+          <div class="f-open"><div id="board-panel-timer"></div></div>
+        </div>
+        <div class="g-board-panel-card">
+          <div class="g-card-meta"><span>calendar · month grid</span><code>420×300</code></div>
+          <div class="f-open"><div id="board-panel-calendar"></div></div>
+        </div>
+        <div class="g-board-panel-card">
+          <div class="g-card-meta"><span>settings · five rows</span><code>420×300</code></div>
+          <div class="f-open"><div id="board-panel-settings"></div></div>
+        </div>
+      </div>
+
+      <div class="g-section-title" style="margin-top: 36px;">
+        <h3>Light Theme</h3>
+        <span class="g-badge">same components, light tokens</span>
+      </div>
+      <div class="g-light-stage" data-theme="light">
+        <div class="compare-window"><div data-pill="idle"></div></div>
+        <div class="compare-window"><div data-pill="playing"></div></div>
+        <div class="compare-window"><div data-pill="pausedRest"></div></div>
+        <div class="compare-window"><div data-pill="timer"></div></div>
+        <div class="compare-window"><div data-pill="done"></div></div>
+        <div class="compare-window"><div data-pill="filesMissing"></div></div>
+      </div>
+    </section>
+
+    <section class="g-page" data-page="compare" hidden>
+      <div class="g-head">
+        <h2>Compare</h2>
         <p class="g-help">
-          Same <code>Beam</code> content, two states. The 184×44 window is fixed; the capsule is <code>104×32</code> idle and <code>128×32</code> hover — a 24px growth, 40px each side at idle and 28px at hover. Static snapshots, no pointer interaction.
+          Locked: music rests at <b>100 wide</b> and grows to <b>136 wide</b> on hover or focus, over 120ms. Both sit in the same <code>144×44</code> window; at rest the title clips to a 50px slot.
         </p>
       </div>
 
-      <div class="g-compare">
-        <div class="g-compare-item">
-          <span class="g-compare-label">Idle · 104</span>
-          <div class="compare-window"><div data-pill="compareIdle"></div></div>
-          <span class="g-compare-note">40px each side · opacity .70</span>
+      <div class="g-options">
+        <div class="g-option">
+          <div class="g-option-head"><b>Rest</b><span>100 pill in a 144 window</span><code>50px title slot · clips</code></div>
+          <div class="g-option-pills">
+            <div class="g-compare-item">
+              <div class="compare-window"><div data-pill="playingRest"></div></div>
+            </div>
+          </div>
         </div>
-        <div class="g-compare-item">
-          <span class="g-compare-label">Hover · 128</span>
-          <div class="compare-window"><div data-pill="compareHover"></div></div>
-          <span class="g-compare-note">28px each side · opacity 1 · +24px</span>
+
+        <div class="g-option">
+          <div class="g-option-head"><b>Hover</b><span>136 pill in a 144 window</span><code>86px slot · 1px each side</code></div>
+          <div class="g-option-pills">
+            <div class="g-compare-item">
+              <div class="compare-window"><div data-pill="playing"></div></div>
+            </div>
+          </div>
         </div>
       </div>
     </section>
@@ -141,51 +270,58 @@
       <div class="g-head">
         <h2>2 · Capsule</h2>
         <p class="g-help">
-          One line; the capsule grows 24px on hover inside a fixed window. Controls fade in only for playing or paused media.
-          Capsule <code>104×32</code> idle / <code>128×32</code> hover / <code>176×32</code> playing; rest window <code>184×44</code>. Inter and Lucide are vendored.
+          One <code>144×44</code> window. Most states are <code>136×32</code>; music rests at <code>100×32</code> and grows to <code>136×32</code> on hover or focus, swapping the title for transport. Long names ellipsize, nothing spills.
         </p>
       </div>
 
       <div class="g-grid">
         <div class="g-row">
-          <div class="g-label"><b>Idle</b><span>no music, no timer</span><code>104 · centered · opacity .70</code></div>
-          <div class="f-idle"><div data-pill="idle"></div></div>
+          <div class="g-label"><b>Idle</b><span>no music, no timer</span><code>136 · centered · muted label</code></div>
+          <div class="f-pill"><div data-pill="idle"></div></div>
         </div>
         <div class="g-row">
-          <div class="g-label"><b>Idle · hover</b><span>the compare pair, same content</span><code>128 · centered</code></div>
-          <div class="f-hover"><div data-pill="idleHover"></div></div>
+          <div class="g-label"><b>Idle · hover</b><span>brightens, title stays</span><code>136 · opacity 1</code></div>
+          <div class="f-pill"><div data-pill="idleHover"></div></div>
         </div>
         <div class="g-row">
-          <div class="g-label"><b>Playing · hover</b><span>SMTC track</span><code>176 · filled transport</code></div>
-          <div class="f-playing"><div data-pill="playing"></div></div>
+          <div class="g-label"><b>Playing · rest</b><span>track title, clipped</span><code>100 · 50px title slot</code></div>
+          <div class="f-pill is-rest"><div data-pill="playingRest"></div></div>
         </div>
         <div class="g-row">
-          <div class="g-label"><b>Paused · hover</b><span>same line, muted ink</span><code>176 · muted ink</code></div>
-          <div class="f-playing"><div data-pill="paused"></div></div>
+          <div class="g-label"><b>Playing · hover</b><span>title swaps to transport</span><code>136 · 3×28px controls</code></div>
+          <div class="f-pill"><div data-pill="playing"></div></div>
         </div>
         <div class="g-row">
-          <div class="g-label"><b>Timer running</b><span>deadline driven</span><code>132 · tabular-nums</code></div>
-          <div class="f-timer"><div data-pill="timer"></div></div>
+          <div class="g-label"><b>Paused · rest</b><span>muted title + play glyph</span><code>100 · 30px title slot</code></div>
+          <div class="f-pill is-rest"><div data-pill="pausedRest"></div></div>
         </div>
         <div class="g-row">
-          <div class="g-label"><b>Timer done</b><span>gold digits</span><code>132 · gold digits</code></div>
-          <div class="f-timer"><div data-pill="done"></div></div>
+          <div class="g-label"><b>Paused · hover</b><span>transport with play</span><code>136 · play icon</code></div>
+          <div class="f-pill"><div data-pill="paused"></div></div>
         </div>
         <div class="g-row">
-          <div class="g-label"><b>Shelf empty</b><span>paths only, never copies</span><code>104 · 0 files</code></div>
-          <div class="f-idle"><div data-pill="filesEmpty"></div></div>
+          <div class="g-label"><b>Timer running</b><span>deadline driven</span><code>136 · tabular digits</code></div>
+          <div class="f-pill"><div data-pill="timer"></div></div>
         </div>
         <div class="g-row">
-          <div class="g-label"><b>Shelf with files</b><span>cap 50</span><code>104 · 3 files</code></div>
-          <div class="f-idle"><div data-pill="filesFull"></div></div>
+          <div class="g-label"><b>Timer done</b><span>gold check + gold border</span><code>136 · no digits</code></div>
+          <div class="f-pill"><div data-pill="done"></div></div>
         </div>
         <div class="g-row">
-          <div class="g-label"><b>Drag over</b><span>accept state</span><code>104 · gold dashed</code></div>
-          <div class="f-idle"><div data-pill="drag"></div></div>
+          <div class="g-label"><b>Shelf with files</b><span>count only, cap 50</span><code>136 · 5 files</code></div>
+          <div class="f-pill"><div data-pill="filesFull"></div></div>
         </div>
         <div class="g-row">
-          <div class="g-label"><b>Missing file</b><span>drag disabled</span><code>140 · danger ink</code></div>
-          <div class="f-missing"><div data-pill="missing"></div></div>
+          <div class="g-label"><b>Shelf, one missing</b><span>red pip, panel shows which</span><code>136 · danger pip</code></div>
+          <div class="f-pill"><div data-pill="filesMissing"></div></div>
+        </div>
+        <div class="g-row">
+          <div class="g-label"><b>Drag over</b><span>accept state</span><code>136 · gold dashed</code></div>
+          <div class="f-pill"><div data-pill="drag"></div></div>
+        </div>
+        <div class="g-row">
+          <div class="g-label"><b>Empty shelf</b><span>falls back to idle, no “0 files” state</span><code>136 · Beam</code></div>
+          <div class="f-pill"><div data-pill="idle"></div></div>
         </div>
       </div>
     </section>
@@ -194,63 +330,70 @@
       <div class="g-head">
         <h2>3 · Panels</h2>
         <p class="g-help">
-          Panel <code>420×300</code>, open window <code>428×308</code>. Tabs 40, body padding 8, no footer. Art left, text right. Grow from the pill over 150ms, bottom-center.
-          Pick one state; no scrolling through every panel.
+          Panel <code>420×300</code> inside a <code>452×332</code> window with a 16px shadow margin. Tabs, calendar arrows, Today, and the timer presets are live in this preview.
         </p>
       </div>
 
       <div class="g-subnav" role="group" aria-label="Panel states">
         <button type="button" data-panel-key="music" aria-pressed="true">Music</button>
-        <button type="button" data-panel-key="files" aria-pressed="false">Files</button>
-        <button type="button" data-panel-key="timer" aria-pressed="false">Timer</button>
-        <button type="button" data-panel-key="calendar" aria-pressed="false">Calendar</button>
-        <button type="button" data-panel-key="settings" aria-pressed="false">Settings</button>
+        <button type="button" data-panel-key="musicPaused" aria-pressed="false">Music paused</button>
         <button type="button" data-panel-key="musicEmpty" aria-pressed="false">Music empty</button>
         <button type="button" data-panel-key="musicLoading" aria-pressed="false">Music loading</button>
+        <button type="button" data-panel-key="files" aria-pressed="false">Files</button>
+        <button type="button" data-panel-key="filesMany" aria-pressed="false">Files many</button>
         <button type="button" data-panel-key="filesEmpty" aria-pressed="false">Files empty</button>
         <button type="button" data-panel-key="filesCopied" aria-pressed="false">Files copied</button>
+        <button type="button" data-panel-key="timer" aria-pressed="false">Timer</button>
+        <button type="button" data-panel-key="timerCustom" aria-pressed="false">Timer custom</button>
+        <button type="button" data-panel-key="timerRunning" aria-pressed="false">Timer running</button>
+        <button type="button" data-panel-key="timerDone" aria-pressed="false">Timer done</button>
+        <button type="button" data-panel-key="calendar" aria-pressed="false">Calendar</button>
+        <button type="button" data-panel-key="settings" aria-pressed="false">Settings</button>
       </div>
 
       <div class="g-panel-stage">
         <div class="f-open"><div id="panel-stage"></div></div>
       </div>
+      <p class="g-stage-note">Demo only: tab switching, month arrows, Today, and timer presets run here. Transport and file actions need the app.</p>
     </section>
 
     <section class="g-page" data-page="rules" hidden>
       <div class="g-head">
         <h2>4 · Rules</h2>
-        <p class="g-help">The tokens and states this file enforces. Shadcn-style variables; vanilla TypeScript; Lucide.</p>
+        <p class="g-help">The values this file demonstrates. Shadcn-style variables; vanilla TypeScript; Lucide.</p>
       </div>
 
       <div class="g-spec">
         <div class="g-card">
           <h3>Sizes</h3>
           <ul>
-            <li>Capsule <code>104 idle / 128 hover / 176 playing</code></li>
-            <li>Rest window <code>184×44</code></li>
+            <li>Capsule <code>136×32</code> · music <code>100 rest / 136 hover</code></li>
+            <li>Window <code>144×44</code> for every state</li>
             <li>Panel <code>420×300</code></li>
-            <li>Open window <code>428×308</code></li>
-            <li>Radii <code>6 / 8 / 10 / 14</code>; hit <code>24</code></li>
+            <li>Open window <code>452×332</code> · 16px shadow margin</li>
+            <li>Radii <code>6 / 8 / 12 / 16</code>; hit <code>24 / 28 / 32</code></li>
           </ul>
         </div>
         <div class="g-card">
           <h3>Type &amp; icons</h3>
           <ul>
             <li>Inter variable, vendored</li>
-            <li>Capsule <code>12 / 600</code>; panel <code>15 / 600</code></li>
+            <li>Scale <code>11 / 12 / 13 / 15 / 40</code></li>
+            <li>Capsule <code>12 / 600</code>; panel title <code>15 / 600</code></li>
             <li>Timer <code>15 / 40 / 600</code>; tabular</li>
-            <li>Lucide outline UI; filled transport</li>
-            <li>Icons <code>18 / 20 / 16 / 14</code></li>
+            <li>Icons <code>20 / 16 / 14 / 12</code></li>
           </ul>
         </div>
         <div class="g-card">
           <h3>States</h3>
           <ul>
-            <li>Idle, hover, active, focus</li>
-            <li>Disabled, loading, empty</li>
-            <li>Error, success, overflow</li>
-            <li>Selected</li>
+            <li>Capsule <code>idle · playing · paused · timer · done · files · drag</code></li>
+            <li>Interaction <code>rest · hover · focus · pressed · disabled</code></li>
+            <li>Panel <code>empty · loading · success</code></li>
             <li>Capsule <code>1px</code> · panel <code>2px</code> focus</li>
+            <li>Selected tab <code>gold icon + label, no fill</code></li>
+            <li>One fill level: no box inside a box</li>
+            <li>Shell <code>solid · no blur · no rim · no glow</code></li>
             <li>No capsule glow</li>
           </ul>
         </div>
@@ -258,8 +401,9 @@
           <h3>Motion</h3>
           <ul>
             <li>Hover <code>120ms</code></li>
-            <li>Panel grow <code>150ms</code></li>
-            <li>Mascot pop <code>120ms</code></li>
+            <li>Title ⇄ transport <code>120ms</code></li>
+            <li>Press <code>100ms</code></li>
+            <li>No layout animation</li>
             <li>Reduced motion honored</li>
             <li>No done glow</li>
           </ul>
@@ -270,88 +414,209 @@
 </div>
 
 <script type="module">
-  import { iconSprite, panel, pill } from '../src/renderer/ui/index.ts';
+  import { bindPanelTabs, iconSprite, panel, pill } from '../src/renderer/ui/index.ts';
 
   document.body.insertAdjacentHTML('afterbegin', iconSprite());
+  bindPanelTabs(document);
+
+  const track = {
+    title: 'Midnight City',
+    artist: 'M83',
+    album: "Hurry Up, We're Dreaming",
+    app: 'Spotify',
+    art: './sample-art.svg',
+    position: 102000,
+    duration: 243000
+  };
+
+  const files = [
+    { name: 'invoice.pdf', size: '1.2 MB' },
+    { name: 'brief-final-v2.docx', size: '240 KB' },
+    { name: 'screenshots', size: 'folder', kind: 'folder' },
+    { name: 'old-notes.txt', size: 'missing', missing: true },
+    { name: 'contract.pdf', size: '88 KB' }
+  ];
+
+  const extraFiles = [
+    ...files,
+    { name: 'archive-2026.zip', size: '18 MB' },
+    { name: 'notes.md', size: '4 KB' },
+    { name: 'design.fig', size: '6.1 MB' }
+  ];
 
   const states = {
-    compareIdle: { state: 'idle', title: 'Beam' },
-    compareHover: { state: 'idle', hover: true, title: 'Beam' },
     idle: { state: 'idle', title: 'Beam' },
     idleHover: { state: 'idle', hover: true, title: 'Beam' },
-    playing: { state: 'playing', hover: true, title: 'Midnight City', controls: true, primaryIcon: 'pause' },
-    paused: { state: 'paused', hover: true, title: 'Midnight City', controls: true, primaryIcon: 'play' },
-    timer: { state: 'timer', title: 'Focus', digits: '18:24' },
-    done: { state: 'done', title: "Time's up", digits: '00:00' },
-    filesEmpty: { state: 'files', title: '0 files' },
-    filesFull: { state: 'files', title: '3 files' },
-    drag: { state: 'drag', title: '+3 files' },
-    missing: { state: 'missing', title: 'invoice.pdf' }
+    playingRest: { state: 'playing', title: track.title },
+    playing: { state: 'playing', hover: true, title: track.title, controls: true, primaryIcon: 'pause' },
+    pausedRest: { state: 'paused', title: track.title },
+    paused: { state: 'paused', hover: true, title: track.title, controls: true, primaryIcon: 'play' },
+    timer: { state: 'timer', title: 'Focus', digits: '10:00', pip: 'media' },
+    done: { state: 'done', title: 'Done' },
+    filesFull: { state: 'files', title: `${files.length} files` },
+    filesMissing: { state: 'files', title: `${files.length} files`, pip: 'danger' },
+    drag: { state: 'drag', title: '+3 files' }
   };
 
   for (const el of document.querySelectorAll('[data-pill]')) {
     el.innerHTML = pill(states[el.dataset.pill]);
   }
 
-  const base = {
+  const theme = () => document.body.dataset.theme === 'light' ? 'light' : 'dark';
+
+  const panelBase = () => ({
     music: {
-      title: 'Midnight City',
-      subtitle: "M83 · Hurry Up, We're Dreaming · Spotify",
-      art: './sample-art.svg',
-      playing: true
+      title: track.title,
+      subtitle: `${track.artist} · ${track.album} · ${track.app}`,
+      art: track.art,
+      playing: true,
+      positionMs: track.position,
+      durationMs: track.duration
     },
-    files: [
-      { name: 'invoice.pdf', size: '1.2 MB' },
-      { name: 'brief-final-v2.docx', size: '240 KB' },
-      { name: 'screenshots', size: 'folder', kind: 'folder' },
-      { name: 'old-notes.txt', size: 'missing', missing: true },
-      { name: 'contract.pdf', size: '88 KB' },
-      { name: 'photo.png', size: '2.4 MB' }
-    ],
-    timer: { digits: '10:00', note: 'press start', preset: '10' },
-    calendar: new Date(),
-    settings: { startup: true, shortcut: 'Alt + Space', volume: '70%', theme: 'Dark' }
-  };
+    files,
+    timer: { mode: 'idle', digits: '10:00', note: 'Press start', preset: '10' },
+    calendar: { view: calView, today: new Date() },
+    settings: { startup: true, shortcut: 'Alt + Space', volume: 70, theme: theme() }
+  });
 
-  const data = {
-    music: base,
-    files: base,
-    timer: base,
-    calendar: base,
-    settings: base,
-    musicEmpty: { ...base, music: { title: '', subtitle: '' } },
-    musicLoading: { ...base, music: { title: '', subtitle: '', loading: true } },
-    filesEmpty: { ...base, files: [] },
-    filesCopied: { ...base, filesCopied: true }
-  };
+  let calView = new Date();
+  let timerDemo = { mode: 'idle', digits: '10:00', note: 'Press start', preset: '10' };
 
-  const panelTab = {
-    music: 'music',
-    files: 'files',
-    timer: 'timer',
-    calendar: 'calendar',
-    settings: 'settings',
-    musicEmpty: 'music',
-    musicLoading: 'music',
-    filesEmpty: 'files',
-    filesCopied: 'files'
-  };
+  function panelFor(key) {
+    const base = panelBase();
+    switch (key) {
+      case 'musicPaused': return { tab: 'music', data: { ...base, music: { ...base.music, playing: false } } };
+      case 'musicEmpty': return { tab: 'music', data: { ...base, music: { title: '', subtitle: '' } } };
+      case 'musicLoading': return { tab: 'music', data: { ...base, music: { title: '', subtitle: '', loading: true } } };
+      case 'filesEmpty': return { tab: 'files', data: { ...base, files: [] } };
+      case 'filesMany': return { tab: 'files', data: { ...base, files: extraFiles } };
+      case 'filesCopied': return { tab: 'files', data: { ...base, filesCopied: true } };
+      case 'timer': return { tab: 'timer', data: { ...base, timer: timerDemo } };
+      case 'timerCustom': return { tab: 'timer', data: { ...base, timer: { mode: 'custom', digits: '10:00', note: 'Set a length', preset: 'custom', customMinutes: '10' } } };
+      case 'timerRunning': return { tab: 'timer', data: { ...base, timer: { mode: 'running', digits: '07:42', note: 'Focus', preset: '10' } } };
+      case 'timerDone': return { tab: 'timer', data: { ...base, timer: { mode: 'done', digits: '00:00', note: 'Timer finished' } } };
+      case 'calendar': return { tab: 'calendar', data: base };
+      case 'settings': return { tab: 'settings', data: base };
+      default: return { tab: key, data: base };
+    }
+  }
 
   const stage = document.querySelector('#panel-stage');
-  let currentPanel = 'music';
+  let currentKey = 'music';
+  let currentTab = 'music';
 
   function renderPanel(key) {
-    currentPanel = key;
-    stage.innerHTML = panel(panelTab[key], data[key]);
+    const { tab, data } = panelFor(key);
+    currentKey = key;
+    currentTab = tab;
+    stage.innerHTML = panel(tab, data);
     for (const btn of document.querySelectorAll('[data-panel-key]')) {
       btn.setAttribute('aria-pressed', String(btn.dataset.panelKey === key));
     }
   }
 
   for (const btn of document.querySelectorAll('[data-panel-key]')) {
-    btn.addEventListener('click', () => renderPanel(btn.dataset.panelKey));
+    btn.addEventListener('click', () => {
+      if (btn.dataset.panelKey === 'timerCustom') {
+        timerDemo = { mode: 'custom', digits: '10:00', note: 'Set a length', preset: 'custom', customMinutes: '10' };
+      }
+      if (btn.dataset.panelKey === 'timerRunning') {
+        timerDemo = { mode: 'running', digits: '07:42', note: 'Focus', preset: '10' };
+      }
+      if (btn.dataset.panelKey === 'timerDone') {
+        timerDemo = { mode: 'done', digits: '00:00', note: 'Timer finished' };
+      }
+      if (btn.dataset.panelKey === 'timer') {
+        timerDemo = { mode: 'idle', digits: '10:00', note: 'Press start', preset: '10' };
+      }
+      if (btn.dataset.panelKey === 'calendar') calView = new Date();
+      renderPanel(btn.dataset.panelKey);
+    });
   }
+
+  stage.addEventListener('click', (event) => {
+    const target = event.target;
+    if (!(target instanceof Element)) return;
+    const button = target.closest('button');
+    if (!button) return;
+
+    if (currentTab === 'calendar' && button.classList.contains('cal-nav-btn')) {
+      const step = button.getAttribute('aria-label') === 'Previous month' ? -1 : 1;
+      calView = new Date(calView.getFullYear(), calView.getMonth() + step, 1);
+      renderPanel(currentKey);
+      return;
+    }
+
+    if (currentTab === 'calendar' && button.classList.contains('cal-today-btn')) {
+      calView = new Date();
+      renderPanel(currentKey);
+      return;
+    }
+
+    if (currentTab !== 'timer') return;
+
+    const chip = button.closest('.presets .chip');
+    if (chip) {
+      const label = chip.textContent.trim();
+      if (label === 'Custom') {
+        timerDemo = { mode: 'custom', digits: '10:00', note: 'Set a length', preset: 'custom', customMinutes: '10' };
+      } else {
+        const minutes = label.replace(' min', '');
+        timerDemo = { mode: 'idle', digits: `${minutes}:00`, note: 'Press start', preset: minutes };
+      }
+      renderPanel(currentKey);
+      return;
+    }
+
+    if (button.closest('.timer-custom')) {
+      const input = stage.querySelector('.timer-input');
+      const minutes = String(Math.min(999, Math.max(1, Number(input && input.value) || 10)));
+      timerDemo = { mode: 'idle', digits: `${minutes}:00`, note: 'Press start', preset: 'custom', customMinutes: minutes };
+      renderPanel(currentKey);
+      return;
+    }
+
+    if (button.classList.contains('primary')) {
+      if (timerDemo.mode === 'custom') {
+        const input = stage.querySelector('.timer-input');
+        const minutes = String(Math.min(999, Math.max(1, Number(input && input.value) || 10)));
+        timerDemo = { mode: 'running', digits: `${minutes}:00`, note: 'Focus', preset: 'custom', customMinutes: minutes };
+      } else {
+        timerDemo = { ...timerDemo, mode: 'running', note: 'Focus' };
+      }
+      renderPanel(currentKey);
+      return;
+    }
+
+    if (button.classList.contains('danger')) {
+      timerDemo = { mode: 'idle', digits: '10:00', note: 'Press start', preset: '10' };
+      renderPanel(currentKey);
+      return;
+    }
+
+    if (button.classList.contains('ghost')) {
+      timerDemo = { mode: 'idle', digits: '10:00', note: 'Press start', preset: '10' };
+      renderPanel(currentKey);
+    }
+  });
+
   renderPanel('music');
+
+  function renderBoardPanels() {
+    const data = panelBase();
+    const board = {
+      'board-panel-music': 'music',
+      'board-panel-files': 'files',
+      'board-panel-timer': 'timer',
+      'board-panel-calendar': 'calendar',
+      'board-panel-settings': 'settings'
+    };
+    for (const [id, tab] of Object.entries(board)) {
+      const el = document.getElementById(id);
+      if (el) el.innerHTML = panel(tab, data);
+    }
+  }
+  renderBoardPanels();
 
   const pages = [...document.querySelectorAll('[data-page]')];
   const navButtons = [...document.querySelectorAll('[data-page-btn]')];
@@ -361,7 +626,7 @@
     for (const btn of navButtons) {
       btn.setAttribute('aria-current', btn.dataset.pageBtn === name ? 'page' : 'false');
     }
-    if (name === 'panels') renderPanel(currentPanel);
+    if (name === 'panels') renderPanel(currentKey);
   }
 
   for (const btn of navButtons) {
@@ -378,14 +643,16 @@
   });
 
   const initial = location.hash.slice(1);
-  showPage(pages.some((page) => page.dataset.page === initial) ? initial : 'compare');
+  showPage(pages.some((page) => page.dataset.page === initial) ? initial : 'board');
 
   for (const btn of document.querySelectorAll('[data-theme-btn]')) {
     btn.addEventListener('click', () => {
-      const theme = btn.dataset.themeBtn;
-      document.documentElement.dataset.theme = theme;
-      document.body.dataset.theme = theme;
+      const next = btn.dataset.themeBtn;
+      document.documentElement.dataset.theme = next;
+      document.body.dataset.theme = next;
       document.querySelectorAll('[data-theme-btn]').forEach((b) => b.classList.toggle('on', b === btn));
+      renderBoardPanels();
+      renderPanel(currentKey);
     });
   }
 </script>

@@ -18,7 +18,9 @@ export type IconName =
   | 'folder'
   | 'monitor'
   | 'check'
-  | 'plus';
+  | 'plus'
+  | 'chevronLeft'
+  | 'chevronRight';
 
 type MediaName = 'play' | 'pause' | 'prev' | 'next';
 

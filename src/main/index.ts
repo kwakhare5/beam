@@ -12,7 +12,7 @@ if (!gotLock) {
 
   function createWindow(): void {
     win = new BrowserWindow({
-      width: 184,
+      width: 144,
       height: 44,
       frame: false,
       transparent: true,

@@ -7,12 +7,13 @@
   height: 24px;
   padding: 0;
   border: 0;
-  border-radius: var(--r-micro);
+  border-radius: var(--r-control);
   background: none;
   color: inherit;
+  font: inherit;
   cursor: default;
   opacity: 0.55;
-  transition: opacity 120ms var(--ease), transform 120ms var(--ease);
+  transition: opacity 120ms var(--ease), transform 100ms var(--ease-spring);
 }
 
 .icon-btn.primary {
@@ -28,7 +29,7 @@
 }
 
 .icon-btn:active {
-  transform: scale(0.97);
+  transform: scale(0.96);
 }
 
 .icon-btn:focus-visible {
@@ -41,19 +42,13 @@
   pointer-events: none;
 }
 
-.icon-btn svg {
-  width: 18px;
-  height: 18px;
-  display: block;
-}
-
 .btn {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  gap: 6px;
+  gap: var(--space-1);
   height: 32px;
-  padding: 0 12px;
+  padding: 0 var(--space-3);
   border: 1px solid var(--border);
   border-radius: var(--r-control);
   background: var(--muted);
@@ -62,7 +57,7 @@
   font-weight: 500;
   color: var(--foreground);
   cursor: default;
-  transition: background 120ms var(--ease), border-color 120ms var(--ease), transform 120ms var(--ease);
+  transition: background 120ms var(--ease), border-color 120ms var(--ease), transform 100ms var(--ease-spring);
 }
 
 .btn svg {
@@ -75,7 +70,7 @@
 }
 
 .btn:active {
-  transform: scale(0.97);
+  transform: scale(0.96);
 }
 
 .btn:focus-visible {
@@ -90,6 +85,8 @@
 
 .btn.ghost {
   background: none;
+  border-color: transparent;
+  box-shadow: none;
 }
 
 .btn.ghost:hover {
@@ -121,7 +118,7 @@
   align-items: center;
   justify-content: center;
   height: 28px;
-  padding: 0 8px;
+  padding: 0 var(--space-2);
   border: 1px solid var(--border);
   border-radius: var(--r-control);
   background: var(--muted);
@@ -130,7 +127,7 @@
   font-weight: 500;
   color: var(--foreground);
   cursor: default;
-  transition: background 120ms var(--ease), border-color 120ms var(--ease), transform 120ms var(--ease);
+  transition: background 120ms var(--ease), border-color 120ms var(--ease), transform 100ms var(--ease-spring);
 }
 
 .chip:hover {
@@ -138,7 +135,7 @@
 }
 
 .chip:active {
-  transform: scale(0.97);
+  transform: scale(0.96);
 }
 
 .chip.active {
@@ -165,9 +162,10 @@
   border: 1px solid var(--border);
   border-radius: var(--r-pill);
   background: var(--muted);
+  font: inherit;
   position: relative;
   cursor: default;
-  transition: background 120ms var(--ease), border-color 120ms var(--ease), transform 120ms var(--ease);
+  transition: background 120ms var(--ease), border-color 120ms var(--ease), transform 100ms var(--ease-spring);
 }
 
 .switch::after {
@@ -179,7 +177,7 @@
   height: 14px;
   border-radius: 50%;
   background: var(--muted-foreground);
-  transition: transform 140ms var(--ease), background 140ms var(--ease);
+  transition: transform 120ms var(--ease), background 120ms var(--ease);
 }
 
 .switch[aria-checked='true'] {
@@ -203,7 +201,7 @@
 }
 
 .switch:active {
-  transform: scale(0.97);
+  transform: scale(0.96);
 }
 
 .switch:focus-visible {
@@ -217,17 +215,96 @@
 }
 
 .kbd {
-  padding: 2px 6px;
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-1);
+  padding: var(--space-1) var(--space-2);
   border: 1px solid var(--border);
   border-radius: var(--r-micro);
   background: var(--muted);
   font-family: inherit;
   font-size: 11px;
+  color: var(--foreground);
+}
+
+button.kbd {
+  cursor: default;
+  transition: background 120ms var(--ease), border-color 120ms var(--ease), transform 100ms var(--ease-spring);
+}
+
+button.kbd:hover {
+  background: var(--accent);
+  border-color: var(--border-hover);
+}
+
+button.kbd:active {
+  transform: scale(0.96);
+}
+
+button.kbd:focus-visible {
+  outline: 2px solid var(--ring);
+  outline-offset: 2px;
+}
+
+.keycap {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 20px;
+  height: 20px;
+  padding: 0 var(--space-1);
+  border-radius: var(--r-micro);
+  background: var(--keycap);
+  border: 1px solid var(--border-hover);
+  font-family: inherit;
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--foreground);
+}
+
+.status-pip {
+  width: 6px;
+  height: 6px;
+  border-radius: var(--r-pill);
+  flex: none;
+  display: inline-block;
+}
+
+.status-pip.green {
+  background: var(--pip-green);
+}
+
+.status-pip.amber {
+  background: var(--pip-amber);
+}
+
+.status-pip.red {
+  background: var(--destructive);
+}
+
+.pill-badge {
+  display: inline-flex;
+  align-items: center;
+  height: 20px;
+  padding: 0 var(--space-2);
+  border-radius: var(--r-pill);
+  background: var(--pill-badge);
+  border: 1px solid var(--border);
+  font-size: 11px;
+  font-weight: 500;
+  font-variant-numeric: tabular-nums;
+  color: var(--muted-foreground);
+}
+
+.pill-badge.danger {
+  color: var(--destructive);
+  border-color: var(--destructive-border);
+  background: var(--destructive-soft);
 }
 
 .actions {
   display: flex;
-  gap: 8px;
+  gap: var(--space-2);
   flex: none;
 }
 
