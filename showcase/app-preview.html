@@ -58,8 +58,8 @@
   .g-label span { display: block; margin-top: 3px; font-size: 11px; line-height: 1.5; color: #8a8a8a; }
   .g-label code { font-size: 11px; color: #6f6f6f; }
 
-  .f-pill { width: 136px; height: 32px; }
-  .f-pill.is-rest { width: 100px; }
+  .f-pill { width: 100px; height: 32px; }
+  .f-pill.is-expanded { width: 136px; }
   .f-open { width: 452px; height: 332px; padding: 16px; box-sizing: border-box; }
 
   .g-options { display: flex; flex-direction: column; gap: 12px; padding: 8px 0 24px; }
@@ -151,11 +151,11 @@
       </div>
       <div class="g-board-capsules">
         <div class="g-board-card">
-          <div class="g-card-meta"><span>idle · rest</span><code>136×32</code></div>
+          <div class="g-card-meta"><span>idle · rest (dimmed)</span><code>100×32</code></div>
           <div class="compare-window"><div data-pill="idle"></div></div>
         </div>
         <div class="g-board-card">
-          <div class="g-card-meta"><span>idle · hover (brightens)</span><code>136×32</code></div>
+          <div class="g-card-meta"><span>idle · hover (brightens)</span><code>100×32</code></div>
           <div class="compare-window"><div data-pill="idleHover"></div></div>
         </div>
         <div class="g-board-card">
@@ -175,19 +175,27 @@
           <div class="compare-window"><div data-pill="paused"></div></div>
         </div>
         <div class="g-board-card">
-          <div class="g-card-meta"><span>timer · countdown + pip</span><code>136×32</code></div>
+          <div class="g-card-meta"><span>timer · rest (time only)</span><code>100×32</code></div>
+          <div class="compare-window"><div data-pill="timerRest"></div></div>
+        </div>
+        <div class="g-board-card">
+          <div class="g-card-meta"><span>timer · hover (cancel)</span><code>136×32</code></div>
           <div class="compare-window"><div data-pill="timer"></div></div>
         </div>
         <div class="g-board-card">
-          <div class="g-card-meta"><span>done · check + gold border</span><code>136×32</code></div>
+          <div class="g-card-meta"><span>done · rest (check)</span><code>100×32</code></div>
+          <div class="compare-window"><div data-pill="doneRest"></div></div>
+        </div>
+        <div class="g-board-card">
+          <div class="g-card-meta"><span>done · hover (dismiss)</span><code>136×32</code></div>
           <div class="compare-window"><div data-pill="done"></div></div>
         </div>
         <div class="g-board-card">
-          <div class="g-card-meta"><span>files · shelf count</span><code>136×32</code></div>
+          <div class="g-card-meta"><span>files · shelf count</span><code>100×32</code></div>
           <div class="compare-window"><div data-pill="filesFull"></div></div>
         </div>
         <div class="g-board-card">
-          <div class="g-card-meta"><span>files · one missing</span><code>136×32</code></div>
+          <div class="g-card-meta"><span>files · one missing</span><code>100×32</code></div>
           <div class="compare-window"><div data-pill="filesMissing"></div></div>
         </div>
         <div class="g-board-card">
@@ -231,8 +239,8 @@
         <div class="compare-window"><div data-pill="idle"></div></div>
         <div class="compare-window"><div data-pill="playing"></div></div>
         <div class="compare-window"><div data-pill="pausedRest"></div></div>
-        <div class="compare-window"><div data-pill="timer"></div></div>
-        <div class="compare-window"><div data-pill="done"></div></div>
+        <div class="compare-window"><div data-pill="timerRest"></div></div>
+        <div class="compare-window"><div data-pill="doneRest"></div></div>
         <div class="compare-window"><div data-pill="filesMissing"></div></div>
       </div>
     </section>
@@ -241,25 +249,43 @@
       <div class="g-head">
         <h2>Compare</h2>
         <p class="g-help">
-          Locked: music rests at <b>100 wide</b> and grows to <b>136 wide</b> on hover or focus, over 120ms. Both sit in the same <code>144×44</code> window; at rest the title clips to a 50px slot.
+          Locked: every state rests at <b>100 wide</b>. Music, timer, and done grow to <b>136 wide</b> on hover or focus over 120ms; idle and files stay 100 and only brighten. Every pill sits in the same <code>144×44</code> window, so the window never resizes.
         </p>
       </div>
 
       <div class="g-options">
         <div class="g-option">
-          <div class="g-option-head"><b>Rest</b><span>100 pill in a 144 window</span><code>50px title slot · clips</code></div>
+          <div class="g-option-head"><b>Rest</b><span>100 pill in a 144 window</span><code>one fact · 50px slot</code></div>
           <div class="g-option-pills">
             <div class="g-compare-item">
+              <div class="g-compare-label">Music</div>
               <div class="compare-window"><div data-pill="playingRest"></div></div>
+            </div>
+            <div class="g-compare-item">
+              <div class="g-compare-label">Timer</div>
+              <div class="compare-window"><div data-pill="timerRest"></div></div>
+            </div>
+            <div class="g-compare-item">
+              <div class="g-compare-label">Done</div>
+              <div class="compare-window"><div data-pill="doneRest"></div></div>
             </div>
           </div>
         </div>
 
         <div class="g-option">
-          <div class="g-option-head"><b>Hover</b><span>136 pill in a 144 window</span><code>86px slot · 1px each side</code></div>
+          <div class="g-option-head"><b>Hover</b><span>136 pill in a 144 window</span><code>actions · 8px edge padding</code></div>
           <div class="g-option-pills">
             <div class="g-compare-item">
+              <div class="g-compare-label">Music</div>
               <div class="compare-window"><div data-pill="playing"></div></div>
+            </div>
+            <div class="g-compare-item">
+              <div class="g-compare-label">Timer</div>
+              <div class="compare-window"><div data-pill="timer"></div></div>
+            </div>
+            <div class="g-compare-item">
+              <div class="g-compare-label">Done</div>
+              <div class="compare-window"><div data-pill="done"></div></div>
             </div>
           </div>
         </div>
@@ -270,57 +296,65 @@
       <div class="g-head">
         <h2>2 · Capsule</h2>
         <p class="g-help">
-          One <code>144×44</code> window. Most states are <code>136×32</code>; music rests at <code>100×32</code> and grows to <code>136×32</code> on hover or focus, swapping the title for transport. Long names ellipsize, nothing spills.
+          One <code>144×44</code> window. Every state rests at <code>100×32</code>; music, timer, and done grow to <code>136×32</code> on hover or focus and reveal their actions. Idle and files stay <code>100×32</code> and only brighten. Long names ellipsize, nothing spills.
         </p>
       </div>
 
       <div class="g-grid">
         <div class="g-row">
-          <div class="g-label"><b>Idle</b><span>no music, no timer</span><code>136 · centered · muted label</code></div>
+          <div class="g-label"><b>Idle · rest</b><span>no music, no timer; star at 70%</span><code>100 · muted label</code></div>
           <div class="f-pill"><div data-pill="idle"></div></div>
         </div>
         <div class="g-row">
-          <div class="g-label"><b>Idle · hover</b><span>brightens, title stays</span><code>136 · opacity 1</code></div>
+          <div class="g-label"><b>Idle · hover</b><span>label and star brighten</span><code>100 · no growth</code></div>
           <div class="f-pill"><div data-pill="idleHover"></div></div>
         </div>
         <div class="g-row">
-          <div class="g-label"><b>Playing · rest</b><span>track title, clipped</span><code>100 · 50px title slot</code></div>
-          <div class="f-pill is-rest"><div data-pill="playingRest"></div></div>
+          <div class="g-label"><b>Playing · rest</b><span>track title only, clipped</span><code>100 · 50px title slot</code></div>
+          <div class="f-pill"><div data-pill="playingRest"></div></div>
         </div>
         <div class="g-row">
-          <div class="g-label"><b>Playing · hover</b><span>title swaps to transport</span><code>136 · 3×28px controls</code></div>
-          <div class="f-pill"><div data-pill="playing"></div></div>
+          <div class="g-label"><b>Playing · hover</b><span>star fades, transport fades in</span><code>136 · 3×28px controls</code></div>
+          <div class="f-pill is-expanded"><div data-pill="playing"></div></div>
         </div>
         <div class="g-row">
           <div class="g-label"><b>Paused · rest</b><span>muted title + play glyph</span><code>100 · 30px title slot</code></div>
-          <div class="f-pill is-rest"><div data-pill="pausedRest"></div></div>
+          <div class="f-pill"><div data-pill="pausedRest"></div></div>
         </div>
         <div class="g-row">
-          <div class="g-label"><b>Paused · hover</b><span>transport with play</span><code>136 · play icon</code></div>
-          <div class="f-pill"><div data-pill="paused"></div></div>
+          <div class="g-label"><b>Paused · hover</b><span>transport with play</span><code>136 · 3×28px controls</code></div>
+          <div class="f-pill is-expanded"><div data-pill="paused"></div></div>
         </div>
         <div class="g-row">
-          <div class="g-label"><b>Timer running</b><span>deadline driven</span><code>136 · tabular digits</code></div>
-          <div class="f-pill"><div data-pill="timer"></div></div>
+          <div class="g-label"><b>Timer · rest</b><span>time only, deadline driven</span><code>100 · tabular digits</code></div>
+          <div class="f-pill"><div data-pill="timerRest"></div></div>
         </div>
         <div class="g-row">
-          <div class="g-label"><b>Timer done</b><span>gold check + gold border</span><code>136 · no digits</code></div>
-          <div class="f-pill"><div data-pill="done"></div></div>
+          <div class="g-label"><b>Timer · hover</b><span>cancel appears</span><code>136 · digits + 28px cancel</code></div>
+          <div class="f-pill is-expanded"><div data-pill="timer"></div></div>
         </div>
         <div class="g-row">
-          <div class="g-label"><b>Shelf with files</b><span>count only, cap 50</span><code>136 · 5 files</code></div>
+          <div class="g-label"><b>Done · rest</b><span>gold check + gold border</span><code>100 · no digits</code></div>
+          <div class="f-pill"><div data-pill="doneRest"></div></div>
+        </div>
+        <div class="g-row">
+          <div class="g-label"><b>Done · hover</b><span>dismiss appears</span><code>136 · Done + 28px dismiss</code></div>
+          <div class="f-pill is-expanded"><div data-pill="done"></div></div>
+        </div>
+        <div class="g-row">
+          <div class="g-label"><b>Shelf with files</b><span>count only, cap 50</span><code>100 · 5 files</code></div>
           <div class="f-pill"><div data-pill="filesFull"></div></div>
         </div>
         <div class="g-row">
-          <div class="g-label"><b>Shelf, one missing</b><span>red pip, panel shows which</span><code>136 · danger pip</code></div>
+          <div class="g-label"><b>Shelf, one missing</b><span>red pip, panel shows which</span><code>100 · danger pip</code></div>
           <div class="f-pill"><div data-pill="filesMissing"></div></div>
         </div>
         <div class="g-row">
           <div class="g-label"><b>Drag over</b><span>accept state</span><code>136 · gold dashed</code></div>
-          <div class="f-pill"><div data-pill="drag"></div></div>
+          <div class="f-pill is-expanded"><div data-pill="drag"></div></div>
         </div>
         <div class="g-row">
-          <div class="g-label"><b>Empty shelf</b><span>falls back to idle, no “0 files” state</span><code>136 · Beam</code></div>
+          <div class="g-label"><b>Empty shelf</b><span>falls back to idle, no “0 files” state</span><code>100 · Beam</code></div>
           <div class="f-pill"><div data-pill="idle"></div></div>
         </div>
       </div>
@@ -367,7 +401,7 @@
         <div class="g-card">
           <h3>Sizes</h3>
           <ul>
-            <li>Capsule <code>136×32</code> · music <code>100 rest / 136 hover</code></li>
+            <li>Capsule <code>100×32 rest</code> · <code>136×32 hover</code> for music, timer, done · drag <code>136</code></li>
             <li>Window <code>144×44</code> for every state</li>
             <li>Panel <code>420×300</code></li>
             <li>Open window <code>452×332</code> · 16px shadow margin</li>
@@ -401,7 +435,7 @@
           <h3>Motion</h3>
           <ul>
             <li>Hover <code>120ms</code></li>
-            <li>Title ⇄ transport <code>120ms</code></li>
+            <li>Star/title ⇄ actions <code>120ms</code></li>
             <li>Press <code>100ms</code></li>
             <li>No layout animation</li>
             <li>Reduced motion honored</li>
@@ -448,11 +482,13 @@
     idle: { state: 'idle', title: 'Beam' },
     idleHover: { state: 'idle', hover: true, title: 'Beam' },
     playingRest: { state: 'playing', title: track.title },
-    playing: { state: 'playing', hover: true, title: track.title, controls: true, primaryIcon: 'pause' },
+    playing: { state: 'playing', hover: true, title: track.title, primaryIcon: 'pause' },
     pausedRest: { state: 'paused', title: track.title },
-    paused: { state: 'paused', hover: true, title: track.title, controls: true, primaryIcon: 'play' },
-    timer: { state: 'timer', title: 'Focus', digits: '10:00', pip: 'media' },
-    done: { state: 'done', title: 'Done' },
+    paused: { state: 'paused', hover: true, title: track.title, primaryIcon: 'play' },
+    timerRest: { state: 'timer', title: 'Focus', digits: '10:00', pip: 'media' },
+    timer: { state: 'timer', hover: true, title: 'Focus', digits: '10:00', pip: 'media' },
+    doneRest: { state: 'done', title: 'Done' },
+    done: { state: 'done', hover: true, title: 'Done' },
     filesFull: { state: 'files', title: `${files.length} files` },
     filesMissing: { state: 'files', title: `${files.length} files`, pip: 'danger' },
     drag: { state: 'drag', title: '+3 files' }

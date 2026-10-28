@@ -1,0 +1,96 @@
+.music-controls {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: var(--space-4);
+}.music-controls .icon-btn {
+  width: 30px;
+  height: 30px;
+  border-radius: var(--r-pill);
+  transition: opacity 120ms var(--ease), background 120ms var(--ease), transform 100ms var(--ease-spring);
+}
+
+.music-controls .icon-btn:hover {
+  background: var(--control);
+}
+
+.music-controls .icon-btn:active {
+  transform: scale(0.96);
+}
+
+.music-controls .icon-btn.primary {
+  width: 38px;
+  height: 38px;
+  background: var(--control);
+}
+
+.music-controls .icon-btn.primary:hover {
+  background: var(--control-hover);
+}
+
+.music-controls .icon-btn svg {
+  width: 20px;
+  height: 20px;
+}
+
+.track {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+}
+
+.track-bar {
+  height: 4px;
+  border-radius: var(--r-pill);
+  background: var(--control);
+  overflow: hidden;
+}
+
+.track-fill {
+  display: block;
+  height: 100%;
+  border-radius: inherit;
+  background: var(--primary);
+}
+
+.track-times {
+  display: flex;
+  justify-content: space-between;
+  font-size: 11px;
+  font-variant-numeric: tabular-nums;
+  color: var(--muted-foreground);
+}
+
+/* music panel layout */
+
+.panel-music {
+  padding: var(--space-2);
+  gap: var(--space-2);
+  flex-direction: row;
+  align-items: center;
+}
+
+.panel-music .art {
+  width: 148px;
+  height: 148px;
+  flex: none;
+  object-fit: cover;
+  border-radius: var(--r-card);
+}
+
+.panel-music-content {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  gap: var(--space-2);
+  min-height: 0;
+}
+
+.panel-music .panel-sub {
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+  overflow: hidden;
+}

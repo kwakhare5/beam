@@ -72,29 +72,37 @@ D:\Beam
 │   │   ├── tray.ts           (planned) tray icon + menu
 │   │   ├── hotkey.ts         (planned) Alt+Space register, fallback, rebind
 │   │   ├── settings.ts       (planned) read/write settings.json, defaults, versioned migration
-│   │   └── bridge.ts         (planned) spawn helper, JSON-lines client, restart on crash
+│   │   └── bridge.ts         spawn helper + JSON-lines client (ping built; commands and restart policy pending)
 │   ├── preload/index.ts      contextBridge surface (the only door)
 │   ├── renderer/
 │   │   ├── ui/
 │   │   │   ├── index.ts      public view API
-│   │   │   ├── pill.ts       one capsule, state data
-│   │   │   ├── panel.ts      one panel shell + tab host
-│   │   │   ├── panel-body.ts tabpanel wrapper
-│   │   │   ├── icons.ts      Lucide sprite + icon()
-│   │   │   ├── icons.generated.ts
-│   │   │   ├── mascots.ts    original mascot map
-│   │   │   ├── html.ts       escape helper
-│   │   │   ├── format.ts     middleTruncate + clock formatting
-│   │   │   ├── types.ts      Tab
-│   │   │   └── tabs/         music, files, timer, calendar, settings
+│   │   │   ├── capsule/
+│   │   │   │   └── pill.ts   one capsule, state data
+│   │   │   ├── panel/
+│   │   │   │   ├── panel.ts  shell + tab host
+│   │   │   │   ├── panel-body.ts tabpanel wrapper
+│   │   │   │   ├── tab-nav.ts    tab click + keyboard behavior
+│   │   │   │   ├── tab-meta.ts   Tab type + tab registry
+│   │   │   │   └── tabs/     music, files, timer, calendar, settings
+│   │   │   ├── shared/
+│   │   │   │   ├── icons.ts  Lucide sprite + icon()
+│   │   │   │   ├── icons.generated.ts
+│   │   │   │   ├── mascots.ts
+│   │   │   │   ├── html.ts
+│   │   │   │   └── format.ts
+│   │   │   └── index.ts      public component API
 │   │   ├── styles.css        CSS entry (@import)
-│   │   ├── styles/           tokens, base, pill, panel, controls, tabs
+│   │   ├── styles/           tokens, base, capsule
+│   │   │   ├── panel/        shell, body
+│   │   │   ├── controls/     buttons, fields, indicators
+│   │   │   └── tabs/         music, files, timer, calendar, settings
 │   │   ├── renderer.ts
 │   │   └── assets.d.ts       .svg/.woff2 module declarations
 │   └── shared/               (planned)
 │       ├── ipc.ts            channel names + payload types
 │       └── bridge.ts         helper command/event types
-├── native/BeamBridge/        (planned) C# .NET console project
+├── native/BeamBridge/        built at 0.3: .NET 10 console, stdio JSON lines, ping/pong, 6.3 MB idle
 ├── assets/
 │   ├── mascot/*.svg          shipped
 │   ├── fonts/                InterVariable.woff2 + OFL.txt
@@ -130,7 +138,7 @@ Events (helper → main), unsolicited, no `id`:
 | `music.changed` | `{ app, title, artist, album, artPath, playing, positionMs, durationMs }` or `null`; players that publish no timeline may omit the last two |
 | `fullscreen.changed` | `{ active }` |
 
-Rules: helper never prints anything else to stdout (stderr is for logs). Any malformed line is dropped and logged. Main restarts the helper on exit, max 3 times in 60s, then shows a tray warning. `files.drag` runs on its own STA thread, so a held drag never blocks `music.get` or the SMTC event stream.
+Rules: helper never prints anything else to stdout (stderr is for logs). Any malformed line is dropped and logged. Main restarts the helper on exit, max 3 times in 60s, then shows a tray warning (not built yet). The helper exits on stdin EOF, so a killed main cannot orphan it. `files.drag` runs on its own STA thread, so a held drag never blocks `music.get` or the SMTC event stream.
 
 **Artwork:** the helper saves the current thumbnail to `%TEMP%\Beam\art\<hash>.png`, overwrites it per track, and wipes the folder on quit. This is the one allowed disk write; the file shelf stays paths-only in memory.
 
@@ -210,6 +218,8 @@ helper's WinEventHook sees a foreground change or the foreground window resize/m
 | 2026-10-28 | One 176×32 capsule for every state; music hover swaps the title for transport (superseded by the two-width row below) | User rejected the five-width system and clipped titles; 176 is the maximum inside the 184 window, and swapping avoids squeezing the title |
 | 2026-10-28 | Two capsule widths: 136×32 compact, 216×32 for music; window 144×44 or 224×44; width snaps on state change (superseded by the 100/136 row below) | A single 176 wasted space in five short states and still clipped long titles; music is the only state that needs room, and hover never resizes |
 | 2026-10-28 | Music capsule rests at 100×32 and grows to 136×32 on hover/focus over 120ms; one 144×44 window for every state | User picked a compact resting pill and accepted hover growth; growing inside a fixed window avoids a Win32 resize during pointer movement |
+| 2026-10-28 | Every capsule state rests at 100×32 and shows one fact; music, timer, and done grow to 136×32 on hover/focus and reveal their actions; idle dims its star to 70%; files and idle never grow | User wants a quiet single-fact rest and full actions on hover; growing only where content exists avoids empty width and keeps the 144 window |
+| 2026-10-29 | UI split into capsule, panel, per-tab, and shared modules; styles split one file per component; every fill is solid (`--control`, `--control-hover`, `--surface-hover`); file badges and status pips are gone | The 437-line tab stylesheet and 313-line controls stylesheet mixed unrelated components, and translucent chips and pips read as glass; solid opaque fills match the Apple-style shell |
 | 2026-10-27 | Last-touched media session wins | Windows can expose Spotify and a browser at once |
 | 2026-10-27 | Timer beats music when both are active | PRD's contextual rule needs one winner |
 | 2026-10-27 | One timer at a time, no pause, cancel allowed, max 999 min | Smallest thing that satisfies the PRD |
@@ -253,7 +263,7 @@ UI decisions: ADR-0001 (component boundaries), ADR-0002 (original mascot), ADR-0
 
 ## 8. Open Decisions
 
-Phase 0: 0.1 built, 0.2 measured and passed, 0.3–0.5 not started.
+Phase 0: 0.1 built, 0.2 measured and passed, 0.3 built (ping/pong, 6.3 MB idle), 0.4–0.5 not started.
 
 ---
 
@@ -261,8 +271,8 @@ Phase 0: 0.1 built, 0.2 measured and passed, 0.3–0.5 not started.
 
 | Risk | Honest read | Mitigation |
 |---|---|---|
-| RAM budget | Electron ≤130 MB, helper ≤60 MB. Electron idle measured 90 MB steady / 90.7 MB peak / 0.035% CPU at 144×44 on 2026-10-28; helper unmeasured. | Measure the helper at 0.3. Over either cap → stop and report before building more. |
-| Music-rest margins | The window stays 144 wide for every state, so the 100px music pill leaves 22px of transparent margin each side that still receives clicks | Decide at task 1.3: shrink the window to 108 at music rest, or forward clicks through the empty margins with `setIgnoreMouseEvents` |
+| RAM budget | Electron ≤130 MB, helper ≤60 MB. Electron idle measured 90 MB steady / 90.7 MB peak / 0.035% CPU at 144×44 on 2026-10-28; helper measured 6.3 MB private idle on 2026-10-29. | Both under cap. Re-measure the helper when SMTC and the event hooks land. Over either cap → stop and report before building more. |
+| Rest margins | The window stays 144 wide for every state, so the 100px rest pill leaves 22px of transparent margin each side that still receives clicks; hover states leave 4px | Decide at task 1.3: forward clicks through the empty margins with `setIgnoreMouseEvents` rather than resizing the window |
 | `Alt+Space` steal | Registering it kills the system window menu for every app while Beam runs | Accepted by user 2026-10-27 |
 | Multi-file drag-out | Needs a WinForms message pump inside a windowless process, on its own STA thread | Prove at task 0.4c; fall back to copy-only if it fights |
 | SMTC on some players | Some apps publish partial metadata, no artwork | Show text without art, never crash |

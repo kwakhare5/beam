@@ -32,7 +32,7 @@ body {
 }
 
 .skeleton {
-  background: var(--secondary);
+  background: var(--control);
   border-radius: var(--r-control);
   animation: skeleton-pulse 1400ms ease-in-out infinite;
 }
@@ -40,7 +40,7 @@ body {
 .skeleton-line {
   height: 12px;
   width: 60%;
-  background: var(--secondary);
+  background: var(--control);
   border-radius: var(--r-micro);
   animation: skeleton-pulse 1400ms ease-in-out infinite;
 }

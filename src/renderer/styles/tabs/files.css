@@ -1,0 +1,133 @@
+.file-list {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  overflow-y: auto;
+  scrollbar-width: thin;
+  scrollbar-color: var(--border-hover) transparent;
+}
+
+.drop-well {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-2);
+  padding: var(--space-4);
+  border: 1px dashed var(--border-hover);
+  border-radius: var(--r-card);
+  text-align: center;
+}
+
+.row {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  height: 36px;
+  flex: none;
+  padding: 0 var(--space-2);
+  border-bottom: 1px solid var(--border);
+  font-size: 12px;
+  transition: background 120ms var(--ease);
+}
+
+.row:last-child {
+  border-bottom: 0;
+}
+
+.row:hover {
+  background: var(--surface-hover);
+}
+
+.row-icon-box {
+  position: relative;
+  width: 24px;
+  height: 24px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex: none;
+}
+
+.row-icon-box svg {
+  width: 14px;
+  height: 14px;
+  color: var(--muted-foreground);
+}
+
+.row .name {
+  flex: 1;
+  min-width: 0;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.row-actions {
+  display: flex;
+  gap: var(--space-1);
+  flex: none;
+}
+
+.row-action {
+  display: grid;
+  place-items: center;
+  width: 24px;
+  height: 24px;
+  padding: 0;
+  border: 0;
+  border-radius: var(--r-micro);
+  background: none;
+  color: var(--muted-foreground);
+  font: inherit;
+  cursor: default;
+  opacity: 0;
+  transition: opacity 120ms var(--ease), background 120ms var(--ease), color 120ms var(--ease);
+}
+
+.row:hover .row-action,
+.row:focus-within .row-action {
+  opacity: 1;
+}
+
+.row-action:hover {
+  background: var(--control-hover);
+  color: var(--foreground);
+}
+
+.row-action:focus-visible {
+  outline: 2px solid var(--ring);
+  outline-offset: 1px;
+}
+
+.row-action:disabled {
+  opacity: 0.35;
+  pointer-events: none;
+}
+
+.row-action svg {
+  width: 14px;
+  height: 14px;
+}
+
+.row-meta {
+  flex: none;
+  font-size: 11px;
+  font-variant-numeric: tabular-nums;
+  color: var(--muted-foreground);
+}
+
+.row-meta.danger {
+  font-weight: 500;
+  color: var(--destructive);
+}
+
+.row.missing {
+  color: var(--destructive);
+}
+
+.row.missing .row-icon-box svg {
+  color: var(--destructive);
+}
