@@ -15,7 +15,7 @@ Beam is a lightweight floating Windows 11 desktop bar that provides 1-click acce
 ## 3. Core Features (v1 Scope)
 
 ### 1. Floating Pill Shell & Window Anchoring
-- **User Flow:** Sits 12px above the Windows taskbar at bottom-center. Every state rests at 100px and shows one fact; music, timer, and done grow to 136px on hover to reveal Prev / Pause / Next, cancel, or dismiss, while idle dims and files stay put. One 144×44 window holds every state. Clicking opens the four content tabs plus Settings as a 420×300 panel inside a 452×332 window with a 150ms grow; the panel opens downward in the upper half of the display and upward in the lower half. Dragging repositioning persists custom coordinates across app restarts. Clicking outside or pressing `Esc` closes the panel. Automatically hides when a full-screen window (game/movie) is active.
+- **User Flow:** Sits 12px above the Windows taskbar at bottom-center. Every state rests at 94px and shows one fact; music, timer, and done grow to 128px on hover to reveal Prev / Pause / Next, cancel, or dismiss, while idle dims and files stay put. One 136×42 window holds every state. Clicking opens the four content tabs plus Settings as a 420×300 panel inside a 452×332 window with a 150ms grow; the panel opens downward in the upper half of the display and upward in the lower half. Dragging repositioning persists custom coordinates across app restarts. Clicking outside or pressing `Esc` closes the panel. Automatically hides when a full-screen window (game/movie) is active.
 - **Acceptance Criteria:**
   - `alwaysOnTop: true` with automatic hide on fullscreen detection.
   - Draggable with position persisted across app restarts.

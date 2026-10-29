@@ -29,7 +29,7 @@ No network. No database. No server. Four parts, three seams.
 
 ### Current vs target (2026-10-28)
 
-Implemented: Electron shell, single-instance lock, 144×44 window with the idle capsule, the full shared UI (7 capsule states, 5 panels) in the canonical preview, split UI modules/styles, five `verify.ps1` checks, `measure.ps1`.
+Implemented: Electron shell, single-instance lock, 136×42 window anchored above the taskbar with the idle capsule, the full shared UI (7 capsule states, 5 panels) in the canonical preview, split UI modules/styles, ten `verify.ps1` checks, `measure.ps1`.
 
 Target only: `window.ts`, `tray.ts`, `hotkey.ts`, `settings.ts`, `bridge.ts`, `src/shared/`, `native/BeamBridge/`, tray icon, chime, panel open/resize, SMTC, timer, shelf, fullscreen, and the IPC contract below. Expect the present-tense sections below to describe the target until those tasks land.
 
@@ -69,7 +69,7 @@ D:\Beam
 │   ├── main/
 │   │   ├── index.ts          app lifecycle, single-instance lock
 │   │   ├── window.ts         (planned) pill/panel geometry, anchoring, drag, close rules
-│   │   ├── tray.ts           (planned) tray icon + menu
+│   │   ├── tray.ts           tray icon + menu (Settings disabled until 1.3)
 │   │   ├── hotkey.ts         (planned) Alt+Space register, fallback, rebind
 │   │   ├── settings.ts       (planned) read/write settings.json, defaults, versioned migration
 │   │   └── bridge.ts         spawn helper + JSON-lines client (ping built; commands and restart policy pending)
@@ -127,7 +127,6 @@ Requests (main → helper), each with an `id`:
 | `music.toggle` | — | ok |
 | `music.next` / `music.prev` | — | ok |
 | `files.copy` | `paths: string[]` | ok / error |
-| `files.drag` | `paths: string[]` | ok (blocks until drop ends) |
 | `fullscreen.get` | — | `{ active, rect }` |
 | `ping` | — | `{ pong, version }` |
 
@@ -138,7 +137,9 @@ Events (helper → main), unsolicited, no `id`:
 | `music.changed` | `{ app, title, artist, album, artPath, playing, positionMs, durationMs }` or `null`; players that publish no timeline may omit the last two |
 | `fullscreen.changed` | `{ active }` |
 
-Rules: helper never prints anything else to stdout (stderr is for logs). Any malformed line is dropped and logged. Main restarts the helper on exit, max 3 times in 60s, then shows a tray warning (not built yet). The helper exits on stdin EOF, so a killed main cannot orphan it; on quit, main closes stdin and waits up to 1.5s for that exit before killing, so the art folder is wiped. `files.drag` runs on its own STA thread, so a held drag never blocks `music.get` or the SMTC event stream.
+Rules: helper never prints anything else to stdout (stderr is for logs). Any malformed line is dropped and logged. Main restarts the helper on exit, max 3 times in 60s, then shows a tray warning (not built yet). The helper exits on stdin EOF, so a killed main cannot orphan it; on quit, main closes stdin and waits up to 1.5s for that exit before killing, so the art folder is wiped.
+
+**Drag-out never goes through the helper.** 0.4c tried `DoDragDrop` on a dedicated STA thread: Windows kept the mouse capture with Chromium's window, so the drag loop spun at 100% CPU and never dropped. The code was deleted 2026-10-29. The renderer starts the drag from its own `dragstart` gesture and main calls `webContents.startDrag({ file, files, icon })`, which uses Chromium's native drag source and accepts multiple paths.
 
 **Artwork:** the helper saves the current thumbnail to `%TEMP%\Beam\art\<hash>.png`, overwrites it per track, and wipes the folder on start and quit. This is the one allowed disk write; the file shelf stays paths-only in memory.
 
@@ -154,7 +155,7 @@ All channels prefixed `beam:`. Renderer can call, main can push. Payloads are ty
 
 | Direction | Channel | Purpose |
 |---|---|---|
-| renderer → main | `beam:panel:resize` | resize 144×44 ⇄ 452×332 |
+| renderer → main | `beam:panel:resize` | resize 136×42 ⇄ 452×332 |
 | renderer → main | `beam:panel:close` | Esc / outside click |
 | renderer → main | `beam:music:command` | toggle / next / prev |
 | renderer → main | `beam:files:add` | paths from a drop |
@@ -220,11 +221,12 @@ helper's WinEventHook sees a foreground change or the foreground window resize/m
 | 2026-10-28 | Music capsule rests at 100×32 and grows to 136×32 on hover/focus over 120ms; one 144×44 window for every state | User picked a compact resting pill and accepted hover growth; growing inside a fixed window avoids a Win32 resize during pointer movement |
 | 2026-10-28 | Every capsule state rests at 100×32 and shows one fact; music, timer, and done grow to 136×32 on hover/focus and reveal their actions; idle dims its star to 70%; files and idle never grow | User wants a quiet single-fact rest and full actions on hover; growing only where content exists avoids empty width and keeps the 144 window |
 | 2026-10-29 | UI split into capsule, panel, per-tab, and shared modules; styles split one file per component; every fill is solid (`--control`, `--control-hover`, `--surface-hover`); file badges and status pips are gone | The 437-line tab stylesheet and 313-line controls stylesheet mixed unrelated components, and translucent chips and pips read as glass; solid opaque fills match the Apple-style shell |
+| 2026-10-29 | Capsule is 94×30 at rest and 128×30 on hover inside a 136×42 window | Karan found 100×32 too heavy at 125% display scale; a 6% cut keeps the layout, type scale, and 8px edge padding while shrinking the surface and its margins |
 | 2026-10-27 | Last-touched media session wins | Windows can expose Spotify and a browser at once |
 | 2026-10-27 | Timer beats music when both are active | PRD's contextual rule needs one winner |
 | 2026-10-27 | One timer at a time, no pause, cancel allowed, max 999 min | Smallest thing that satisfies the PRD |
 | 2026-10-27 | Shelf cap 50 entries, folders allowed, wiped on quit | In-memory by design, matches PRD |
-| 2026-10-27 | Multi-file drag-out goes through the helper | Electron's `startDrag` handles one file only |
+| 2026-10-27 | Multi-file drag-out is owned by the app, not the helper (revised 2026-10-29) | Electron's `startDrag` handles a `files` list, and Chromium owns the mouse gesture that starts it. A cross-process `DoDragDrop` inside the helper spun at 100% CPU without dropping |
 | 2026-10-27 | Fonts: bundled Inter variable (decision changed 2026-10-28) | Segoe UI was the placeholder; Inter is vendored in `assets/fonts/` |
 | 2026-10-27 | Chime is a generated 1.5s WAV (planned; not committed yet) | No network fetch, no license question |
 | 2026-10-27 | Perf budget read as: under 0.5% avg CPU over 60s idle, under 130 MB private bytes summed across processes | "0% CPU" is not measurable as written |
@@ -264,7 +266,7 @@ UI decisions: ADR-0001 (component boundaries), ADR-0002 (original mascot), ADR-0
 
 ## 8. Open Decisions
 
-Phase 0: 0.1 built, 0.2 measured and passed, 0.3 built (ping/pong), 0.4a built (live SMTC events, PNG art), 0.4b built (CF_HDROP clipboard), 0.4c–0.5 not started.
+Phase 0: 0.1 built, 0.2 measured and passed, 0.3 built (ping/pong), 0.4a built (live SMTC events, PNG art), 0.4b built (CF_HDROP clipboard). 0.4c replaced by 3.4. 1.1 built (`placeWindow` anchors above the taskbar), 1.2 built (verify guards foreground), 1.6 built (tray), 1.3 built (panel open/collapse proven by hand on all three close paths). Next: 3.1.
 
 ---
 
@@ -273,7 +275,7 @@ Phase 0: 0.1 built, 0.2 measured and passed, 0.3 built (ping/pong), 0.4a built (
 | Risk | Honest read | Mitigation |
 |---|---|---|
 | RAM budget | Electron ≤130 MB, helper ≤60 MB. Electron idle measured 90 MB steady / 90.7 MB peak / 0.035% CPU at 144×44 on 2026-10-28; helper measured 12.5 MB private idle with SMTC and clipboard live on 2026-10-29. | Both under cap. Re-measure the helper when drag-out and fullscreen hooks land. Over either cap → stop and report before building more. |
-| Rest margins | The window stays 144 wide for every state, so the 100px rest pill leaves 22px of transparent margin each side that still receives clicks; hover states leave 4px | Decide at task 1.3: forward clicks through the empty margins with `setIgnoreMouseEvents` rather than resizing the window |
+| Rest margins | The window stays 136 wide for every state, so the 94px rest pill leaves 21px of transparent margin each side that still receives clicks; hover states leave 4px | Decide at task 1.3: forward clicks through the empty margins with `setIgnoreMouseEvents` rather than resizing the window |
 | `Alt+Space` steal | Registering it kills the system window menu for every app while Beam runs | Accepted by user 2026-10-27 |
-| Multi-file drag-out | Needs a WinForms message pump inside a windowless process, on its own STA thread | Prove at task 0.4c; fall back to copy-only if it fights |
+| Multi-file drag-out | Solved 2026-10-29: helper OLE drag spun at 100% CPU; Electron's `webContents.startDrag` with a `files` array is the path | Prove with a real drop into Explorer at 3.4 |
 | SMTC on some players | Some apps publish partial metadata, no artwork | Show text without art, never crash |

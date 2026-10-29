@@ -46,12 +46,13 @@ export function calendarPanel(now: Date, active = true, view: Date = now, firstD
       `<td class="cal-cell${today ? ' today' : ''}" aria-label="${esc(label)}"${today ? ' aria-current="date"' : ''}>${day}</td>`
     );
   }
+  const weekCount = Math.max(5, Math.ceil((offset + days) / 7));
   let next = 1;
-  while (cells.length < 42) {
+  while (cells.length < weekCount * 7) {
     cells.push(`<td class="cal-cell other" aria-hidden="true">${next++}</td>`);
   }
 
-  const weeks = Array.from({ length: 6 }, (_, row) => `<tr>${cells.slice(row * 7, row * 7 + 7).join('')}</tr>`).join('');
+  const weeks = Array.from({ length: weekCount }, (_, row) => `<tr>${cells.slice(row * 7, row * 7 + 7).join('')}</tr>`).join('');
   const title = view.toLocaleString(undefined, { month: 'long', year: 'numeric' });
   const content = `<div class="cal-head"><div class="cal-nav-group"><button type="button" class="cal-nav-btn" aria-label="Previous month">${icon('chevronLeft')}</button><span class="cal-title">${esc(title)}</span><button type="button" class="cal-nav-btn" aria-label="Next month">${icon('chevronRight')}</button></div><button type="button" class="cal-today-btn">Today</button></div><table class="cal-grid"><caption class="sr-only">${esc(title)}</caption><thead><tr>${weekdayLabels(firstDay)}</tr></thead><tbody>${weeks}</tbody></table>`;
 

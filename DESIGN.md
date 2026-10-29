@@ -59,17 +59,17 @@ Light overrides every color token in `tokens.css:41-67`. The key differences:
 
 | | Rest | Hover | Open |
 |---|---|---|---|
-| **Window** | 144×44 | 144×44 | 452×332 |
-| **Visible Surface** | 100×32 capsule · drag 136 | 136×32 capsule · music, timer, done | 420×300 panel |
+| **Window** | 136×42 | 136×42 | 452×332 |
+| **Visible Surface** | 94×30 capsule · drag 128 | 128×30 capsule · music, timer, done | 420×300 panel |
 
-- **Rest & Hover:** idle, playing, paused, timer, done, and files rest at `100×32`; drag rests at `136×32`. Music, timer, and done grow to `136×32` on hover or keyboard focus over 120ms. Idle and files stay `100×32` and only brighten. There is one `144×44` window for all states, so the window never resizes on hover; the pill grows inside it, centered.
+- **Rest & Hover:** idle, playing, paused, timer, done, and files rest at `94×30`; drag rests at `128×30`. Music, timer, and done grow to `128×30` on hover or keyboard focus over 120ms. Idle and files stay `94×30` and only brighten. There is one `136×42` window for all states, so the window never resizes on hover; the pill grows inside it, centered.
 - **Zero-Flicker Hover:** Hover never resizes the window. It brightens the shell and border, grows the three states that have more to show, and swaps the resting fact for their actions. Nothing grows when there is nothing new to reveal.
-- **Smooth Panel Expansion:** On click, the window expands to `452×332` with a 150ms ease-out. The OS window resizes immediately while GPU-accelerated CSS transforms handle the 150ms scale/fade expansion internally; on collapse, CSS animates out over 150ms before the window snaps back to `144×44`.
+- **Smooth Panel Expansion:** On click, the window expands to `452×332` with a 150ms ease-out; Beam animates even when Windows has window animations off, because the OS toggle made the open read as a hard snap. The OS window resizes immediately while GPU-accelerated CSS transforms handle the 150ms scale/fade expansion internally; on collapse, CSS animates out over 150ms before the window snaps back to `136×42`.
 - **Screen-Aware Vertical Anchoring:** The panel anchors bottom-center and grows upward when the capsule is in the lower half of the display, and anchors top-center and grows downward when in the upper half.
 - **Edge Clamping:** Horizontal coordinates clamp to keep at least 8px margin from display boundaries.
 - **Click Isolation:** Transport buttons stop propagation and toggle playback directly; only clicks on the mascot, title, or empty capsule body trigger panel expansion.
 - **Lightweight Dismissal:** `Esc`, tray toggle, or clicking outside collapses the window without stealing active window focus.
-- **Shadow Margins:** the `144×44` window leaves 22px on each side of the rest capsule and 6px above and below it; an expanded capsule leaves 4px on each side. The open window leaves 16px on all sides, so the panel shadow has room and the margin still counts as an outside click.
+- **Shadow Margins:** the `136×42` window leaves 21px on each side of the rest capsule and 6px above and below it; an expanded capsule leaves 4px on each side. The open window leaves 16px on all sides, so the panel shadow has room and the margin still counts as an outside click.
 
 ## 4. Radii & Component Hierarchy
 - **One Fill Level:** every surface is flat by default. Never put a filled or bordered box inside another one: no tab pill inside a track, no icon box inside a row, no chip around row metadata. State comes from color, spacing, and 1px dividers. A control may carry one fill or one border, never both a parent fill and its own.
@@ -81,11 +81,11 @@ Light overrides every color token in `tokens.css:41-67`. The key differences:
 - **Pills, Capsules & Switches:** `999px` (`--r-pill`)
 
 ## 5. Capsule Specifications
-- **Geometry:** `100×32` at rest for idle, playing, paused, timer, done, and files; drag is `136×32`. Music, timer, and done grow to `136×32` on hover or focus. Radius 999, padding `0 8px`, 1px hairline border, shell `#151517`. One `144×44` window for every state.
+- **Geometry:** `94×30` at rest for idle, playing, paused, timer, done, and files; drag is `128×30`. Music, timer, and done grow to `128×30` on hover or focus. Radius 999, padding `0 8px`, 1px hairline border, shell `#151517`. One `136×42` window for every state.
 - **Mascot Mark:** 24px master mark followed by an 8px gap. Music states swap it for the 24px album thumbnail (6px radius) when artwork exists; the star is the fallback. At idle rest the star dims to 70% and returns to full on hover. The mark fades out on music and done hover so the actions keep the 8px edge padding. Static otherwise; no hover transform.
-- **Hover Reveal:** The resting pill shows one fact in a 50px slot: a title, digits, a check, or a count. Music and paused swap the thumbnail and title for three 28px transports at `136×32`; their overlay spans the full pill, leaving 18px on each side. Timer keeps its digits and reveals a 28px cancel at the slot end (the slot grows from 50 to 86). Done swaps the 16px check for `Done` plus a 28px dismiss. Idle and files reveal nothing and keep `100×32`.
+- **Hover Reveal:** The resting pill shows one fact in a 46px slot: a title, digits, a check, or a count. Music and paused swap the thumbnail and title for three 28px transports at `128×30`; their overlay spans the full pill, leaving 14px on each side. Timer keeps its digits and reveals a 28px cancel at the slot end (the slot grows from 46 to 80). Done swaps the 16px check for `Done` plus a 28px dismiss. Idle and files reveal nothing and keep `94×30`.
 - **Done:** at rest the capsule shows the star and a centered 16px gold check with a gold 1px border. On hover or focus the check fades and `Done` plus a 28px dismiss fade in. No digits and no glow.
-- **Paused:** no glyph. Paused shows the album thumbnail (or the star) with a 6px amber dot and keeps the full 50px title slot; the title stays muted and the artwork stays crisp. The title fades out on hover for the transports.
+- **Paused:** no glyph. Paused shows the album thumbnail (or the star) with a 6px amber dot and keeps the full 46px title slot; the title stays muted and the artwork stays crisp. The title fades out on hover for the transports.
 - **Shelf Count:** a non-empty shelf shows its count (`5 files`). A missing file turns the mascot dot red; the row carries the name and red `Missing` text. An empty shelf falls back to idle, so there is no `0 files` state.
 - **Status Dots:** 6px green while playing, amber when paused, red when a shelf file is missing. A timer carries the background music's dot. Gold stays brand and primary.
 - **Dual-State Collision (Timer + Music):** Countdown takes capsule prominence (digits only) with a 6px green dot on the mascot while audio plays, amber when paused.
@@ -93,21 +93,21 @@ Light overrides every color token in `tokens.css:41-67`. The key differences:
 
 | State | Width | Line | Right slot | Extra |
 |---|---|---|---|---|
-| Idle | 100px | `Beam` | — | centered; star 70%, label muted; hover brightens both |
-| Playing | 100 → 136 | track title (50px rest) | — | 24px thumbnail + green dot; hover: thumbnail and title fade, transports fade in |
-| Paused | 100 → 136 | track title, muted (50px rest) | — | 24px thumbnail + amber dot; hover: thumbnail and title fade, transports fade in |
-| Timer | 100 → 136 | digits only | 28px cancel on hover | tabular digits; green dot when music plays, amber when paused |
-| Done | 100 → 136 | gold check | `Done` + 28px dismiss on hover | gold 1px border |
-| Files | 100px | `5 files` | — | no growth; red dot when a file is missing |
-| Drag | 136px | `+3 files` | — | dashed gold border |
+| Idle | 94px | `Beam` | — | centered; star 70%, label muted; hover brightens both |
+| Playing | 94 → 128 | track title (46px rest) | — | 24px thumbnail + green dot; hover: thumbnail and title fade, transports fade in |
+| Paused | 94 → 128 | track title, muted (46px rest) | — | 24px thumbnail + amber dot; hover: thumbnail and title fade, transports fade in |
+| Timer | 94 → 128 | digits only | 28px cancel on hover | tabular digits; green dot when music plays, amber when paused |
+| Done | 94 → 128 | gold check | `Done` + 28px dismiss on hover | gold 1px border |
+| Files | 94px | `5 files` | — | no growth; red dot when a file is missing |
+| Drag | 128px | `+3 files` | — | dashed gold border |
 
 ## 6. Panel Specifications
 - **Panel Dimensions:** `420×300` body inside a `452×332` open window. Radius 16px, 1px border, no footer, 8px body padding.
 - **Tab Bar (40px):** Four equal tabs, flat: no track background, no padding box, no selected fill. Tabs are 28px tall with 14px Lucide icons and 12px labels. The selected content tab is gold icon + gold label at weight 500 plus a 2px gold underline inset 8px; Settings keeps the gold icon and label without the underline. Hover is a solid `--surface-hover` fill on the tab itself. Tabs are keyboard-navigable (arrows, Home, End).
-- **Music Tab:** 148×148 square art on the left with a `12px` radius and no border; title and artist with a status dot on the right. A read-only position bar with elapsed/total in 11px tabular digits and one transport row span the full panel width below. The transport is a solid 38px circular primary play/pause with 16px gap to 30px flanking controls. Empty and loading states use the mascot or skeleton lines.
+- **Music Tab:** 148×148 square art on the left with a `12px` radius and no border; title and artist with a status dot on the right. A read-only position bar with elapsed/total in 11px tabular digits and one transport row span the full panel width below. The transport is a solid 38px circular primary play/pause with 16px gap to 30px flanking controls. Nothing playing uses the designed empty state — mascot, `No music playing`, `Start playback in any app` — with no transport row, so the panel never shows dead controls. Loading uses skeleton lines.
 - **Files Shelf:** 36px flush rows separated by 1px dividers, with plain 14px status icons (no icon box, no pips), 26-character middle-truncated filenames, right-aligned 11px text for size, `Folder`, or red `Missing`, and 24px copy/remove buttons that appear, and accept clicks, only on hover or focus. A missing row keeps only Remove; copy would fail. Row hover is a solid `--surface-hover` fill. Five rows fit; more scroll. Pinned bottom actions: solid gold Copy All, text Add files, red text Clear All. Copy All disables when every row is missing; Clear All asks for a second click. The empty state is a dashed drop well with an Add files button.
 - **Timer Tab:** 28px preset chips, always visible, with 25 min selected by default; the custom mode shows a 1–999 minute inline field with a `Set` chip below the chips; 40px digits; 12px note; Start in idle and custom, Cancel in running. Done shows a 40px gold check plus `Time’s up` with Start again and Dismiss.
-- **Calendar Tab:** Header with 28px left/right chevrons, month title, and Today. A real table with seven columns, full weekday names as column headers, and a full date label on every current-month cell; the first day of the week follows the Windows locale (Sunday fallback); two-letter locale weekday headers at 11px; always six week rows, padded with adjacent-month days, so the grid never jumps; today is gold.
+- **Calendar Tab:** Header with 28px left/right chevrons, month title, and Today. A real table with seven columns, full weekday names as column headers, and a full date label on every current-month cell; the first day of the week follows the Windows locale (Sunday fallback); two-letter locale weekday headers at 11px; only the weeks the month needs (five, or six when the month spills), padded with adjacent-month days, so days get a taller, calmer cell; today is gold.
 - **Settings Tab:** Five 44px rows separated by 1px dividers, no row gap: Start with Windows switch, toggle shortcut as keycaps without an outer box, chime volume as plain 12px text with −/+ and a test button, theme row naming `Dark` or `Light` beside the switch, Reset position. 36×20 switch, 20px keycaps, 28px steppers.
 
 ## 7. Motion, Typography & Code Architecture
