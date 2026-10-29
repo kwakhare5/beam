@@ -24,7 +24,7 @@
 }
 
 .pill.expands:hover,
-.pill.expands:focus-within,
+.pill.expands:has(:focus-visible),
 .pill.expands[data-hover='true'] {
   width: 136px;
 }
@@ -35,7 +35,7 @@
 }
 
 .pill[data-state='idle']:hover,
-.pill[data-state='idle']:focus-within,
+.pill[data-state='idle']:has(:focus-visible),
 .pill[data-state='idle'][data-hover='true'] {
   color: var(--card-foreground);
 }
@@ -53,7 +53,7 @@
 }
 
 .pill[data-state='idle']:hover .mascot,
-.pill[data-state='idle']:focus-within .mascot,
+.pill[data-state='idle']:has(:focus-visible) .mascot,
 .pill[data-state='idle'][data-hover='true'] .mascot {
   opacity: 1;
 }
@@ -155,10 +155,6 @@
   object-fit: cover;
   border-radius: var(--r-micro);
   background: var(--control);
-}
-
-.pill[data-state='paused'] .pill-art {
-  opacity: 0.7;
 }
 
 .slot {
@@ -297,33 +293,33 @@
 .pill.has-controls[data-hover='true'] .mascot-wrap,
 .pill.has-controls[data-hover='true'] .meta,
 .pill.has-controls[data-hover='true'] .state-icon,
-.pill.has-controls:focus-within .mascot-wrap,
-.pill.has-controls:focus-within .meta,
-.pill.has-controls:focus-within .state-icon {
+.pill.has-controls:has(:focus-visible) .mascot-wrap,
+.pill.has-controls:has(:focus-visible) .meta,
+.pill.has-controls:has(:focus-visible) .state-icon {
   opacity: 0;
 }
 
 .pill.has-controls[data-hover='true'] .controls,
-.pill.has-controls:focus-within .controls {
+.pill.has-controls:has(:focus-visible) .controls {
   opacity: 1;
   pointer-events: auto;
 }
 
 .pill[data-state='done'][data-hover='true'] .mascot-wrap,
 .pill[data-state='done'][data-hover='true'] .meta,
-.pill[data-state='done']:focus-within .mascot-wrap,
-.pill[data-state='done']:focus-within .meta {
+.pill[data-state='done']:has(:focus-visible) .mascot-wrap,
+.pill[data-state='done']:has(:focus-visible) .meta {
   opacity: 0;
 }
 
 .pill[data-state='done'][data-hover='true'] .done-actions,
-.pill[data-state='done']:focus-within .done-actions {
+.pill[data-state='done']:has(:focus-visible) .done-actions {
   opacity: 1;
   pointer-events: auto;
 }
 
 .pill[data-state='timer'][data-hover='true'] .pill-action,
-.pill[data-state='timer']:focus-within .pill-action {
+.pill[data-state='timer']:has(:focus-visible) .pill-action {
   width: 28px;
   margin-left: var(--space-2);
   opacity: 0.8;

@@ -33,7 +33,7 @@ export function pill(data: PillData): string {
 
   const doneActions =
     data.state === 'done'
-      ? `<div class="pill-overlay done-actions"><span class="done-label">${esc(data.title)}</span><button type="button" class="icon-btn pill-action" aria-label="Dismiss">${icon('x')}</button></div>`
+      ? `<div class="pill-overlay done-actions"><span class="done-label">Done</span><button type="button" class="icon-btn pill-action" aria-label="Dismiss">${icon('x')}</button></div>`
       : '';
 
   const rest =

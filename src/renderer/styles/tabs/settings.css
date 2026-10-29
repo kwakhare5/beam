@@ -70,22 +70,23 @@
 }
 
 .setting-value {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
   min-width: 44px;
   font-size: 12px;
   font-weight: 500;
   font-variant-numeric: tabular-nums;
-  text-align: center;
   color: var(--muted-foreground);
 }
 
 .setting-inline .setting-value {
   min-width: 40px;
-  text-align: right;
+  justify-content: flex-end;
 }
 
 .stepper .setting-value {
   min-width: 44px;
-  justify-content: center;
 }
 
 .kbd.capturing {

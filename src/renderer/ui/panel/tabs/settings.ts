@@ -11,11 +11,10 @@ export interface SettingsData {
 }
 
 export function settingsPanel(data: SettingsData, active = true): string {
+  const keys = data.shortcut.split('+').map((key) => key.trim()).filter(Boolean);
   const shortcut = data.rebinding
     ? '<button type="button" class="kbd capturing" aria-label="Press the new shortcut">Press keys…</button>'
-    : data.shortcut === 'Alt + Space'
-      ? '<button type="button" class="kbd" aria-label="Change toggle shortcut (Alt + Space)"><span class="keycap">Alt</span><span class="keycap">Space</span></button>'
-      : `<button type="button" class="kbd" aria-label="Change toggle shortcut (${esc(data.shortcut)})"><span class="keycap">${esc(data.shortcut)}</span></button>`;
+    : `<button type="button" class="kbd" aria-label="Change toggle shortcut (${esc(data.shortcut)})">${keys.map((key) => `<span class="keycap">${esc(key)}</span>`).join('')}</button>`;
 
   const volume = Math.min(100, Math.max(0, Math.round(data.volume)));
 

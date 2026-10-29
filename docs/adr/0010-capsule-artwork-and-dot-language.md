@@ -12,3 +12,5 @@ The paused capsule used a 12px play glyph that stole 20px from the title, the go
 - **Timer**: the custom chip says `Set`. Done shows a 40px gold check plus `Time’s up`, not `00:00`.
 
 Consequences: `verify.ps1` now checks the thumbnail, the three dot colors, the full-width music row, the tab underline, the theme label, the missing-row copy removal, and the done face. The proposal page in `showcase/app-preview.html` is gone; the canonical board, capsule, and panels pages carry these states. App wiring is still unbuilt, so the preview remains the only rendered surface.
+
+**Amendment 2026-10-29 (audit pass):** the paused capsule keeps the thumbnail at full opacity; the amber dot and the muted title carry the state. Custom timer mode keeps the preset chips visible with 25 min selected by default and a `Set` chip below. Copy All disables when every shelf row is missing, and Clear All asks for a second click. The Done hover label is always `Done`. Capsule expansion uses `:has(:focus-visible)` so a mouse click releases it while keyboard focus holds it.

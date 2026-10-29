@@ -35,10 +35,46 @@ export function filesPanel(rows: FileRow[], copied = false, active = true): stri
     })
     .join('');
 
+  const allMissing = rows.every((row) => row.missing);
   const copyIcon = copied ? icon('check') : icon('copy');
   const copyLabel = copied ? 'Copied' : 'Copy All';
 
-  const actions = `<div class="actions"><span class="sr-only" role="status">${copied ? 'Copied to clipboard' : ''}</span><button type="button" class="btn primary">${copyIcon}${copyLabel}</button><button type="button" class="btn ghost">${icon('plus')}Add files</button><button type="button" class="btn danger">${icon('trash')}Clear All</button></div>`;
+  const actions = `<div class="actions"><span class="sr-only" role="status">${copied ? 'Copied to clipboard' : ''}</span><button type="button" class="btn primary"${allMissing ? ' disabled' : ''}>${copyIcon}${copyLabel}</button><button type="button" class="btn ghost">${icon('plus')}Add files</button><button type="button" class="btn danger clear-all" data-armed="false">${icon('trash')}<span class="clear-all-label">Clear All</span></button></div>`;
 
   return panelBody('files', `<div class="file-list" role="list">${list}</div>${actions}`, '', active);
+}
+
+export function bindClearAll(root: Document | Element): void {
+  const clearButtons = (): NodeListOf<HTMLElement> => root.querySelectorAll<HTMLElement>('.clear-all');
+
+  const reset = (button: HTMLElement): void => {
+    button.dataset.armed = 'false';
+    const label = button.querySelector('.clear-all-label');
+    if (label) label.textContent = 'Clear All';
+  };
+
+  root.addEventListener('click', (event) => {
+    const target = event.target;
+    if (!(target instanceof Element)) return;
+    const button = target.closest<HTMLElement>('.clear-all');
+    for (const other of clearButtons()) {
+      if (other !== button) reset(other);
+    }
+    if (!button) return;
+    if (button.dataset.armed !== 'true') {
+      button.dataset.armed = 'true';
+      const label = button.querySelector('.clear-all-label');
+      if (label) label.textContent = 'Clear all?';
+      return;
+    }
+    reset(button);
+    button.dispatchEvent(new CustomEvent('beam:files:clear', { bubbles: true }));
+  });
+
+  root.addEventListener('keydown', (event) => {
+    if ((event as KeyboardEvent).key !== 'Escape') return;
+    for (const button of clearButtons()) {
+      if (button.dataset.armed === 'true') reset(button);
+    }
+  });
 }

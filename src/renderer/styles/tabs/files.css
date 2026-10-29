@@ -84,12 +84,14 @@
   font: inherit;
   cursor: default;
   opacity: 0;
+  pointer-events: none;
   transition: opacity 120ms var(--ease), background 120ms var(--ease), color 120ms var(--ease);
 }
 
 .row:hover .row-action,
 .row:focus-within .row-action {
   opacity: 1;
+  pointer-events: auto;
 }
 
 .row-action:hover {

@@ -25,6 +25,12 @@ body {
   padding: 6px 4px;
   font-family: var(--font-sans);
   color: var(--foreground);
+  user-select: none;
+}
+
+input,
+textarea {
+  user-select: text;
 }
 
 #app {

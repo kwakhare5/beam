@@ -4,7 +4,7 @@
 
 **Milestone:** a floating pill that reads Spotify, holds files, runs a timer, and passes `.\verify.ps1` with exit code 0.
 
-**Completed outside the phase order:** the app UI system, the canonical preview, the Compare page, the 420×300 landscape panel spec, the focus/cleanup pass (`JOURNAL` cards 21–35), the 2026-10-28 UI/UX cleanup (card 43), the one-width capsule + segmented tab redesign (card 44), the state identity + panel completeness pass (cards 45–54), the two-width capsule + flat surface pass (card 47), the 100/136 music capsule pass (card 52), the 100-rest capsule pass (card 55), and the solid-fill component split (card 56). The app still runs only the idle capsule; phases below are still the ordered path.
+**Completed outside the phase order:** the app UI system, the canonical preview, the Compare page, the 420×300 landscape panel spec, the focus/cleanup pass (`JOURNAL` cards 21–35), the 2026-10-28 UI/UX cleanup (card 43), the one-width capsule + segmented tab redesign (card 44), the state identity + panel completeness pass (cards 45–54), the two-width capsule + flat surface pass (card 47), the 100/136 music capsule pass (card 52), the 100-rest capsule pass (card 55), the solid-fill component split (card 56), and the 2026-10-29 audit fix pass (card 64). The app still runs only the idle capsule; phases below are still the ordered path.
 
 ---
 
