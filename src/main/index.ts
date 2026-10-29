@@ -9,7 +9,7 @@ const WINDOW_WIDTH = 136;
 const WINDOW_HEIGHT = 42;
 const PILL_HEIGHT = 30;
 const PANEL_WIDTH = 452;
-const PANEL_HEIGHT = 332;
+const PANEL_HEIGHT = 316;
 const PILL_GAP = 12;
 
 function placeWindow(window: BrowserWindow, resize: boolean): void {

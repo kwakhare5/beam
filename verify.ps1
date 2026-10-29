@@ -124,7 +124,12 @@ if ($appOut -notmatch '\[tray\] ready') {
   Write-Host 'FAIL launch: tray did not initialize'
   exit 1
 }
-$beamShell = Get-Process electron -ErrorAction SilentlyContinue | Where-Object { $_.MainWindowHandle -ne 0 } | Select-Object -First 1
+$beamShell = $null
+for ($i = 0; $i -lt 30; $i++) {
+  $beamShell = Get-Process electron -ErrorAction SilentlyContinue | Where-Object { $_.MainWindowHandle -ne 0 } | Select-Object -First 1
+  if ($beamShell) { break }
+  Start-Sleep -Milliseconds 200
+}
 if (-not $beamShell) {
   Stop-Process -Id $first.Id -Force -ErrorAction SilentlyContinue
   Get-Process electron,BeamBridge -ErrorAction SilentlyContinue | Stop-Process -Force
@@ -149,6 +154,7 @@ Write-Host 'PASS focus (pill appeared without taking the foreground)'
 Start-Sleep -Seconds 5
 
 Write-Host '[6/11] anchor'
+$appOut = Get-Content -LiteralPath $outLog -Raw -ErrorAction SilentlyContinue
 $anchorMatches = [regex]::Matches($appOut, '\[window\] bounds=(-?\d+),(-?\d+),(\d+),(\d+) content=(-?\d+),(-?\d+),(\d+),(\d+) work=(-?\d+),(-?\d+),(\d+),(\d+)')
 if ($anchorMatches.Count -eq 0) {
   Stop-Process -Id $first.Id -Force -ErrorAction SilentlyContinue
@@ -243,10 +249,10 @@ if ($panelMs -lt 130 -or $panelMs -gt 170) {
   Write-Host "FAIL panel: open took ${panelMs}ms (expected 130-170; Beam animates even when Windows animations are off)"
   exit 1
 }
-if ($panelOut -notmatch '\[panel\] bounds=-?\d+,-?\d+,452,332') {
+if ($panelOut -notmatch '\[panel\] bounds=-?\d+,-?\d+,452,316') {
   Stop-Process -Id $first.Id -Force -ErrorAction SilentlyContinue
   Get-Process electron,BeamBridge -ErrorAction SilentlyContinue | Stop-Process -Force
-  Write-Host 'FAIL panel: the window never reached 452x332'
+  Write-Host 'FAIL panel: the window never reached 452x316'
   exit 1
 }
 if ($panelOut -notmatch '\[panel\] test-dismiss') {
@@ -266,7 +272,7 @@ if ($restoredW -gt 200 -or $restoredH -gt 100) {
   exit 1
 }
 Remove-Item Env:BEAM_PANEL_TEST -ErrorAction SilentlyContinue
-Write-Host "PASS panel (open ${panelMs}ms reduced=$reduced, 452x332, dismissed back to the pill)"
+Write-Host "PASS panel (open ${panelMs}ms reduced=$reduced, 452x316, dismissed back to the pill)"
 
 Write-Host '[8/11] helper memory'
 $helper = Get-Process BeamBridge -ErrorAction SilentlyContinue
@@ -534,6 +540,14 @@ if ($bodyCss -notmatch '\.panel-body\[hidden\]') {
   Write-Host 'FAIL UI spec: inactive tabpanels must be hidden'
   $uiFail = $true
 }
+if ($shellCss -notmatch '\.panel \{[^}]*height: 100%' -or $shellCss -match '\.panel \{[^}]*max-height') {
+  Write-Host 'FAIL UI spec: every tab shares one fixed panel height (no per-tab sizing)'
+  $uiFail = $true
+}
+if ($bodyCss -notmatch '\.panel-body \{[^}]*justify-content: center') {
+  Write-Host 'FAIL UI spec: panel bodies must center their content so no tab pools space at the bottom'
+  $uiFail = $true
+}
 if ($shellCss -notmatch '\.tab-track') {
   Write-Host 'FAIL UI spec: tab bar must keep the four equal tab columns'
   $uiFail = $true
@@ -562,8 +576,8 @@ if ($preview -match 'is-wide|224px|216×32') {
   Write-Host 'FAIL UI spec: the 224 window and the 216 music width are gone'
   $uiFail = $true
 }
-if ($preview -notmatch '\.f-open \{ width: 452px; height: 332px; padding: 16px' -or $preview -notmatch 'compare-window \[data-pill\].*height: 30px') {
-  Write-Host 'FAIL UI spec: preview must be 452 window with a 16px margin and a 30px capsule frame'
+if ($preview -notmatch '\.f-open \{ width: 452px; height: 316px; padding: 16px' -or $preview -notmatch 'compare-window \[data-pill\].*height: 30px') {
+  Write-Host 'FAIL UI spec: preview must be a 452x316 window with a 16px margin and a 30px capsule frame'
   $uiFail = $true
 }
 if ($preview -notmatch 'data-pill="filesMissing"' -or $preview -match 'data-pill="missing"') {

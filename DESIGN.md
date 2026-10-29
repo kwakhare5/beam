@@ -59,12 +59,12 @@ Light overrides every color token in `tokens.css:41-67`. The key differences:
 
 | | Rest | Hover | Open |
 |---|---|---|---|
-| **Window** | 136×42 | 136×42 | 452×332 |
-| **Visible Surface** | 94×30 capsule · drag 128 | 128×30 capsule · music, timer, done | 420×300 panel |
+| **Window** | 136×42 | 136×42 | 452×316 |
+| **Visible Surface** | 94×30 capsule · drag 128 | 128×30 capsule · music, timer, done | 420×284 panel |
 
 - **Rest & Hover:** idle, playing, paused, timer, done, and files rest at `94×30`; drag rests at `128×30`. Music, timer, and done grow to `128×30` on hover or keyboard focus over 120ms. Idle and files stay `94×30` and only brighten. There is one `136×42` window for all states, so the window never resizes on hover; the pill grows inside it, centered.
 - **Zero-Flicker Hover:** Hover never resizes the window. It brightens the shell and border, grows the three states that have more to show, and swaps the resting fact for their actions. Nothing grows when there is nothing new to reveal.
-- **Smooth Panel Expansion:** On click, the window expands to `452×332` with a 150ms ease-out; Beam animates even when Windows has window animations off, because the OS toggle made the open read as a hard snap. The OS window resizes immediately while GPU-accelerated CSS transforms handle the 150ms scale/fade expansion internally; on collapse, CSS animates out over 150ms before the window snaps back to `136×42`.
+- **Smooth Panel Expansion:** On click, the window expands to `452×316` with a 150ms ease-out; Beam animates even when Windows has window animations off, because the OS toggle made the open read as a hard snap. The OS window resizes immediately while GPU-accelerated CSS transforms handle the 150ms scale/fade expansion internally; on collapse, CSS animates out over 150ms before the window snaps back to `136×42`.
 - **Screen-Aware Vertical Anchoring:** The panel anchors bottom-center and grows upward when the capsule is in the lower half of the display, and anchors top-center and grows downward when in the upper half.
 - **Edge Clamping:** Horizontal coordinates clamp to keep at least 8px margin from display boundaries.
 - **Click Isolation:** Transport buttons stop propagation and toggle playback directly; only clicks on the mascot, title, or empty capsule body trigger panel expansion.
@@ -102,7 +102,7 @@ Light overrides every color token in `tokens.css:41-67`. The key differences:
 | Drag | 128px | `+3 files` | — | dashed gold border |
 
 ## 6. Panel Specifications
-- **Panel Dimensions:** `420×300` body inside a `452×332` open window. Radius 16px, 1px border, no footer, 8px body padding.
+- **Panel Dimensions:** `420×284` body inside a `452×316` open window. Radius 16px, 1px border, no footer, 8px body padding. One fixed height for every tab — switching tabs never resizes the window — and each tab body centers its content, so leftover space splits top and bottom instead of pooling under the content. A long file list scrolls inside the fixed height.
 - **Tab Bar (40px):** Four equal tabs, flat: no track background, no padding box, no selected fill. Tabs are 28px tall with 14px Lucide icons and 12px labels. The selected content tab is gold icon + gold label at weight 500 plus a 2px gold underline inset 8px; Settings keeps the gold icon and label without the underline. Hover is a solid `--surface-hover` fill on the tab itself. Tabs are keyboard-navigable (arrows, Home, End).
 - **Music Tab:** 148×148 square art on the left with a `12px` radius and no border; title and artist with a status dot on the right. A read-only position bar with elapsed/total in 11px tabular digits and one transport row span the full panel width below. The transport is a solid 38px circular primary play/pause with 16px gap to 30px flanking controls. Nothing playing uses the designed empty state — mascot, `No music playing`, `Start playback in any app` — with no transport row, so the panel never shows dead controls. Loading uses skeleton lines.
 - **Files Shelf:** 36px flush rows separated by 1px dividers, with plain 14px status icons (no icon box, no pips), 26-character middle-truncated filenames, right-aligned 11px text for size, `Folder`, or red `Missing`, and 24px copy/remove buttons that appear, and accept clicks, only on hover or focus. A missing row keeps only Remove; copy would fail. Row hover is a solid `--surface-hover` fill. Five rows fit; more scroll. Pinned bottom actions: solid gold Copy All, text Add files, red text Clear All. Copy All disables when every row is missing; Clear All asks for a second click. The empty state is a dashed drop well with an Add files button.
