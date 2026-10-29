@@ -245,6 +245,54 @@ if ($settingsTs -notmatch 'setting-inline' -or $settingsTs -notmatch "'Dark' : '
   Write-Host 'FAIL UI spec: the theme row names its mode and keycaps have no outer box'
   $uiFail = $true
 }
+if ($pill -match ':focus-within' -or $pill -notmatch ':has\(:focus-visible\)') {
+  Write-Host 'FAIL UI spec: capsule expansion must release on mouse click and hold on keyboard focus'
+  $uiFail = $true
+}
+if ($pill -match "data-state='paused'\] \.pill-art") {
+  Write-Host 'FAIL UI spec: paused keeps the artwork crisp'
+  $uiFail = $true
+}
+if ($pillTs -notmatch 'done-label">Done<') {
+  Write-Host 'FAIL UI spec: the done hover label is Done'
+  $uiFail = $true
+}
+if ($filesCss -notmatch '\.row-action \{[^}]*pointer-events: none') {
+  Write-Host 'FAIL UI spec: hidden row actions must not take clicks'
+  $uiFail = $true
+}
+if ($settingsCss -notmatch '\.setting-value \{[^}]*display: inline-flex') {
+  Write-Host 'FAIL UI spec: settings values must reserve their width'
+  $uiFail = $true
+}
+if ($timerCss -notmatch 'spin-button') {
+  Write-Host 'FAIL UI spec: the timer field hides native spinners'
+  $uiFail = $true
+}
+if ($timer -notmatch 'showPicker' -or $timer -notmatch "mode === 'custom' \? custom") {
+  Write-Host 'FAIL UI spec: timer chips stay visible in custom mode'
+  $uiFail = $true
+}
+if ($calendarTs -notmatch '<table class="cal-grid"' -or $calendarTs -notmatch 'scope="col"') {
+  Write-Host 'FAIL UI spec: the calendar is a real table with column headers'
+  $uiFail = $true
+}
+if ($filesTs -notmatch 'clear-all' -or $filesTs -notmatch "'Clear all\?'" -or $filesTs -notmatch 'allMissing') {
+  Write-Host 'FAIL UI spec: Clear All asks twice and Copy All disables when nothing can copy'
+  $uiFail = $true
+}
+if ($base -notmatch 'user-select: none') {
+  Write-Host 'FAIL UI spec: the interface must not select text'
+  $uiFail = $true
+}
+if ($preview -match 'button\.blur\(') {
+  Write-Host 'FAIL UI spec: the preview must not fake the focus release'
+  $uiFail = $true
+}
+if ($preview -notmatch 'bindArtFallback' -or $preview -notmatch 'bindClearAll') {
+  Write-Host 'FAIL UI spec: the preview must bind the art fallback and the clear arm'
+  $uiFail = $true
+}
 $allStyles = $pill + $shellCss + $bodyCss + $buttonsCss + $fieldsCss + $indicatorsCss + $musicCss + $filesCss + $timerCss + $calendarCss + $settingsCss
 if ($allStyles -match 'font-size: 10px') {
   Write-Host 'FAIL UI spec: type scale starts at 11px'

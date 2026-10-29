@@ -413,7 +413,7 @@
       <div class="g-panel-stage">
         <div class="f-open"><div id="panel-stage"></div></div>
       </div>
-      <p class="g-stage-note">Demo only: tab switching, month arrows, Today, and timer presets run here. Transport and file actions need the app.</p>
+      <p class="g-stage-note">Demo only: tab switching, month arrows, Today, timer presets, and the Clear All arm step run here. Transport and the actual file copy/clear need the app.</p>
     </section>
 
     <section class="g-page" data-page="rules" hidden>
@@ -476,10 +476,12 @@
 </div>
 
 <script type="module">
-  import { bindPanelTabs, iconSprite, panel, pill } from '../src/renderer/ui/index.ts';
+  import { bindArtFallback, bindClearAll, bindPanelTabs, iconSprite, panel, pill } from '../src/renderer/ui/index.ts';
 
   document.body.insertAdjacentHTML('afterbegin', iconSprite());
   bindPanelTabs(document);
+  bindArtFallback(document);
+  bindClearAll(document);
 
   const track = {
     title: 'Midnight City',
@@ -514,8 +516,8 @@
     playing: { state: 'playing', hover: true, title: track.title, primaryIcon: 'pause', art: track.art },
     pausedRest: { state: 'paused', title: track.title, art: track.art },
     paused: { state: 'paused', hover: true, title: track.title, primaryIcon: 'play', art: track.art },
-    timerRest: { state: 'timer', title: 'Focus', digits: '10:00', pip: 'playing' },
-    timer: { state: 'timer', hover: true, title: 'Focus', digits: '10:00', pip: 'playing' },
+    timerRest: { state: 'timer', title: '', digits: '10:00', pip: 'playing' },
+    timer: { state: 'timer', hover: true, title: '', digits: '10:00', pip: 'playing' },
     doneRest: { state: 'done', title: 'Done' },
     done: { state: 'done', hover: true, title: 'Done' },
     filesFull: { state: 'files', title: `${files.length} files` },
@@ -539,13 +541,13 @@
       durationMs: track.duration
     },
     files,
-    timer: { mode: 'idle', digits: '10:00', note: 'Press start', preset: '10' },
+    timer: { mode: 'idle', digits: '25:00', note: 'Press start', preset: '25' },
     calendar: { view: calView, today: new Date() },
     settings: { startup: true, shortcut: 'Alt + Space', volume: 70, theme: theme() }
   });
 
   let calView = new Date();
-  let timerDemo = { mode: 'idle', digits: '10:00', note: 'Press start', preset: '10' };
+  let timerDemo = { mode: 'idle', digits: '25:00', note: 'Press start', preset: '25' };
 
   function panelFor(key) {
     const base = panelBase();
@@ -557,7 +559,7 @@
       case 'filesMany': return { tab: 'files', data: { ...base, files: extraFiles } };
       case 'filesCopied': return { tab: 'files', data: { ...base, filesCopied: true } };
       case 'timer': return { tab: 'timer', data: { ...base, timer: timerDemo } };
-      case 'timerCustom': return { tab: 'timer', data: { ...base, timer: { mode: 'custom', digits: '10:00', note: 'Set a length', preset: 'custom', customMinutes: '10' } } };
+      case 'timerCustom': return { tab: 'timer', data: { ...base, timer: { mode: 'custom', digits: '25:00', note: 'Set a length', preset: 'custom', customMinutes: '25' } } };
       case 'timerRunning': return { tab: 'timer', data: { ...base, timer: { mode: 'running', digits: '07:42', note: 'Focus', preset: '10' } } };
       case 'timerDone': return { tab: 'timer', data: { ...base, timer: { mode: 'done', digits: '00:00', note: 'Timer finished' } } };
       case 'calendar': return { tab: 'calendar', data: base };
@@ -583,16 +585,16 @@
   for (const btn of document.querySelectorAll('[data-panel-key]')) {
     btn.addEventListener('click', () => {
       if (btn.dataset.panelKey === 'timerCustom') {
-        timerDemo = { mode: 'custom', digits: '10:00', note: 'Set a length', preset: 'custom', customMinutes: '10' };
+        timerDemo = { mode: 'custom', digits: '25:00', note: 'Set a length', preset: 'custom', customMinutes: '25' };
       }
       if (btn.dataset.panelKey === 'timerRunning') {
-        timerDemo = { mode: 'running', digits: '07:42', note: 'Focus', preset: '10' };
+        timerDemo = { mode: 'running', digits: '07:42', note: 'Focus', preset: '25' };
       }
       if (btn.dataset.panelKey === 'timerDone') {
         timerDemo = { mode: 'done', digits: '00:00', note: 'Timer finished' };
       }
       if (btn.dataset.panelKey === 'timer') {
-        timerDemo = { mode: 'idle', digits: '10:00', note: 'Press start', preset: '10' };
+        timerDemo = { mode: 'idle', digits: '25:00', note: 'Press start', preset: '25' };
       }
       if (btn.dataset.panelKey === 'calendar') calView = new Date();
       renderPanel(btn.dataset.panelKey);
@@ -624,7 +626,7 @@
     if (chip) {
       const label = chip.textContent.trim();
       if (label === 'Custom') {
-        timerDemo = { mode: 'custom', digits: '10:00', note: 'Set a length', preset: 'custom', customMinutes: '10' };
+        timerDemo = { mode: 'custom', digits: '25:00', note: 'Set a length', preset: 'custom', customMinutes: '25' };
       } else {
         const minutes = label.replace(' min', '');
         timerDemo = { mode: 'idle', digits: `${minutes}:00`, note: 'Press start', preset: minutes };
@@ -635,7 +637,7 @@
 
     if (button.closest('.timer-custom')) {
       const input = stage.querySelector('.timer-input');
-      const minutes = String(Math.min(999, Math.max(1, Number(input && input.value) || 10)));
+      const minutes = String(Math.min(999, Math.max(1, Number(input && input.value) || 25)));
       timerDemo = { mode: 'idle', digits: `${minutes}:00`, note: 'Press start', preset: 'custom', customMinutes: minutes };
       renderPanel(currentKey);
       return;
@@ -644,7 +646,7 @@
     if (button.classList.contains('primary')) {
       if (timerDemo.mode === 'custom') {
         const input = stage.querySelector('.timer-input');
-        const minutes = String(Math.min(999, Math.max(1, Number(input && input.value) || 10)));
+        const minutes = String(Math.min(999, Math.max(1, Number(input && input.value) || 25)));
         timerDemo = { mode: 'running', digits: `${minutes}:00`, note: 'Focus', preset: 'custom', customMinutes: minutes };
       } else {
         timerDemo = { ...timerDemo, mode: 'running', note: 'Focus' };
@@ -654,13 +656,13 @@
     }
 
     if (button.classList.contains('danger')) {
-      timerDemo = { mode: 'idle', digits: '10:00', note: 'Press start', preset: '10' };
+      timerDemo = { mode: 'idle', digits: '25:00', note: 'Press start', preset: '25' };
       renderPanel(currentKey);
       return;
     }
 
     if (button.classList.contains('ghost')) {
-      timerDemo = { mode: 'idle', digits: '10:00', note: 'Press start', preset: '10' };
+      timerDemo = { mode: 'idle', digits: '25:00', note: 'Press start', preset: '25' };
       renderPanel(currentKey);
     }
   });
@@ -712,7 +714,6 @@
       const pip = pillEl.querySelector('.media-pip');
       if (pip) pip.className = `media-pip ${next === 'playing' ? 'playing' : 'paused'}`;
       if (liveLabel) liveLabel.textContent = next;
-      if (event.detail > 0) button.blur();
     });
   }
 

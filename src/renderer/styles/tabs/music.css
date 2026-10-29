@@ -82,6 +82,12 @@
   align-self: start;
 }
 
+.panel-music .art-fallback-img {
+  object-fit: contain;
+  padding: 50px;
+  background: var(--control);
+}
+
 .panel-music-content {
   flex: 1;
   min-width: 0;

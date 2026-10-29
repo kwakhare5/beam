@@ -1,6 +1,7 @@
-import { iconSprite, pill } from './ui';
+import { bindArtFallback, iconSprite, pill } from './ui';
 
 document.body.insertAdjacentHTML('afterbegin', iconSprite());
+bindArtFallback(document);
 
 const app = document.querySelector<HTMLElement>('#app');
 
