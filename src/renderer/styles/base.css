@@ -48,10 +48,10 @@ body.is-open .pill {
 .panel-wrap {
   position: absolute;
   left: 50%;
-  top: 50%;
+  bottom: 16px;
   width: 420px;
-  height: 300px;
-  transform: translate(-50%, -50%);
+  height: 284px;
+  transform: translateX(-50%);
   visibility: hidden;
 }
 

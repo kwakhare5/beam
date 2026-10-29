@@ -13,11 +13,11 @@ The 136×42 transparent window that contains the capsule and its shadow margin. 
 _Avoid_: pill window
 
 **Panel**:
-The visible 420×300 open surface with tabs. No footer.
+The visible 420×284 open surface with tabs. No footer.
 _Avoid_: popup, modal, card
 
 **Open window**:
-The 452×332 transparent window that contains the 420×300 panel and a 16px shadow margin.
+The 452×316 transparent window that contains the 420×284 panel and a 16px shadow margin.
 _Avoid_: panel window
 
 **Shell**:

@@ -155,7 +155,7 @@ All channels prefixed `beam:`. Renderer can call, main can push. Payloads are ty
 
 | Direction | Channel | Purpose |
 |---|---|---|
-| renderer → main | `beam:panel:resize` | resize 136×42 ⇄ 452×332 |
+| renderer → main | `beam:panel:resize` | resize 136×42 ⇄ 452×316 |
 | renderer → main | `beam:panel:close` | Esc / outside click |
 | renderer → main | `beam:music:command` | toggle / next / prev |
 | renderer → main | `beam:files:add` | paths from a drop |
@@ -254,6 +254,7 @@ helper's WinEventHook sees a foreground change or the foreground window resize/m
 | 2026-10-27 | Pill is a transparent CSS capsule, not Windows acrylic | Tested 2026-10-27: acrylic paints the window rectangle and ignores the CSS pill radius; at 32px tall the capsule shape matters more than blur |
 | 2026-10-27 | Marketing website out of v1 | DESIGN.md specs one; PRD does not ask for one |
 | 2026-10-28 | Open window is 452×332; panel stays 420×300 with a 16px shadow margin | The old 428×308 left 4px, so the panel shadow clipped into a hard band |
+| 2026-10-29 | Open window is 452×316 (420×284 panel) and every tab body centers its content | Karan saw too much empty space at the panel's bottom. Per-tab sizing was built and rejected as too variable; one fixed height that still fits playing music (284) removes 16px and centering splits the remaining slack instead of pooling it at the bottom |
 | 2026-10-28 | Capsule state identity: done shows a gold check and gold border; paused shows a play glyph; shelf shows a count with a red pip when a file is missing | Running and done looked identical, paused was invisible at rest, and one missing filename could not represent several files (ADR-0009) |
 | 2026-10-29 | Music states show the 24px album thumbnail (star fallback) and a green/amber dot; paused drops the play glyph. The music track and transport span the panel width, selected content tabs get a 2px gold underline, missing rows drop copy, the timer says Set, and done shows a check + Time’s up | The paused glyph stole 20px from the title, the gold pip read as brand, and the narrow music column squeezed the transport (ADR-0010) |
 | 2026-10-28 | Capsule precedence is drag > timer > music > files > idle | Direct manipulation feedback wins for the moment it lasts; timer still beats music |
