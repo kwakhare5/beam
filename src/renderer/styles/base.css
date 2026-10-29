@@ -37,6 +37,42 @@ textarea {
   display: contents;
 }
 
+body.is-open {
+  padding: 16px;
+}
+
+body.is-open .pill {
+  display: none;
+}
+
+.panel-wrap {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: 420px;
+  height: 300px;
+  transform: translate(-50%, -50%);
+  visibility: hidden;
+}
+
+body.is-open .panel-wrap {
+  visibility: visible;
+}
+
+.panel-wrap .panel {
+  transform: scale(0.96);
+  opacity: 0;
+  transform-origin: bottom center;
+  transition:
+    transform 150ms var(--ease),
+    opacity 150ms var(--ease);
+}
+
+body.is-open .panel {
+  transform: none;
+  opacity: 1;
+}
+
 .skeleton {
   background: var(--control);
   border-radius: var(--r-control);
@@ -77,13 +113,4 @@ textarea {
   border: 0;
 }
 
-@media (prefers-reduced-motion: reduce) {
-  *,
-  *::before,
-  *::after {
-    animation-duration: 0.01ms !important;
-    animation-iteration-count: 1 !important;
-    transition-duration: 0.01ms !important;
-    scroll-behavior: auto !important;
-  }
-}
+

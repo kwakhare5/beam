@@ -5,11 +5,11 @@
 ## 1. What this is
 Beam is an offline Windows 11 floating pill that gives 1-click media controls, a file drop shelf, a countdown timer, and a month calendar. No cloud, no accounts, no network.
 
-**Current (2026-10-29):** the app runs a 144×44 window with the idle capsule at 100×32 (star at 70%) and owns a live `BeamBridge.exe` child over stdio JSON lines. The helper reports the system's current media session (`music.changed`: app, title, artist, album, playing, position, duration), writes the artwork as a PNG to `%TEMP%\Beam\art\`, and puts real file paths on the clipboard as `CF_HDROP` on request; main logs the music. Music, timer, and done will rest at 100 and grow to 136 on hover inside the same window, while idle and files stay 100. All seven capsule states and five panels exist in `showcase/app-preview.html`. Panel wiring and the rest of the app are unbuilt. Next is task 0.4c.
+**Current (2026-10-29):** the app runs a 136×42 window with the idle capsule at 94×30 (star at 70%) and owns a live `BeamBridge.exe` child over stdio JSON lines. The helper reports the system's current media session (`music.changed`: app, title, artist, album, playing, position, duration), writes the artwork as a PNG to `%TEMP%\Beam\art\`, and puts real file paths on the clipboard as `CF_HDROP` on request; main logs the music. Music, timer, and done will rest at 94 and grow to 128 on hover inside the same window, while idle and files stay 94. All seven capsule states and five panels exist in `showcase/app-preview.html`. Panel wiring and the rest of the app are unbuilt. 1.1 and 1.2 are done — the pill anchors bottom-center 12px above the taskbar and never takes focus. 1.6 is done (tray icon, Reset, Quit). 1.3 is done — the panel opens at 452×332 with a 151ms transform, grows up from the bottom, and closes on Esc, outside click, and tray click. Next is 3.1 (drop files onto the pill).
 
 ## 2. Stack
 - Electron + TypeScript + Vite, exact-pinned. Renderer sandboxed, contextIsolation on, nodeIntegration off. The renderer is vanilla TypeScript with shadcn-style tokens and Lucide; no React or Tailwind.
-- `native/BeamBridge/` — windowless C# .NET 10 helper, self-contained single-file publish. Owns SMTC, clipboard, drag-out, fullscreen detection (SMTC read, artwork, and the CF_HDROP clipboard are built; drag-out and fullscreen are pending).
+- `native/BeamBridge/` — windowless C# .NET 10 helper, self-contained single-file publish. Owns SMTC, clipboard, and fullscreen detection (SMTC read, artwork, and the CF_HDROP clipboard are built; fullscreen is pending). Drag-out is app-owned: the renderer's `dragstart` gesture goes to main, which calls `webContents.startDrag`.
 - No database, no server, no TCP ports. Main ⇄ helper is stdio JSON lines only.
 - Settings live in `%APPDATA%\Beam\settings.json`.
 
@@ -23,8 +23,8 @@ Beam is an offline Windows 11 floating pill that gives 1-click media controls, a
 - Done check = `.\verify.ps1` exits 0 with pasted raw terminal output.
 
 ## 4. Hard Rules & Invariants (What the AI must ALWAYS do)
-- One task at a time from `TASKS.md`, top unchecked box. Do not skip the Phase 0 order.
-- 0.4b is done: `files.copy` puts 3 real paths on the clipboard as `CF_HDROP`, survives helper exit, and verify checks it. 0.4a reads the live SMTC session at 12.5 MB idle; 0.3 answers ping; 0.2's rest window measures 90 MB steady / 90.7 MB peak / 0.035% CPU. The next task is 0.4c (drag out multiple files).
+- One task at a time from `TASKS.md`, top unchecked box, in the order of its blocks A–H. Never start a task whose `Depends on` line is not done.
+- 0.4b is done: `files.copy` puts 3 real paths on the clipboard as `CF_HDROP`, survives helper exit, and verify checks it. 0.4a reads the live SMTC session at 12.5 MB idle; 0.3 answers ping; 0.2's rest window measures 90 MB steady / 90.7 MB peak / 0.035% CPU. 0.4c is replaced by 3.4 (Electron drag). Work the block order in `TASKS.md` top-down; the next task is 3.1.
 - Keep the renderer untrusted. Everything touching Win32 goes through the helper.
 - Read `ARCHITECTURE.md` before touching the window, IPC, or helper seams.
 - Follow `DESIGN.md` tokens exactly. No invented colors, radii, or shadows.
@@ -58,8 +58,8 @@ Beam is an offline Windows 11 floating pill that gives 1-click media controls, a
 - Timer counts from a deadline timestamp, never by decrementing. Sleep must not break it.
 - Shelf is wiped on quit by design, and must warn while non-empty.
 - Fullscreen hide needs the helper alive; the hotkey is main-owned. Helper restart logic is max 3 times in 60s.
-- Every state rests at 100 inside the 144 window, so 22px of transparent margin on each side still receives clicks (hover states leave 4px). Fix click-through at task 1.3.
-- Electron RAM is the top project risk; latest idle measurement at 144×44 is 90 MB steady / 90.7 MB peak / 0.035% CPU, under the 130 MB gate. The helper cap is still unmeasured.
+- Every state rests at 94 inside the 136 window, so 21px of transparent margin on each side still receives clicks (hover states leave 4px). Fix click-through at task 1.3.
+- Electron RAM is the top project risk; latest idle measurement (taken at the old 144×44 window) is 90 MB steady / 90.7 MB peak / 0.035% CPU, under the 130 MB gate. The helper measures 12.3 MB idle against a 60 MB cap.
 
 ## 9. Do Not Touch
 - `assets/mascot/` — finalized brand assets.

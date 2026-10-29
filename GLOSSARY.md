@@ -5,11 +5,11 @@ The shared language for the Beam desktop surface. Use these terms in code, docs,
 ## Surfaces
 
 **Capsule**:
-The visible surface: a 100×32 bar at rest for idle, playing, paused, timer, done, and files; drag is 136×32. Music, timer, and done grow to 136×32 on hover or focus. Idle centers the master mark and a muted label at 70% star opacity; music shows the album thumbnail (or the star) and the title; paused adds an amber dot; timer shows digits only; done shows a gold check; files shows a count.
+The visible surface: a 94×30 bar at rest for idle, playing, paused, timer, done, and files; drag is 128×30. Music, timer, and done grow to 128×30 on hover or focus. Idle centers the master mark and a muted label at 70% star opacity; music shows the album thumbnail (or the star) and the title; paused adds an amber dot; timer shows digits only; done shows a gold check; files shows a count.
 _Avoid_: pill, bar, bubble
 
 **Rest window**:
-The 144×44 transparent window that contains the capsule and its shadow margin. One size for every state; it never resizes on hover.
+The 136×42 transparent window that contains the capsule and its shadow margin. One size for every state; it never resizes on hover.
 _Avoid_: pill window
 
 **Panel**:

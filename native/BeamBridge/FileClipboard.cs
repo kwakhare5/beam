@@ -18,20 +18,7 @@ internal static class FileClipboard
             return false;
         }
 
-        var text = string.Join('\0', paths) + "\0\0";
-        var bytes = new byte[DropFilesSize + Encoding.Unicode.GetByteCount(text)];
-
-        using (var stream = new MemoryStream(bytes))
-        using (var writer = new BinaryWriter(stream))
-        {
-            writer.Write(DropFilesSize);
-            writer.Write(0);
-            writer.Write(0);
-            writer.Write(0);
-            writer.Write(1);
-            writer.Write(Encoding.Unicode.GetBytes(text));
-        }
-
+        var bytes = BuildDropFiles(paths);
         var memory = GlobalAlloc(GMEM_MOVEABLE, (UIntPtr)bytes.Length);
         if (memory == IntPtr.Zero)
         {
@@ -85,6 +72,22 @@ internal static class FileClipboard
 
         error = string.Empty;
         return true;
+    }
+
+    public static byte[] BuildDropFiles(IReadOnlyList<string> paths)
+    {
+        var text = string.Join('\0', paths) + "\0\0";
+        var bytes = new byte[DropFilesSize + Encoding.Unicode.GetByteCount(text)];
+
+        using var stream = new MemoryStream(bytes);
+        using var writer = new BinaryWriter(stream);
+        writer.Write(DropFilesSize);
+        writer.Write(0);
+        writer.Write(0);
+        writer.Write(0);
+        writer.Write(1);
+        writer.Write(Encoding.Unicode.GetBytes(text));
+        return bytes;
     }
 
     private static bool OpenClipboardWithRetry(out string error)

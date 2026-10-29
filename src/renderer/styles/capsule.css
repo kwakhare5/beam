@@ -2,7 +2,7 @@
 
 .pill {
   position: relative;
-  width: 100px;
+  width: 94px;
   height: 100%;
   display: flex;
   align-items: center;
@@ -20,13 +20,13 @@
 }
 
 .pill[data-state='drag'] {
-  width: 136px;
+  width: 128px;
 }
 
 .pill.expands:hover,
 .pill.expands:has(:focus-visible),
 .pill.expands[data-hover='true'] {
-  width: 136px;
+  width: 128px;
 }
 
 .pill[data-state='idle'] {

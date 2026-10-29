@@ -75,7 +75,7 @@
   min-height: 0;
   table-layout: fixed;
   border-collapse: separate;
-  border-spacing: var(--space-1) 0;
+  border-spacing: 6px 0;
 }
 
 .cal-grid th {
@@ -94,7 +94,7 @@
 
 .cal-cell {
   border-radius: var(--r-micro);
-  font-size: 11px;
+  font-size: 12px;
   color: var(--foreground);
 }
 
