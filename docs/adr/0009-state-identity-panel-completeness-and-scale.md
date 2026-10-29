@@ -1,6 +1,6 @@
 # State identity, panel completeness, and one visual scale
 
-Status: accepted 2026-10-28. Amends ADR-0003, ADR-0005, ADR-0006, ADR-0007, and ADR-0008. Amended the same day by the two-width pass, the 100/136 music pass, and the 100-rest pass: every capsule state rests at 100×32; music, timer, and done grow to 136×32 on hover; drag is 136; the paused rest slot is 30px; the calendar always draws six rows; the tab bar and file rows are flat.
+Status: accepted 2026-10-28. Amends ADR-0003, ADR-0005, ADR-0006, ADR-0007, and ADR-0008. Amended the same day by the two-width pass, the 100/136 music pass, and the 100-rest pass: every capsule state rests at 100×32; music, timer, and done grow to 136×32 on hover; drag is 136; the paused rest slot is 30px; the calendar always draws six rows; the tab bar and file rows are flat. Amended 2026-10-29 by ADR-0010: paused shows artwork plus an amber dot and keeps the 50px title slot; the dots are green/amber/red.
 
 The capsule states were hard to tell apart, four panel screens were clipped or missing their states, several settings rows looked interactive but were not, and the docs described a product that did not exist. We settled on:
 

@@ -5,11 +5,11 @@
 ## 1. What this is
 Beam is an offline Windows 11 floating pill that gives 1-click media controls, a file drop shelf, a countdown timer, and a month calendar. No cloud, no accounts, no network.
 
-**Current (2026-10-29):** the app runs a 144×44 window with the idle capsule at 100×32 (star at 70%) and owns a live `BeamBridge.exe` child over stdio JSON lines. The helper reports the system's current media session (`music.changed`: app, title, artist, album, playing, position, duration) and writes the artwork as a PNG to `%TEMP%\Beam\art\`; main logs it. Music, timer, and done will rest at 100 and grow to 136 on hover inside the same window, while idle and files stay 100. All seven capsule states and five panels exist in `showcase/app-preview.html`. Panel wiring and the rest of the app are unbuilt. Next is task 0.4b.
+**Current (2026-10-29):** the app runs a 144×44 window with the idle capsule at 100×32 (star at 70%) and owns a live `BeamBridge.exe` child over stdio JSON lines. The helper reports the system's current media session (`music.changed`: app, title, artist, album, playing, position, duration), writes the artwork as a PNG to `%TEMP%\Beam\art\`, and puts real file paths on the clipboard as `CF_HDROP` on request; main logs the music. Music, timer, and done will rest at 100 and grow to 136 on hover inside the same window, while idle and files stay 100. All seven capsule states and five panels exist in `showcase/app-preview.html`. Panel wiring and the rest of the app are unbuilt. Next is task 0.4c.
 
 ## 2. Stack
 - Electron + TypeScript + Vite, exact-pinned. Renderer sandboxed, contextIsolation on, nodeIntegration off. The renderer is vanilla TypeScript with shadcn-style tokens and Lucide; no React or Tailwind.
-- `native/BeamBridge/` — windowless C# .NET 10 helper, self-contained single-file publish. Owns SMTC, clipboard, drag-out, fullscreen detection (SMTC read and artwork are built; transports and clipboard are pending).
+- `native/BeamBridge/` — windowless C# .NET 10 helper, self-contained single-file publish. Owns SMTC, clipboard, drag-out, fullscreen detection (SMTC read, artwork, and the CF_HDROP clipboard are built; drag-out and fullscreen are pending).
 - No database, no server, no TCP ports. Main ⇄ helper is stdio JSON lines only.
 - Settings live in `%APPDATA%\Beam\settings.json`.
 
@@ -24,7 +24,7 @@ Beam is an offline Windows 11 floating pill that gives 1-click media controls, a
 
 ## 4. Hard Rules & Invariants (What the AI must ALWAYS do)
 - One task at a time from `TASKS.md`, top unchecked box. Do not skip the Phase 0 order.
-- 0.4a is done: the helper reads the live SMTC session and writes PNG artwork; proven with Spotify Web in Chrome at 12.4 MB idle, and the art folder is wiped on quit. 0.3's helper answers ping; 0.2's rest window measures 90 MB steady / 90.7 MB peak / 0.035% CPU. The next task is 0.4b (copy files as files).
+- 0.4b is done: `files.copy` puts 3 real paths on the clipboard as `CF_HDROP`, survives helper exit, and verify checks it. 0.4a reads the live SMTC session at 12.5 MB idle; 0.3 answers ping; 0.2's rest window measures 90 MB steady / 90.7 MB peak / 0.035% CPU. The next task is 0.4c (drag out multiple files).
 - Keep the renderer untrusted. Everything touching Win32 goes through the helper.
 - Read `ARCHITECTURE.md` before touching the window, IPC, or helper seams.
 - Follow `DESIGN.md` tokens exactly. No invented colors, radii, or shadows.

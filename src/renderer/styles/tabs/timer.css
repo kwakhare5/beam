@@ -52,3 +52,26 @@
   font-size: 40px;
   letter-spacing: -0.02em;
 }
+
+.timer-done {
+  gap: var(--space-2);
+}
+
+.done-check {
+  display: grid;
+  place-items: center;
+  color: var(--primary-text);
+}
+
+.done-check svg {
+  width: 40px;
+  height: 40px;
+  display: block;
+}
+
+.done-title {
+  font-size: 15px;
+  font-weight: 600;
+  letter-spacing: -0.01em;
+  color: var(--foreground);
+}

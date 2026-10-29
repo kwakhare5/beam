@@ -10,7 +10,8 @@ export interface PillData {
   hover?: boolean;
   primaryIcon?: 'play' | 'pause';
   digits?: string;
-  pip?: 'media' | 'danger';
+  pip?: 'playing' | 'paused' | 'danger';
+  art?: string;
 }
 
 export function pill(data: PillData): string {
@@ -42,8 +43,12 @@ export function pill(data: PillData): string {
         ? `<span class="state-icon" aria-hidden="true">${icon('check')}</span>`
         : `<div class="title" title="${esc(data.title)}">${esc(data.title)}</div>`;
 
-  const glyph = data.state === 'paused' ? `<span class="state-icon" aria-hidden="true">${icon('play')}</span>` : '';
-  const pip = data.pip ? `<span class="media-pip ${data.pip === 'danger' ? 'danger' : ''}" aria-hidden="true"></span>` : '';
+  const pipState = music ? (data.state === 'playing' ? 'playing' : 'paused') : data.pip;
+  const pip = pipState ? `<span class="media-pip ${pipState}" aria-hidden="true"></span>` : '';
+  const thumb =
+    data.art && music
+      ? `<img class="mascot pill-art" src="${esc(data.art)}" alt="" />`
+      : `<img class="mascot" src="${MASCOTS.master}" alt="" />`;
 
-  return `<div class="pill${expands ? ' expands' : ''}${music ? ' has-controls' : ''}" data-state="${data.state}"${data.hover ? ' data-hover="true"' : ''}><div class="mascot-wrap"><img class="mascot" src="${MASCOTS.master}" alt="" />${pip}</div><div class="slot"><div class="meta">${rest}</div>${timerAction}</div>${glyph}${doneActions}${controls}</div>`;
+  return `<div class="pill${expands ? ' expands' : ''}${music ? ' has-controls' : ''}" data-state="${data.state}"${data.hover ? ' data-hover="true"' : ''}><div class="mascot-wrap">${thumb}${pip}</div><div class="slot"><div class="meta">${rest}</div>${timerAction}</div>${doneActions}${controls}</div>`;
 }

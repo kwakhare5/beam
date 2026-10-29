@@ -102,7 +102,7 @@ D:\Beam
 │   └── shared/               (planned)
 │       ├── ipc.ts            channel names + payload types
 │       └── bridge.ts         helper command/event types
-├── native/BeamBridge/        built at 0.3–0.4a: .NET 10 console, stdio JSON lines, ping, SMTC music events + PNG art, 12.4 MB idle
+├── native/BeamBridge/        built at 0.3–0.4b: .NET 10 console, stdio JSON lines, ping, SMTC music events + PNG art, CF_HDROP clipboard, 12.5 MB idle
 ├── assets/
 │   ├── mascot/*.svg          shipped
 │   ├── fonts/                InterVariable.woff2 + OFL.txt
@@ -142,7 +142,7 @@ Rules: helper never prints anything else to stdout (stderr is for logs). Any mal
 
 **Artwork:** the helper saves the current thumbnail to `%TEMP%\Beam\art\<hash>.png`, overwrites it per track, and wipes the folder on start and quit. This is the one allowed disk write; the file shelf stays paths-only in memory.
 
-**Clipboard:** Windows keeps `CF_HDROP` alive only while the owning process lives. The helper owns the clipboard, so a helper crash breaks paste until it restarts. Accepted; covered by a restart test in task 8.1.
+**Clipboard:** Windows keeps `CF_HDROP` alive only while the owning process lives. The helper owns the clipboard, so a helper crash breaks paste until it restarts. Accepted; covered by a restart test in task 8.1. Built at 0.4b: `DROPFILES` + double-null UTF-16 paths in moveable global memory, five clipboard-open retries; data is rendered immediately, so it survives the helper exiting.
 
 **Fullscreen:** detection listens to foreground changes, `EVENT_OBJECT_LOCATIONCHANGE` on the foreground window, and a 1s fallback poll. Foreground events alone miss a video that goes fullscreen inside an already-focused window.
 
@@ -253,17 +253,18 @@ helper's WinEventHook sees a foreground change or the foreground window resize/m
 | 2026-10-27 | Marketing website out of v1 | DESIGN.md specs one; PRD does not ask for one |
 | 2026-10-28 | Open window is 452×332; panel stays 420×300 with a 16px shadow margin | The old 428×308 left 4px, so the panel shadow clipped into a hard band |
 | 2026-10-28 | Capsule state identity: done shows a gold check and gold border; paused shows a play glyph; shelf shows a count with a red pip when a file is missing | Running and done looked identical, paused was invisible at rest, and one missing filename could not represent several files (ADR-0009) |
+| 2026-10-29 | Music states show the 24px album thumbnail (star fallback) and a green/amber dot; paused drops the play glyph. The music track and transport span the panel width, selected content tabs get a 2px gold underline, missing rows drop copy, the timer says Set, and done shows a check + Time’s up | The paused glyph stole 20px from the title, the gold pip read as brand, and the narrow music column squeezed the transport (ADR-0010) |
 | 2026-10-28 | Capsule precedence is drag > timer > music > files > idle | Direct manipulation feedback wins for the moment it lasts; timer still beats music |
 | 2026-10-28 | Music panel shows a read-only position bar, no seeking | Square art plus a position readout fills the panel; SMTC seeking stays out of scope |
 | 2026-10-28 | Files rows expose copy and remove on hover; the empty state is a dashed drop well | Task 3.3 already promised per-row copy, and the core action needs a visible target |
 | 2026-10-28 | Settings has five rows including Reset position, with real controls and dividers instead of a row gap | Read-only badges looked interactive; five 44px rows only fit 242px without the gap |
 | 2026-10-28 | Type scale 11/12/13/15/40 and spacing 4/8/12/16 | Five label sizes and three body rhythms made the panel look assembled from different screens |
 
-UI decisions: ADR-0001 (component boundaries), ADR-0002 (original mascot), ADR-0003 (window, capsule, and panel sizes), ADR-0004 (vanilla shadcn-style), ADR-0005 (capsule interaction), ADR-0006 (landscape panel), ADR-0007 (capsule-to-panel interaction), ADR-0008 (content dynamics), ADR-0009 (state identity, panel completeness, and scale).
+UI decisions: ADR-0001 (component boundaries), ADR-0002 (original mascot), ADR-0003 (window, capsule, and panel sizes), ADR-0004 (vanilla shadcn-style), ADR-0005 (capsule interaction), ADR-0006 (landscape panel), ADR-0007 (capsule-to-panel interaction), ADR-0008 (content dynamics), ADR-0009 (state identity, panel completeness, and scale), ADR-0010 (capsule artwork, dot language, and panel clarity).
 
 ## 8. Open Decisions
 
-Phase 0: 0.1 built, 0.2 measured and passed, 0.3 built (ping/pong), 0.4a built (live SMTC events, PNG art, 12.4 MB idle), 0.4b–0.5 not started.
+Phase 0: 0.1 built, 0.2 measured and passed, 0.3 built (ping/pong), 0.4a built (live SMTC events, PNG art), 0.4b built (CF_HDROP clipboard), 0.4c–0.5 not started.
 
 ---
 
@@ -271,7 +272,7 @@ Phase 0: 0.1 built, 0.2 measured and passed, 0.3 built (ping/pong), 0.4a built (
 
 | Risk | Honest read | Mitigation |
 |---|---|---|
-| RAM budget | Electron ≤130 MB, helper ≤60 MB. Electron idle measured 90 MB steady / 90.7 MB peak / 0.035% CPU at 144×44 on 2026-10-28; helper measured 12.4 MB private idle with SMTC live on 2026-10-29. | Both under cap. Re-measure the helper when clipboard, drag-out, and fullscreen hooks land. Over either cap → stop and report before building more. |
+| RAM budget | Electron ≤130 MB, helper ≤60 MB. Electron idle measured 90 MB steady / 90.7 MB peak / 0.035% CPU at 144×44 on 2026-10-28; helper measured 12.5 MB private idle with SMTC and clipboard live on 2026-10-29. | Both under cap. Re-measure the helper when drag-out and fullscreen hooks land. Over either cap → stop and report before building more. |
 | Rest margins | The window stays 144 wide for every state, so the 100px rest pill leaves 22px of transparent margin each side that still receives clicks; hover states leave 4px | Decide at task 1.3: forward clicks through the empty margins with `setIgnoreMouseEvents` rather than resizing the window |
 | `Alt+Space` steal | Registering it kills the system window menu for every app while Beam runs | Accepted by user 2026-10-27 |
 | Multi-file drag-out | Needs a WinForms message pump inside a windowless process, on its own STA thread | Prove at task 0.4c; fall back to copy-only if it fights |

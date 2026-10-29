@@ -33,6 +33,7 @@
 }
 
 .tab {
+  position: relative;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -80,6 +81,17 @@
 .tab[aria-selected='true']:hover {
   background: none;
   color: var(--primary-text);
+}
+
+.tab:not(.settings)[aria-selected='true']::after {
+  content: '';
+  position: absolute;
+  left: var(--space-2);
+  right: var(--space-2);
+  bottom: -6px;
+  height: 2px;
+  border-radius: 1px;
+  background: var(--primary);
 }
 
 .tab.settings {

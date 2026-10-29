@@ -66,6 +66,9 @@ internal static class Program
                             ["version"] = Version
                         });
                         break;
+                    case "files.copy":
+                        CopyFiles(request);
+                        break;
                     default:
                         Protocol.Log($"dropped unknown cmd {cmd}");
                         break;
@@ -78,5 +81,52 @@ internal static class Program
         }
 
         return 0;
+    }
+
+    private static void CopyFiles(JsonObject request)
+    {
+        var id = request["id"]?.DeepClone();
+        var paths = ReadPaths(request);
+        if (paths is null)
+        {
+            Protocol.Emit(new JsonObject
+            {
+                ["id"] = id,
+                ["ok"] = false,
+                ["error"] = "paths must be a non-empty string array"
+            });
+            return;
+        }
+
+        if (FileClipboard.Copy(paths, out var error))
+        {
+            Protocol.Emit(new JsonObject { ["id"] = id, ["ok"] = true });
+        }
+        else
+        {
+            Protocol.Emit(new JsonObject { ["id"] = id, ["ok"] = false, ["error"] = error });
+        }
+    }
+
+    private static List<string>? ReadPaths(JsonObject request)
+    {
+        if (request["paths"] is not JsonArray array || array.Count == 0)
+        {
+            return null;
+        }
+
+        var paths = new List<string>(array.Count);
+        foreach (var item in array)
+        {
+            if (item is not JsonValue value ||
+                !value.TryGetValue<string>(out var path) ||
+                string.IsNullOrWhiteSpace(path) ||
+                path.Contains('\0'))
+            {
+                return null;
+            }
+            paths.Add(path);
+        }
+        return paths;
     }
 }

@@ -109,8 +109,12 @@
   width: 6px;
   height: 6px;
   border-radius: var(--r-pill);
-  background: var(--primary);
+  background: var(--pip-green);
   box-shadow: 0 0 0 1.5px var(--card);
+}
+
+.media-pip.paused {
+  background: var(--pip-amber);
 }
 
 .media-pip.danger {
@@ -145,6 +149,16 @@
   flex: none;
   display: block;
   transition: opacity 120ms var(--ease);
+}
+
+.pill-art {
+  object-fit: cover;
+  border-radius: var(--r-micro);
+  background: var(--control);
+}
+
+.pill[data-state='paused'] .pill-art {
+  opacity: 0.7;
 }
 
 .slot {

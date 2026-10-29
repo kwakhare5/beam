@@ -6,7 +6,7 @@ Beam is an offline Windows 11 floating capsule for media controls, a file shelf,
 
 - **App:** one 144×44 transparent window showing the **idle capsule only**. Every state will rest at 100×32 and show one fact; music, timer, and done grow to 136×32 on hover to reveal their actions, while idle dims its star to 70% and files stay 100. One window size for every state. It uses `showInactive()`.
 - **Preview-only:** the 420×300 panel, the 452×332 open window, the 150ms grow, all tab bodies, transport buttons, and theme switching. They exist in `showcase/app-preview.html`, not in the app.
-- **Not built:** panel wiring, hotkey, tray, settings, transports, timer, shelf, fullscreen, IPC, and automated UI tests. The `BeamBridge` helper answers `ping` and reports the live media session (title, artist, app, artwork PNG) at 12.4 MB idle; main logs it. Next is task 0.4b (copy files as files), then 0.4c–0.5 and Phase 1.
+- **Not built:** panel wiring, hotkey, tray, settings, transports, timer, shelf, fullscreen, IPC, and automated UI tests. The `BeamBridge` helper answers `ping`, reports the live media session (title, artist, app, artwork PNG), and copies real file paths to the clipboard at 12.5 MB idle; main logs the music. Next is task 0.4c (drag out files), then 0.5 and Phase 1.
 
 ## Commands
 
