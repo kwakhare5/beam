@@ -5,19 +5,19 @@ Remove-Item Env:ELECTRON_RUN_AS_NODE -ErrorAction SilentlyContinue
 $tsc = Join-Path $PSScriptRoot 'node_modules\.bin\tsc.cmd'
 $electron = Join-Path $PSScriptRoot 'node_modules\electron\dist\electron.exe'
 
-Write-Host '[1/8] typecheck'
+Write-Host '[1/9] typecheck'
 & $tsc -p tsconfig.json --noEmit
 if ($LASTEXITCODE -ne 0) { Write-Host 'FAIL typecheck'; exit 1 }
 & $tsc -p tsconfig.renderer.json --noEmit
 if ($LASTEXITCODE -ne 0) { Write-Host 'FAIL typecheck (renderer)'; exit 1 }
 Write-Host 'PASS typecheck'
 
-Write-Host '[2/8] build'
+Write-Host '[2/9] build'
 & npm run build
 if ($LASTEXITCODE -ne 0) { Write-Host 'FAIL build'; exit 1 }
 Write-Host 'PASS build'
 
-Write-Host '[3/8] helper build'
+Write-Host '[3/9] helper build'
 $helperDir = Join-Path $PSScriptRoot 'native\BeamBridge\dist'
 if (Test-Path -LiteralPath $helperDir) { Remove-Item -LiteralPath $helperDir -Recurse -Force }
 & dotnet publish (Join-Path $PSScriptRoot 'native\BeamBridge\BeamBridge.csproj') -c Release -o $helperDir --nologo
@@ -28,7 +28,50 @@ $helperFiles = @(Get-ChildItem -LiteralPath $helperDir -File)
 if ($helperFiles.Count -ne 1) { Write-Host "FAIL helper build: expected one file, found $($helperFiles.Count)"; exit 1 }
 Write-Host 'PASS helper build (single exe)'
 
-Write-Host '[4/8] launch + helper ping'
+Write-Host '[4/9] clipboard'
+$clipDir = Join-Path $env:TEMP 'beam-clip'
+if (Test-Path -LiteralPath $clipDir) { Remove-Item -LiteralPath $clipDir -Recurse -Force }
+New-Item -ItemType Directory -Path $clipDir | Out-Null
+$clipFiles = @('one.txt', 'two.txt', 'three.txt') | ForEach-Object { Join-Path $clipDir $_ }
+$clipFiles | ForEach-Object { Set-Content -LiteralPath $_ -Value 'beam' }
+$clipPsi = New-Object System.Diagnostics.ProcessStartInfo
+$clipPsi.FileName = $helperExe
+$clipPsi.RedirectStandardInput = $true
+$clipPsi.RedirectStandardOutput = $true
+$clipPsi.RedirectStandardError = $true
+$clipPsi.UseShellExecute = $false
+$clipPsi.CreateNoWindow = $true
+$clipProc = [System.Diagnostics.Process]::Start($clipPsi)
+$clipRequest = @{ id = 1; cmd = 'files.copy'; paths = @($clipFiles) } | ConvertTo-Json -Compress
+$clipProc.StandardInput.WriteLine($clipRequest)
+$clipProc.StandardInput.Flush()
+$clipReply = $null
+for ($i = 0; $i -lt 10; $i++) {
+  $lineTask = $clipProc.StandardOutput.ReadLineAsync()
+  if (-not $lineTask.Wait(3000)) { break }
+  if ($null -eq $lineTask.Result) { break }
+  if ($lineTask.Result -match '"id":1') { $clipReply = $lineTask.Result; break }
+}
+$clipRaw = Get-Clipboard -Format FileDropList
+$clipPaths = @($clipRaw | ForEach-Object { if ($_ -is [System.IO.FileInfo]) { $_.FullName } else { [string]$_ } })
+$clipMissing = @($clipFiles | Where-Object { $clipPaths -notcontains $_ })
+if ($clipReply -notmatch '"ok":true' -or $clipPaths.Count -ne 3 -or $clipMissing.Count -ne 0) {
+  $clipProc.Kill()
+  Write-Host "FAIL clipboard: reply '$clipReply', got $($clipPaths.Count) paths, missing $($clipMissing -join ',')"
+  exit 1
+}
+$clipProc.StandardInput.Close()
+$clipProc.WaitForExit(5000) | Out-Null
+$clipAfterRaw = Get-Clipboard -Format FileDropList
+$clipAfter = @($clipAfterRaw | ForEach-Object { $_ })
+if ($clipAfter.Count -ne 3) {
+  Write-Host "FAIL clipboard: $($clipAfter.Count) paths after helper exit"
+  exit 1
+}
+Remove-Item -LiteralPath $clipDir -Recurse -Force
+Write-Host 'PASS clipboard (3 real paths, survive helper exit)'
+
+Write-Host '[5/9] launch + helper ping'
 $outLog = Join-Path $env:TEMP 'beam-verify.out.log'
 $errLog = Join-Path $env:TEMP 'beam-verify.err.log'
 Remove-Item -LiteralPath $outLog -ErrorAction SilentlyContinue
@@ -49,7 +92,7 @@ if ($appOut -notmatch '\[bridge\] pong 0\.1\.0') {
 }
 Write-Host "PASS launch (pid $($first.Id)) + pong 0.1.0"
 
-Write-Host '[5/8] helper memory'
+Write-Host '[6/9] helper memory'
 $helper = Get-Process BeamBridge -ErrorAction SilentlyContinue
 if (-not $helper) {
   Stop-Process -Id $first.Id -Force -ErrorAction SilentlyContinue
@@ -66,7 +109,7 @@ if ($helperMb -ge 60) {
 }
 Write-Host "PASS helper memory ($helperMb MB idle, cap 60 MB)"
 
-Write-Host '[6/8] single instance'
+Write-Host '[7/9] single instance'
 $second = Start-Process -FilePath $electron -ArgumentList '.' -WorkingDirectory $PSScriptRoot -PassThru
 Start-Sleep -Seconds 4
 if (-not $second.HasExited) {
@@ -83,7 +126,7 @@ if ($first.HasExited) {
 }
 Write-Host 'PASS single instance'
 
-Write-Host '[7/8] UI spec'
+Write-Host '[8/9] UI spec'
 $main = Get-Content (Join-Path $PSScriptRoot 'src\main\index.ts') -Raw
 $base = Get-Content (Join-Path $PSScriptRoot 'src\renderer\styles\base.css') -Raw
 $pill = Get-Content (Join-Path $PSScriptRoot 'src\renderer\styles\capsule.css') -Raw
@@ -138,8 +181,8 @@ if ($pill -match 'scale\(1\.06\)') {
   Write-Host 'FAIL UI spec: mascot must not animate on hover'
   $uiFail = $true
 }
-if ($pill -notmatch '\.has-controls' -or $pillTs -notmatch 'state-icon') {
-  Write-Host 'FAIL UI spec: hover swap must be scoped and paused/done need a state glyph'
+if ($pill -notmatch '\.has-controls' -or $pillTs -notmatch 'state-icon' -or $pillTs -notmatch 'pill-art' -or $pill -notmatch 'media-pip\.paused' -or $pill -notmatch 'media-pip\.danger') {
+  Write-Host 'FAIL UI spec: hover swap must be scoped; music needs a thumbnail and green/amber/red dots'
   $uiFail = $true
 }
 if ($pillTs -notmatch 'Cancel timer' -or $pillTs -notmatch 'Dismiss' -or $pillTs -notmatch 'pill-overlay') {
@@ -158,8 +201,20 @@ if ($music -notmatch 'track-bar' -or $musicCss -notmatch 'width: 148px' -or $mus
   Write-Host 'FAIL UI spec: music needs square 148px art and a position bar'
   $uiFail = $true
 }
+if ($musicCss -notmatch 'grid-template-columns: 148px' -or $musicCss -notmatch 'grid-column: 1 / -1') {
+  Write-Host 'FAIL UI spec: the music track and controls must span the panel width'
+  $uiFail = $true
+}
+if ($shellCss -notmatch 'tab:not\(\.settings\)' -or $shellCss -notmatch 'bottom: -6px') {
+  Write-Host 'FAIL UI spec: the selected content tab needs a 2px gold underline'
+  $uiFail = $true
+}
 if ($filesTs -notmatch 'row-action' -or $filesTs -notmatch 'drop-well' -or $filesTs -notmatch 'Folder') {
   Write-Host 'FAIL UI spec: files need row actions, a drop well, and a Folder badge'
+  $uiFail = $true
+}
+if ($filesTs -match 'row-action[^>]*disabled' -or $filesTs -notmatch 'Add files') {
+  Write-Host 'FAIL UI spec: missing rows keep only remove and the footer says Add files'
   $uiFail = $true
 }
 if ($filesCss -match '\.row \{[^}]*background:' -or $filesCss -match '\.row-icon-box \{[^}]*background:') {
@@ -168,6 +223,10 @@ if ($filesCss -match '\.row \{[^}]*background:' -or $filesCss -match '\.row-icon
 }
 if ($timer -notmatch 'TimerMode' -or $timer -notmatch 'timer-input' -or $timer -notmatch "'running'") {
   Write-Host 'FAIL UI spec: timer needs idle/custom/running/done states'
+  $uiFail = $true
+}
+if ($timer -notmatch '>Set<' -or $timer -notmatch 'Time.{0,4}s up' -or $timerCss -notmatch '\.done-check') {
+  Write-Host "FAIL UI spec: the custom timer says Set and done shows a check plus Time's up"
   $uiFail = $true
 }
 if ($calendarTs -notmatch 'firstDayOfWeek' -or $calendarTs -notmatch 'aria-current') {
@@ -182,12 +241,16 @@ if ($settingsTs -notmatch 'Dark theme' -or $settingsTs -notmatch 'stepper' -or $
   Write-Host 'FAIL UI spec: settings needs real controls and a gapped-free row list'
   $uiFail = $true
 }
+if ($settingsTs -notmatch 'setting-inline' -or $settingsTs -notmatch "'Dark' : 'Light'" -or $fieldsCss -notmatch '\.kbd \{[^}]*border: 0') {
+  Write-Host 'FAIL UI spec: the theme row names its mode and keycaps have no outer box'
+  $uiFail = $true
+}
 $allStyles = $pill + $shellCss + $bodyCss + $buttonsCss + $fieldsCss + $indicatorsCss + $musicCss + $filesCss + $timerCss + $calendarCss + $settingsCss
 if ($allStyles -match 'font-size: 10px') {
   Write-Host 'FAIL UI spec: type scale starts at 11px'
   $uiFail = $true
 }
-if ($tokens -notmatch '--card: #1c1c1e' -or $tokens -notmatch '--card: #ffffff') {
+if ($tokens -notmatch '--card: #151517' -or $tokens -notmatch '--card: #f4f4f2') {
   Write-Host 'FAIL UI spec: the shell must be solid in both themes'
   $uiFail = $true
 }
@@ -211,7 +274,7 @@ if ($tokens -match '--(secondary|muted|accent|keycap|pill-badge|destructive-soft
   Write-Host 'FAIL UI spec: translucent fill tokens must stay deleted'
   $uiFail = $true
 }
-if ($tokens -notmatch '--control: #2c2c2e' -or $tokens -notmatch '--control: #ececec' -or $tokens -notmatch '--surface-hover') {
+if ($tokens -notmatch '--control: #252527' -or $tokens -notmatch '--control: #e7e7e5' -or $tokens -notmatch '--surface-hover') {
   Write-Host 'FAIL UI spec: solid control and surface tokens must exist in both themes'
   $uiFail = $true
 }
@@ -271,6 +334,10 @@ if ($preview -notmatch 'data-pill="filesMissing"' -or $preview -match 'data-pill
   Write-Host 'FAIL UI spec: preview must show the shelf count with a danger pip'
   $uiFail = $true
 }
+if ($preview -notmatch 'data-pill="playingNoArt"' -or $preview -notmatch 'art: track.art' -or $preview -match 'data-page="proposals"|data-prop-pill|g-proposal') {
+  Write-Host 'FAIL UI spec: preview must show art and the star fallback, and the proposal page must be gone'
+  $uiFail = $true
+}
 if ($preview -match '128px title slot' -or $preview -match '142px' -or $preview -match '428×308' -or $preview -match '176×32' -or $preview -match '184×44' -or $preview -match '1px each side' -or $preview -match 'is-rest') {
   Write-Host 'FAIL UI spec: preview must not repeat stale geometry'
   $uiFail = $true
@@ -281,7 +348,7 @@ if ($uiFail) {
 }
 Write-Host 'PASS UI spec'
 
-Write-Host '[8/8] quit cleanup'
+Write-Host '[9/9] quit cleanup'
 $closed = $first.CloseMainWindow()
 if (-not $closed) {
   Get-Process electron,BeamBridge -ErrorAction SilentlyContinue | Stop-Process -Force

@@ -46,7 +46,7 @@ export function musicPanel(data: MusicData, active = true): string {
     return panelBody(
       'music',
       `<div class="art skeleton" aria-hidden="true"></div><div class="panel-music-content"><div class="skeleton-line w-65"></div><div class="skeleton-line w-40"></div><div class="skeleton-line w-25"></div>${controls}</div>`,
-      'panel-music',
+      'panel-music-skeleton',
       active
     );
   }

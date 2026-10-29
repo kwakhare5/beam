@@ -64,10 +64,9 @@
   display: inline-flex;
   align-items: center;
   gap: var(--space-1);
-  padding: var(--space-1) var(--space-2);
-  border: 1px solid var(--border);
-  border-radius: var(--r-micro);
-  background: var(--control);
+  padding: 0;
+  border: 0;
+  background: none;
   font-family: inherit;
   font-size: 11px;
   color: var(--foreground);
@@ -75,12 +74,7 @@
 
 button.kbd {
   cursor: default;
-  transition: background 120ms var(--ease), border-color 120ms var(--ease), transform 100ms var(--ease-spring);
-}
-
-button.kbd:hover {
-  background: var(--control-hover);
-  border-color: var(--border-hover);
+  transition: transform 100ms var(--ease-spring);
 }
 
 button.kbd:active {

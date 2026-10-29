@@ -22,8 +22,8 @@
 - [x] **0.4a Read Spotify**
   - Helper reports `music.changed` with title, artist, app, and an art file path. Artwork is written to `%TEMP%\Beam\art\`, overwritten per track, folder wiped on start and quit. Proven with Spotify Web in Chrome (desktop Spotify not installed): `[music] Admirin' You (feat. Preston Pablo) - Karan Aujla, Ikky, Preston Pablo (Chrome)`, 45 KB PNG, folder gone after a graceful quit.
   - _Verify:_ terminal prints the exact track title showing in Spotify; the art path exists while playing and the folder is empty after quit.
-- [ ] **0.4b Copy files as files**
-  - Helper puts `CF_HDROP` on the clipboard for 3 real paths.
+- [x] **0.4b Copy files as files**
+  - Helper puts `CF_HDROP` on the clipboard for 3 real paths. Replies `{"id":N,"ok":true}`; validates a non-empty string array. Clipboard contents survive the helper exiting.
   - _Verify:_ `Get-Clipboard -Format FileDropList` returns exactly 3 paths.
 - [ ] **0.4c Drag out multiple files**
   - Helper runs `DoDragDrop` with `FileDrop` for 3 paths.

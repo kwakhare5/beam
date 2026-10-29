@@ -64,10 +64,13 @@
 /* music panel layout */
 
 .panel-music {
+  display: grid;
+  grid-template-columns: 148px minmax(0, 1fr);
+  grid-template-rows: auto auto auto;
+  align-content: start;
+  align-items: start;
+  gap: var(--space-2) var(--space-3);
   padding: var(--space-2);
-  gap: var(--space-2);
-  flex-direction: row;
-  align-items: center;
 }
 
 .panel-music .art {
@@ -76,6 +79,7 @@
   flex: none;
   object-fit: cover;
   border-radius: var(--r-card);
+  align-self: start;
 }
 
 .panel-music-content {
@@ -86,6 +90,39 @@
   justify-content: center;
   gap: var(--space-2);
   min-height: 0;
+}
+
+.panel-music .panel-music-content {
+  display: contents;
+}
+
+.panel-music .panel-meta {
+  grid-column: 2;
+  grid-row: 1;
+  align-self: center;
+}
+
+.panel-music .track {
+  grid-column: 1 / -1;
+  grid-row: 2;
+}
+
+.panel-music .music-controls {
+  grid-column: 1 / -1;
+  grid-row: 3;
+}
+
+.panel-music-skeleton {
+  flex-direction: row;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+.panel-music-skeleton .art {
+  width: 148px;
+  height: 148px;
+  flex: none;
+  border-radius: var(--r-card);
 }
 
 .panel-music .panel-sub {

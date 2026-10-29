@@ -62,6 +62,13 @@
   height: 14px;
 }
 
+.setting-inline {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  flex: none;
+}
+
 .setting-value {
   min-width: 44px;
   font-size: 12px;
@@ -71,12 +78,19 @@
   color: var(--muted-foreground);
 }
 
+.setting-inline .setting-value {
+  min-width: 40px;
+  text-align: right;
+}
+
 .stepper .setting-value {
   min-width: 44px;
   justify-content: center;
 }
 
 .kbd.capturing {
-  border-color: var(--primary);
+  padding: var(--space-1) var(--space-2);
+  border: 1px dashed var(--primary);
+  border-radius: var(--r-micro);
   color: var(--primary-text);
 }

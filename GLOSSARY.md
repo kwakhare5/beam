@@ -5,7 +5,7 @@ The shared language for the Beam desktop surface. Use these terms in code, docs,
 ## Surfaces
 
 **Capsule**:
-The visible surface: a 100×32 bar at rest for idle, playing, paused, timer, done, and files; drag is 136×32. Music, timer, and done grow to 136×32 on hover or focus. Idle centers the master mark and a muted label at 70% star opacity; music shows the title; timer shows digits only; done shows a gold check; files shows a count.
+The visible surface: a 100×32 bar at rest for idle, playing, paused, timer, done, and files; drag is 136×32. Music, timer, and done grow to 136×32 on hover or focus. Idle centers the master mark and a muted label at 70% star opacity; music shows the album thumbnail (or the star) and the title; paused adds an amber dot; timer shows digits only; done shows a gold check; files shows a count.
 _Avoid_: pill, bar, bubble
 
 **Rest window**:
@@ -25,7 +25,7 @@ The fill, 1px border, and shadow shared by the capsule and the panel.
 _Avoid_: background, chrome
 
 **Hover emphasis**:
-Hover brightens the border and reveals actions. The idle label and star brighten in place at 100. Music, timer, and done grow from 100 to 136: music fades star and title for transports, timer adds cancel, done replaces its check with `Done` and dismiss. Idle and files never grow. The window never resizes.
+Hover brightens the border and reveals actions. The idle label and star brighten in place at 100. Music, timer, and done grow from 100 to 136: music fades the thumbnail and title for transports, timer adds cancel, done replaces its check with `Done` and dismiss. Idle and files never grow. The window never resizes.
 _Avoid_: hover growth, hover resize, OS resize
 
 **Hover action**:
@@ -71,7 +71,7 @@ Shifting the open window coordinates to preserve at least 8px margin from displa
 _Avoid_: screen padding, window snapping
 
 **Title / transport swap**:
-The playing capsule shows the track title at rest in a 50px slot and swaps the star and title for Previous / Play-Pause / Next on hover or focus while growing from 100 to 136 wide.
+The playing capsule shows the track title at rest in a 50px slot and swaps the thumbnail and title for Previous / Play-Pause / Next on hover or focus while growing from 100 to 136 wide.
 _Avoid_: dynamic width, hover growth, text stretching
 
 **Middle-truncation**:
@@ -82,9 +82,9 @@ _Avoid_: end truncation, text clipping
 The unified single-canvas gallery view in `app-preview.html` displaying all capsule states and all five open panels simultaneously.
 _Avoid_: dashboard, mock page
 
-**Media pip**:
-A subtle 6px gold indicator on the mascot marking active background playback when a countdown timer claims the primary capsule. The same pip turns red when a shelf file is missing.
-_Avoid_: notification dot, badge
+**Status dot**:
+A 6px dot on the capsule mark: green while playing, amber when paused, red when a shelf file is missing. A timer carries the background music's dot. Gold is reserved for brand and primary actions, so a gold dot never signals state.
+_Avoid_: notification dot, badge, media pip
 
 **Drop well**:
 The dashed empty area in the Files tab that accepts a drop and holds the Add button.
