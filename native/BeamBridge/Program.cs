@@ -14,6 +14,8 @@ internal static class Program
         Console.SetOut(new StreamWriter(Console.OpenStandardOutput(), new UTF8Encoding(false)) { AutoFlush = true });
         Console.SetError(new StreamWriter(Console.OpenStandardError(), new UTF8Encoding(false)) { AutoFlush = true });
 
+        FullscreenWatcher.EnableDpiAwareness();
+
         var watcher = new MusicWatcher();
         try
         {
@@ -22,6 +24,16 @@ internal static class Program
         catch (Exception ex)
         {
             Protocol.Log($"smtc unavailable: {ex.Message}");
+        }
+
+        var fullscreen = new FullscreenWatcher();
+        try
+        {
+            fullscreen.Start();
+        }
+        catch (Exception ex)
+        {
+            Protocol.Log($"fullscreen unavailable: {ex.Message}");
         }
 
         try
@@ -69,6 +81,9 @@ internal static class Program
                     case "files.copy":
                         CopyFiles(request);
                         break;
+                    case "fullscreen.get":
+                        ReplyFullscreen(request, fullscreen);
+                        break;
                     default:
                         Protocol.Log($"dropped unknown cmd {cmd}");
                         break;
@@ -77,6 +92,7 @@ internal static class Program
         }
         finally
         {
+            fullscreen.Dispose();
             watcher.Dispose();
         }
 
@@ -106,6 +122,25 @@ internal static class Program
         {
             Protocol.Emit(new JsonObject { ["id"] = id, ["ok"] = false, ["error"] = error });
         }
+    }
+
+    private static void ReplyFullscreen(JsonObject request, FullscreenWatcher fullscreen)
+    {
+        var (active, rect) = fullscreen.Snapshot();
+        Protocol.Emit(new JsonObject
+        {
+            ["id"] = request["id"]?.DeepClone(),
+            ["active"] = active,
+            ["rect"] = rect is { } r
+                ? new JsonObject
+                {
+                    ["left"] = r.Left,
+                    ["top"] = r.Top,
+                    ["right"] = r.Right,
+                    ["bottom"] = r.Bottom
+                }
+                : null
+        });
     }
 
     private static List<string>? ReadPaths(JsonObject request)

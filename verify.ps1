@@ -23,19 +23,19 @@ public static class BeamScreen {
 [BeamScreen]::SetProcessDpiAwarenessContext([IntPtr](-4)) | Out-Null
 
 
-Write-Host '[1/13] typecheck'
+Write-Host '[1/14] typecheck'
 & $tsc -p tsconfig.json --noEmit
 if ($LASTEXITCODE -ne 0) { Write-Host 'FAIL typecheck'; exit 1 }
 & $tsc -p tsconfig.renderer.json --noEmit
 if ($LASTEXITCODE -ne 0) { Write-Host 'FAIL typecheck (renderer)'; exit 1 }
 Write-Host 'PASS typecheck'
 
-Write-Host '[2/13] build'
+Write-Host '[2/14] build'
 & npm run build
 if ($LASTEXITCODE -ne 0) { Write-Host 'FAIL build'; exit 1 }
 Write-Host 'PASS build'
 
-Write-Host '[3/13] helper build'
+Write-Host '[3/14] helper build'
 $helperDir = Join-Path $PSScriptRoot 'native\BeamBridge\dist'
 if (Test-Path -LiteralPath $helperDir) { Remove-Item -LiteralPath $helperDir -Recurse -Force }
 & dotnet publish (Join-Path $PSScriptRoot 'native\BeamBridge\BeamBridge.csproj') -c Release -o $helperDir --nologo
@@ -46,7 +46,7 @@ $helperFiles = @(Get-ChildItem -LiteralPath $helperDir -File)
 if ($helperFiles.Count -ne 1) { Write-Host "FAIL helper build: expected one file, found $($helperFiles.Count)"; exit 1 }
 Write-Host 'PASS helper build (single exe)'
 
-Write-Host '[4/13] clipboard'
+Write-Host '[4/14] clipboard'
 $clipDir = Join-Path $env:TEMP 'beam-clip'
 if (Test-Path -LiteralPath $clipDir) { Remove-Item -LiteralPath $clipDir -Recurse -Force }
 New-Item -ItemType Directory -Path $clipDir | Out-Null
@@ -96,7 +96,7 @@ if ($clipAfter.Count -ne 3) {
 Remove-Item -LiteralPath $clipDir -Recurse -Force
 Write-Host 'PASS clipboard (3 real paths, survive helper exit)'
 
-Write-Host '[5/13] launch + focus'
+Write-Host '[5/14] launch + focus'
 $outLog = Join-Path $env:TEMP 'beam-verify.out.log'
 $errLog = Join-Path $env:TEMP 'beam-verify.err.log'
 Remove-Item -LiteralPath $outLog -ErrorAction SilentlyContinue
@@ -158,7 +158,7 @@ Write-Host "PASS launch (pid $($first.Id)) + pong 0.1.0"
 Write-Host 'PASS focus (pill appeared without taking the foreground)'
 Start-Sleep -Seconds 5
 
-Write-Host '[6/13] anchor'
+Write-Host '[6/14] anchor'
 $appOut = Get-Content -LiteralPath $outLog -Raw -ErrorAction SilentlyContinue
 $anchorMatches = [regex]::Matches($appOut, '\[window\] bounds=(-?\d+),(-?\d+),(\d+),(\d+) content=(-?\d+),(-?\d+),(\d+),(\d+) work=(-?\d+),(-?\d+),(\d+),(\d+)')
 if ($anchorMatches.Count -eq 0) {
@@ -230,7 +230,7 @@ if ([math]::Abs($waX - $wx) -gt 2 -or [math]::Abs($waY - $wy) -gt 2 -or [math]::
 }
 Write-Host "PASS anchor (pill 12px above the taskbar, centered; native rect matches; scale $scale)"
 
-Write-Host '[7/13] idle dim'
+Write-Host '[7/14] idle dim'
 $idleOut = Get-Content -LiteralPath $outLog -Raw -ErrorAction SilentlyContinue
 $idleMatch = [regex]::Match($idleOut, '\[idle\] (\{.+\})')
 if (-not $idleMatch.Success) {
@@ -249,7 +249,7 @@ if ($idle.state -ne 'idle' -or $idle.markOpacity -ne '0.7' -or $idle.shellOpacit
 }
 Write-Host "PASS idle dim (star $($idle.markOpacity), shell $($idle.shellOpacity), master mark, label Beam)"
 
-Write-Host '[8/13] panel'
+Write-Host '[8/14] panel'
 $panelOut = $appOut
 for ($i = 0; $i -lt 50; $i++) {
   Start-Sleep -Milliseconds 300
@@ -298,7 +298,7 @@ if ($restoredW -gt 200 -or $restoredH -gt 100) {
 Remove-Item Env:BEAM_PANEL_TEST -ErrorAction SilentlyContinue
 Write-Host "PASS panel (open ${panelMs}ms reduced=$reduced, 452x316, dismissed back to the pill)"
 
-Write-Host '[9/13] helper memory'
+Write-Host '[9/14] helper memory'
 $helper = Get-Process BeamBridge -ErrorAction SilentlyContinue
 if (-not $helper) {
   Stop-Process -Id $first.Id -Force -ErrorAction SilentlyContinue
@@ -315,7 +315,7 @@ if ($helperMb -ge 60) {
 }
 Write-Host "PASS helper memory ($helperMb MB idle, cap 60 MB)"
 
-Write-Host '[10/13] single instance'
+Write-Host '[10/14] single instance'
 $second = Start-Process -FilePath $electron -ArgumentList '.' -WorkingDirectory $PSScriptRoot -PassThru
 Start-Sleep -Seconds 4
 if (-not $second.HasExited) {
@@ -332,7 +332,7 @@ if ($first.HasExited) {
 }
 Write-Host 'PASS single instance'
 
-Write-Host '[11/13] UI spec'
+Write-Host '[11/14] UI spec'
 $main = Get-Content (Join-Path $PSScriptRoot 'src\main\index.ts') -Raw
 $base = Get-Content (Join-Path $PSScriptRoot 'src\renderer\styles\base.css') -Raw
 $pill = Get-Content (Join-Path $PSScriptRoot 'src\renderer\styles\capsule.css') -Raw
@@ -622,7 +622,7 @@ if ($uiFail) {
 }
 Write-Host 'PASS UI spec'
 
-Write-Host '[12/13] move + persist'
+Write-Host '[12/14] move + persist'
 $settingsPath = $null
 $settingsBackup = Join-Path $env:TEMP 'beam-verify-settings.json'
 $hadSettings = $false
@@ -771,7 +771,7 @@ try {
 if ($hadSettings) { Copy-Item -LiteralPath $settingsBackup -Destination $settingsPath -Force } else { Remove-Item -LiteralPath $settingsPath -ErrorAction SilentlyContinue }
 Write-Host "PASS move (drag $bx,$by to $endX,$endY, saved, restart restored it, Reset returned to $anchorX,$anchorY)"
 
-Write-Host '[13/13] quit cleanup'
+Write-Host '[13/14] quit cleanup'
 $closed = $first.CloseMainWindow()
 if (-not $closed) {
   Get-Process electron,BeamBridge -ErrorAction SilentlyContinue | Stop-Process -Force
@@ -787,6 +787,125 @@ if (-not $appExited -or $helperLeft -ne 0) {
   exit 1
 }
 Write-Host 'PASS quit cleanup (app and helper exited)'
+
+Write-Host '[14/14] fullscreen'
+$fsHarnessPath = Join-Path $env:TEMP 'beam-fs-harness.ps1'
+$fsStagePath = Join-Path $env:TEMP 'beam-fs-stage.txt'
+$fsProc = $null
+$fsHarness = $null
+try {
+  $fsHarnessSource = @'
+Add-Type -AssemblyName System.Windows.Forms
+Add-Type -AssemblyName System.Drawing
+Add-Type -TypeDefinition 'using System; using System.Runtime.InteropServices; public static class BeamFsHarness { [DllImport("user32.dll")] public static extern bool SetForegroundWindow(IntPtr hwnd); [DllImport("user32.dll")] public static extern IntPtr GetForegroundWindow(); [DllImport("user32.dll")] public static extern bool SetProcessDpiAwarenessContext(IntPtr ctx); [DllImport("user32.dll")] public static extern IntPtr GetWindowThreadProcessId(IntPtr hwnd, IntPtr pid); [DllImport("user32.dll")] public static extern bool AttachThreadInput(IntPtr attach, IntPtr to, bool on); [DllImport("kernel32.dll")] public static extern uint GetCurrentThreadId(); [DllImport("user32.dll")] public static extern void keybd_event(byte key, byte scan, uint flags, UIntPtr extra); const byte VK_MENU = 0x12; const uint KEYEVENTF_KEYUP = 0x0002; public static bool ForceForeground(IntPtr hwnd) { if (GetForegroundWindow() == hwnd) return true; var fg = GetForegroundWindow(); var fgThread = GetWindowThreadProcessId(fg, IntPtr.Zero); var self = GetCurrentThreadId(); AttachThreadInput(fgThread, (IntPtr)self, true); SetForegroundWindow(hwnd); AttachThreadInput(fgThread, (IntPtr)self, false); if (GetForegroundWindow() == hwnd) return true; keybd_event(VK_MENU, 0, 0, UIntPtr.Zero); keybd_event(VK_MENU, 0, KEYEVENTF_KEYUP, UIntPtr.Zero); SetForegroundWindow(hwnd); return GetForegroundWindow() == hwnd; } }'
+[BeamFsHarness]::SetProcessDpiAwarenessContext([IntPtr](-4)) | Out-Null
+$stage = Join-Path $env:TEMP 'beam-fs-stage.txt'
+$screen = [System.Windows.Forms.Screen]::PrimaryScreen.Bounds
+$form = New-Object System.Windows.Forms.Form
+$form.FormBorderStyle = [System.Windows.Forms.FormBorderStyle]::None
+$form.StartPosition = [System.Windows.Forms.FormStartPosition]::Manual
+$form.Bounds = New-Object System.Drawing.Rectangle(100, 100, 600, 400)
+$form.TopMost = $true
+$form.BackColor = [System.Drawing.Color]::Black
+$form.Show()
+$ok = [BeamFsHarness]::ForceForeground($form.Handle)
+"stage0 hwnd=$($form.Handle) fg=$([BeamFsHarness]::GetForegroundWindow()) ok=$ok screen=$($screen.Width)x$($screen.Height)" | Set-Content -LiteralPath $stage
+if (-not $ok) { exit 3 }
+Start-Sleep -Milliseconds 2200
+$form.Bounds = $screen
+$ok = [BeamFsHarness]::ForceForeground($form.Handle)
+"stage1 hwnd=$($form.Handle) fg=$([BeamFsHarness]::GetForegroundWindow()) ok=$ok bounds=$($form.Bounds)" | Add-Content -LiteralPath $stage
+if (-not $ok) { exit 4 }
+Start-Sleep -Milliseconds 2900
+$form.Bounds = New-Object System.Drawing.Rectangle(100, 100, 600, 400)
+Start-Sleep -Milliseconds 150
+"stage2 hwnd=$($form.Handle) fg=$([BeamFsHarness]::GetForegroundWindow())" | Add-Content -LiteralPath $stage
+Start-Sleep -Milliseconds 1900
+$form.Close()
+'@
+  Set-Content -LiteralPath $fsHarnessPath -Value $fsHarnessSource -Encoding UTF8
+
+  $fsPsi = New-Object System.Diagnostics.ProcessStartInfo
+  $fsPsi.FileName = $helperExe
+  $fsPsi.RedirectStandardInput = $true
+  $fsPsi.RedirectStandardOutput = $true
+  $fsPsi.RedirectStandardError = $true
+  $fsPsi.UseShellExecute = $false
+  $fsPsi.CreateNoWindow = $true
+  $fsProc = [System.Diagnostics.Process]::Start($fsPsi)
+  $script:fsRead = $null
+  function Read-FsLine([int]$timeoutMs) {
+    if (-not $script:fsRead) { $script:fsRead = $fsProc.StandardOutput.ReadLineAsync() }
+    if (-not $script:fsRead.Wait($timeoutMs)) { return '<timeout>' }
+    $line = $script:fsRead.Result
+    $script:fsRead = $null
+    return $line
+  }
+  function Wait-FsActive([bool]$want, [int]$seconds) {
+    $expected = if ($want) { '"active":true' } else { '"active":false' }
+    $stop = (Get-Date).AddSeconds($seconds)
+    while ((Get-Date) -lt $stop) {
+      if ($fsHarness.HasExited) { return $null }
+      $line = Read-FsLine 1000
+      if ($line -eq '<timeout>') { continue }
+      if ($null -eq $line) { return $null }
+      if ($line -match '"evt":"fullscreen.changed"' -and $line.Contains($expected)) { return $line }
+    }
+    return $null
+  }
+
+  $fsInitial = $null
+  $fsStop = (Get-Date).AddSeconds(10)
+  while ((Get-Date) -lt $fsStop) {
+    $line = Read-FsLine 3000
+    if ($line -eq '<timeout>') { continue }
+    if ($null -eq $line) { throw 'the helper closed stdout before its first fullscreen event' }
+    if ($line -match '"evt":"fullscreen.changed"') { $fsInitial = $line; break }
+  }
+  if (-not $fsInitial) { throw 'no initial fullscreen.changed event' }
+
+  $fsProc.StandardInput.WriteLine('{"id":2,"cmd":"fullscreen.get"}')
+  $fsProc.StandardInput.Flush()
+  $fsGet = $null
+  $fsStop = (Get-Date).AddSeconds(10)
+  while ((Get-Date) -lt $fsStop) {
+    $line = Read-FsLine 3000
+    if ($line -eq '<timeout>') { continue }
+    if ($null -eq $line) { throw 'the helper closed stdout before the fullscreen.get reply' }
+    if ($line -match '"id":2') { $fsGet = $line; break }
+  }
+  if (-not $fsGet -or $fsGet -notmatch '"active":(true|false)' -or $fsGet -notmatch '"rect"') {
+    throw "fullscreen.get replied '$fsGet'"
+  }
+
+  Remove-Item -LiteralPath $fsStagePath -ErrorAction SilentlyContinue
+  $fsHarness = Start-Process 'C:\Windows\System32\WindowsPowerShell\v1.0\powershell.exe' -ArgumentList '-NoProfile', '-ExecutionPolicy', 'Bypass', '-File', $fsHarnessPath -PassThru
+
+  if (-not (Wait-FsActive $true 15)) { throw 'a window growing to fullscreen never reported active:true' }
+  if (-not (Wait-FsActive $false 15)) { throw 'leaving fullscreen never reported active:false' }
+
+  $fsHarness.WaitForExit(15000) | Out-Null
+  $fsStage = Get-Content -LiteralPath $fsStagePath -Raw -ErrorAction SilentlyContinue
+  if (-not $fsStage -or $fsStage -notmatch 'stage0 hwnd=(\d+) fg=(\d+) ok=True') {
+    throw "the harness never focused its window: $fsStage"
+  }
+  $fsHwnd = $Matches[1]
+  if ($Matches[2] -ne $fsHwnd -or $fsStage -notmatch "stage1 hwnd=$fsHwnd fg=$fsHwnd ok=True") {
+    throw 'the foreground window changed while the window grew to fullscreen'
+  }
+} catch {
+  if ($fsProc -and -not $fsProc.HasExited) { $fsProc.Kill() }
+  if ($fsHarness -and -not $fsHarness.HasExited) { $fsHarness.Kill() }
+  Write-Host "FAIL fullscreen: $($_.Exception.Message)"
+  exit 1
+}
+if ($fsProc -and -not $fsProc.HasExited) {
+  $fsProc.StandardInput.Close()
+  $fsProc.WaitForExit(5000) | Out-Null
+  if (-not $fsProc.HasExited) { $fsProc.Kill() }
+}
+Remove-Item -LiteralPath $fsHarnessPath, $fsStagePath -ErrorAction SilentlyContinue
+Write-Host 'PASS fullscreen (grow to monitor bounds -> active:true, shrink -> active:false, same foreground window)'
 
 Write-Host 'ALL CHECKS PASSED'
 exit 0
