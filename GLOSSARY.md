@@ -25,7 +25,7 @@ The fill, 1px border, and shadow shared by the capsule and the panel.
 _Avoid_: background, chrome
 
 **Hover emphasis**:
-Hover brightens the border and reveals actions. The idle label and star brighten in place at 100. Music, timer, and done grow from 100 to 136: music fades the thumbnail and title for transports, timer adds cancel, done replaces its check with `Done` and dismiss. Idle and files never grow. The window never resizes.
+Hover brightens the border and reveals actions. The idle label and star brighten in place at 100. Music, timer, and done grow from 94 to 128: music fades the thumbnail and title for transports, timer adds cancel, done replaces its check with `Done` and dismiss. Idle and files never grow. The window never resizes.
 _Avoid_: hover growth, hover resize, OS resize
 
 **Hover action**:
@@ -71,7 +71,7 @@ Shifting the open window coordinates to preserve at least 8px margin from displa
 _Avoid_: screen padding, window snapping
 
 **Title / transport swap**:
-The playing capsule shows the track title at rest in a 50px slot and swaps the thumbnail and title for Previous / Play-Pause / Next on hover or focus while growing from 100 to 136 wide.
+The playing capsule shows the track title at rest in a 46px slot and swaps the thumbnail and title for Previous / Play-Pause / Next on hover or focus while growing from 94 to 128 wide.
 _Avoid_: dynamic width, hover growth, text stretching
 
 **Middle-truncation**:

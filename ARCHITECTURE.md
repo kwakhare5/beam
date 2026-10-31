@@ -27,11 +27,13 @@
 
 No network. No database. No server. Four parts, three seams.
 
-### Current vs target (2026-10-28)
+### Current vs target (2026-10-29)
 
-Implemented: Electron shell, single-instance lock, 136×42 window anchored above the taskbar with the idle capsule, the full shared UI (7 capsule states, 5 panels) in the canonical preview, split UI modules/styles, ten `verify.ps1` checks, `measure.ps1`.
+Implemented: Electron shell with single-instance lock, the 136×42 window anchored above the taskbar with the 94×30 idle capsule, tray, panel open/collapse at 452×316 with a ~150ms transform, split UI modules/styles, the canonical preview, eleven `verify.ps1` checks, and `measure.ps1`.
 
-Target only: `window.ts`, `tray.ts`, `hotkey.ts`, `settings.ts`, `bridge.ts`, `src/shared/`, `native/BeamBridge/`, tray icon, chime, panel open/resize, SMTC, timer, shelf, fullscreen, and the IPC contract below. Expect the present-tense sections below to describe the target until those tasks land.
+Built in the helper: stdio client, SMTC read with PNG artwork, CF_HDROP clipboard, ping.
+
+Still target: `window.ts` (drag and persisted position), `hotkey.ts`, `settings.ts`, `src/shared/`, fullscreen detection, the timer owner, the shelf, the chime, and every tab's live wiring. Present-tense sections below describe that target until those tasks land.
 
 ---
 
@@ -41,7 +43,7 @@ Target only: `window.ts`, `tray.ts`, `hotkey.ts`, `settings.ts`, `bridge.ts`, `s
 |---|---|---|---|
 | Electron main | Node process | Window geometry, tray, global hotkey, settings file, helper lifecycle | Draw UI, touch Win32 directly |
 | Renderer | Chromium window | Pill, 5 tabs, all visuals | Read files from disk, call Win32 |
-| BeamBridge.exe | Windowless C# child | SMTC read/write, clipboard, drag-out, fullscreen detection | Draw anything, own state long-term |
+| BeamBridge.exe | Windowless C# child | SMTC read, clipboard, fullscreen detection | Draw anything, own state long-term, run drag-out (app-owned) |
 | settings.json | File in `%APPDATA%\Beam\` | Position, hotkey, startup flag, chime volume, theme, schema `version` | Store temp data |
 
 Renderer is untrusted by design: `contextIsolation: true`, `nodeIntegration: false`, `sandbox: true`. It gets one narrow preload API and nothing else.
@@ -62,17 +64,17 @@ D:\Beam
 ├── measure.ps1               memory/CPU proof
 ├── README.md
 ├── GLOSSARY.md               UI vocabulary
-├── docs/adr/                 0001–0009 UI decisions
+├── docs/adr/                 0001–0010 UI decisions
 ├── PRD.md  DESIGN.md  ARCHITECTURE.md  TASKS.md  AGENTS.md  JOURNAL.md
 ├── scripts/generate-icons.mjs
 ├── src/
 │   ├── main/
 │   │   ├── index.ts          app lifecycle, single-instance lock
 │   │   ├── window.ts         (planned) pill/panel geometry, anchoring, drag, close rules
-│   │   ├── tray.ts           tray icon + menu (Settings disabled until 1.3)
+│   │   ├── tray.ts           tray icon + menu (Settings stays disabled until 7.1)
 │   │   ├── hotkey.ts         (planned) Alt+Space register, fallback, rebind
 │   │   ├── settings.ts       (planned) read/write settings.json, defaults, versioned migration
-│   │   └── bridge.ts         spawn helper + JSON-lines client (ping built; commands and restart policy pending)
+│   │   └── bridge.ts         spawn helper + JSON-lines client (ping and files.copy built; music commands and restart policy pending)
 │   ├── preload/index.ts      contextBridge surface (the only door)
 │   ├── renderer/
 │   │   ├── ui/
@@ -102,11 +104,11 @@ D:\Beam
 │   └── shared/               (planned)
 │       ├── ipc.ts            channel names + payload types
 │       └── bridge.ts         helper command/event types
-├── native/BeamBridge/        built at 0.3–0.4b: .NET 10 console, stdio JSON lines, ping, SMTC music events + PNG art, CF_HDROP clipboard, 12.5 MB idle
+├── native/BeamBridge/        built at 0.3–0.4b: .NET 10 console, stdio JSON lines, ping, SMTC music events + PNG art, CF_HDROP clipboard, 10.8 MB private idle (2026-10-29)
 ├── assets/
 │   ├── mascot/*.svg          shipped
 │   ├── fonts/                InterVariable.woff2 + OFL.txt
-│   ├── tray.ico              (planned)
+│   ├── tray.ico              shipped (16/20/24/32 PNG entries)
 │   └── chime.wav             (planned) generated, committed
 └── showcase/                 brand lab, never shipped
 ```
@@ -151,21 +153,25 @@ Rules: helper never prints anything else to stdout (stderr is for logs). Any mal
 
 ## 5. Seam B — Main ⇄ Renderer (IPC)
 
-All channels prefixed `beam:`. Renderer can call, main can push. Payloads are typed in `src/shared/ipc.ts`.
+All channels prefixed `beam:`. Renderer can call, main can push. Built channels are typed inline in `src/preload/index.ts`; `src/shared/ipc.ts` (planned) will own the types when the rest of the contract lands.
 
-| Direction | Channel | Purpose |
-|---|---|---|
-| renderer → main | `beam:panel:resize` | resize 136×42 ⇄ 452×316 |
-| renderer → main | `beam:panel:close` | Esc / outside click |
-| renderer → main | `beam:music:command` | toggle / next / prev |
-| renderer → main | `beam:files:add` | paths from a drop |
-| renderer → main | `beam:files:copy` | copy one or all |
-| renderer → main | `beam:files:drag` | start drag-out |
-| renderer → main | `beam:timer:start/stop` | presets or custom |
-| renderer → main | `beam:settings:get/set` | settings screen |
-| main → renderer | `beam:music:state` | pushed on `music.changed` |
-| main → renderer | `beam:fullscreen` | hide the window |
-| main → renderer | `beam:timer:tick` | seconds left, pushed by main (the timer owner) |
+| Direction | Channel | Purpose | State |
+|---|---|---|---|
+| renderer → main | `beam:panel:request-open` | open the panel from a pill click | built |
+| renderer → main | `beam:panel:collapsed` | panel finished closing; window returns to 136×42 | built |
+| renderer → main | `beam:panel:timing` | measured open duration + reduced-motion flag | built |
+| main → renderer | `beam:panel:open` | start the open animation | built |
+| main → renderer | `beam:panel:dismiss` | close on blur or tray toggle | built |
+| renderer → main | `beam:drag-test` / `beam:drag-test:enabled` | drag-gesture test hook (`BEAM_DRAG_TEST=1`) | built |
+| renderer → main | `beam:music:command` | toggle / next / prev | planned |
+| renderer → main | `beam:files:add` | paths from a drop | planned |
+| renderer → main | `beam:files:copy` | copy one or all | planned |
+| renderer → main | `beam:files:drag` | start drag-out | planned |
+| renderer → main | `beam:timer:start/stop` | presets or custom | planned |
+| renderer → main | `beam:settings:get/set` | settings screen | planned |
+| main → renderer | `beam:music:state` | pushed on `music.changed` | planned |
+| main → renderer | `beam:fullscreen` | hide the window | planned |
+| main → renderer | `beam:timer:tick` | seconds left, pushed by main (the timer owner) | planned |
 
 ---
 
@@ -219,7 +225,7 @@ helper's WinEventHook sees a foreground change or the foreground window resize/m
 | 2026-10-28 | One 176×32 capsule for every state; music hover swaps the title for transport (superseded by the two-width row below) | User rejected the five-width system and clipped titles; 176 is the maximum inside the 184 window, and swapping avoids squeezing the title |
 | 2026-10-28 | Two capsule widths: 136×32 compact, 216×32 for music; window 144×44 or 224×44; width snaps on state change (superseded by the 100/136 row below) | A single 176 wasted space in five short states and still clipped long titles; music is the only state that needs room, and hover never resizes |
 | 2026-10-28 | Music capsule rests at 100×32 and grows to 136×32 on hover/focus over 120ms; one 144×44 window for every state | User picked a compact resting pill and accepted hover growth; growing inside a fixed window avoids a Win32 resize during pointer movement |
-| 2026-10-28 | Every capsule state rests at 100×32 and shows one fact; music, timer, and done grow to 136×32 on hover/focus and reveal their actions; idle dims its star to 70%; files and idle never grow | User wants a quiet single-fact rest and full actions on hover; growing only where content exists avoids empty width and keeps the 144 window |
+| 2026-10-28 | (superseded 2026-10-29 by the 94×30 row) Every capsule state rests at 100×32 and shows one fact; music, timer, and done grow to 136×32 on hover/focus and reveal their actions; idle dims its star to 70%; files and idle never grow | User wants a quiet single-fact rest and full actions on hover; growing only where content exists avoids empty width and keeps the 144 window |
 | 2026-10-29 | UI split into capsule, panel, per-tab, and shared modules; styles split one file per component; every fill is solid (`--control`, `--control-hover`, `--surface-hover`); file badges and status pips are gone | The 437-line tab stylesheet and 313-line controls stylesheet mixed unrelated components, and translucent chips and pips read as glass; solid opaque fills match the Apple-style shell |
 | 2026-10-29 | Capsule is 94×30 at rest and 128×30 on hover inside a 136×42 window | Karan found 100×32 too heavy at 125% display scale; a 6% cut keeps the layout, type scale, and 8px edge padding while shrinking the surface and its margins |
 | 2026-10-27 | Last-touched media session wins | Windows can expose Spotify and a browser at once |
@@ -233,14 +239,14 @@ helper's WinEventHook sees a foreground change or the foreground window resize/m
 | 2026-10-27 | RAM ceiling raised 100 → 130 MB, PRD amended | User accepted the Electron baseline; 100 MB was not realistic |
 | 2026-10-27 | RAM gate runs immediately after scaffolding (task 0.2), before the helper | Failing the budget after the native spike would waste the hardest work; cheapest point to swap stacks is at the empty window |
 | 2026-10-27 | Electron is confirmed, WinUI is the fallback if the gate fails | User chose Electron; no rewrite until the 60s measurement says otherwise |
-| 2026-10-27 | Hardware acceleration is disabled at startup | GPU on measured 139.2 MB private, over the 130 MB gate; off measured 81.8 MB steady / 84 MB peak / 0.011% CPU at the 184×44 idle window (earlier 86.4–86.5 MB runs were on the 800×60 window). Re-measured 2026-10-28 at 144×44: 90 MB steady / 90.7 MB peak / 0.035% CPU, still under the gate. |
+| 2026-10-27 | Hardware acceleration is disabled at startup | GPU on measured 139.2 MB private, over the 130 MB gate; off measured 81.8 MB steady / 84 MB peak / 0.011% CPU at the 184×44 idle window (earlier 86.4–86.5 MB runs were on the 800×60 window). Re-measured 2026-10-28 at 144×44: 90 MB steady / 90.7 MB peak / 0.035% CPU, and 2026-10-29 at 136×42 with the panel and tray: 99 MB private / 0.2% CPU. Still off, still under the gate. |
 | 2026-10-27 | Renderer UI is vanilla shadcn-style, not React shadcn/ui | Avoids React/Tailwind/Radix in a small always-on-top utility; keeps the Electron/TS stack. ADR-0004. |
 | 2026-10-27 | `Alt+Space` stays the default despite stealing the system window menu | Explicit user choice |
 | 2026-10-27 | Helper ships self-contained, no .NET prerequisite | Must run on a fresh Windows install |
 | 2026-10-27 | Pill starts on the primary monitor, follows across monitors when dragged, snaps back to primary if that monitor disappears | Prevents an offscreen window |
 | 2026-10-27 | Shelf stays in-memory; quitting drops contents; shelf shows a warning while non-empty | Matches PRD; silent loss would be worse |
 | 2026-10-27 | Timer deadline is owned by main, not the renderer | Chromium throttles hidden windows; the alarm must fire while the pill is hidden |
-| 2026-10-27 | `files.drag` runs on a dedicated STA thread in the helper | A blocking `DoDragDrop` on the stdio loop would freeze SMTC reads for the whole drag |
+| 2026-10-27 | (superseded 2026-10-29: helper drag deleted) `files.drag` runs on a dedicated STA thread in the helper | A blocking `DoDragDrop` on the stdio loop would freeze SMTC reads for the whole drag |
 | 2026-10-27 | Budget split: Electron ≤130 MB, helper ≤60 MB, total always reported | One combined number hides which side regressed |
 | 2026-10-27 | Single instance: a second launch wakes the existing pill and exits | Two pills would fight over the hotkey, tray icon, and settings file |
 | 2026-10-27 | settings.json carries `version: 1`; unknown keys are preserved | Migration needs something to compare against, and a downgrade must not wipe settings |
@@ -253,7 +259,7 @@ helper's WinEventHook sees a foreground change or the foreground window resize/m
 | 2026-10-27 | App ships light and dark themes, toggled in settings | User request 2026-10-27; light palette is the Notion set, dark palette is the solid dark set |
 | 2026-10-27 | Pill is a transparent CSS capsule, not Windows acrylic | Tested 2026-10-27: acrylic paints the window rectangle and ignores the CSS pill radius; at 32px tall the capsule shape matters more than blur |
 | 2026-10-27 | Marketing website out of v1 | DESIGN.md specs one; PRD does not ask for one |
-| 2026-10-28 | Open window is 452×332; panel stays 420×300 with a 16px shadow margin | The old 428×308 left 4px, so the panel shadow clipped into a hard band |
+| 2026-10-28 | (superseded 2026-10-29 by the 316 row) Open window is 452×332; panel stays 420×300 with a 16px shadow margin | The old 428×308 left 4px, so the panel shadow clipped into a hard band |
 | 2026-10-29 | Open window is 452×316 (420×284 panel) and every tab body centers its content | Karan saw too much empty space at the panel's bottom. Per-tab sizing was built and rejected as too variable; one fixed height that still fits playing music (284) removes 16px and centering splits the remaining slack instead of pooling it at the bottom |
 | 2026-10-28 | Capsule state identity: done shows a gold check and gold border; paused shows a play glyph; shelf shows a count with a red pip when a file is missing | Running and done looked identical, paused was invisible at rest, and one missing filename could not represent several files (ADR-0009) |
 | 2026-10-29 | Music states show the 24px album thumbnail (star fallback) and a green/amber dot; paused drops the play glyph. The music track and transport span the panel width, selected content tabs get a 2px gold underline, missing rows drop copy, the timer says Set, and done shows a check + Time’s up | The paused glyph stole 20px from the title, the gold pip read as brand, and the narrow music column squeezed the transport (ADR-0010) |
@@ -265,9 +271,11 @@ helper's WinEventHook sees a foreground change or the foreground window resize/m
 
 UI decisions: ADR-0001 (component boundaries), ADR-0002 (original mascot), ADR-0003 (window, capsule, and panel sizes), ADR-0004 (vanilla shadcn-style), ADR-0005 (capsule interaction), ADR-0006 (landscape panel), ADR-0007 (capsule-to-panel interaction), ADR-0008 (content dynamics), ADR-0009 (state identity, panel completeness, and scale), ADR-0010 (capsule artwork, dot language, and panel clarity).
 
-## 8. Open Decisions
+## 8. Status
 
-Phase 0: 0.1 built, 0.2 measured and passed, 0.3 built (ping/pong), 0.4a built (live SMTC events, PNG art), 0.4b built (CF_HDROP clipboard). 0.4c replaced by 3.4. 1.1 built (`placeWindow` anchors above the taskbar), 1.2 built (verify guards foreground), 1.6 built (tray), 1.3 built (panel open/collapse proven by hand on all three close paths). Next: 3.1.
+Phase 0: 0.1 built, 0.2 measured and passed, 0.3 built (ping/pong), 0.4a built (live SMTC events, PNG art), 0.4b built (CF_HDROP clipboard). 0.4c replaced by 3.4. 1.1 built (`placeWindow` anchors above the taskbar), 1.2 built (verify guards the foreground), 1.6 built (tray), 1.3 built (panel open/collapse, all three close paths proven by hand). Next: 1.4, then 1.5, then block B.
+
+Open: the transparent rest margins still swallow clicks (no task owns it); the helper restart policy, hotkey, settings file, fullscreen, shelf, timer, and live tabs are unbuilt.
 
 ---
 
@@ -275,8 +283,8 @@ Phase 0: 0.1 built, 0.2 measured and passed, 0.3 built (ping/pong), 0.4a built (
 
 | Risk | Honest read | Mitigation |
 |---|---|---|
-| RAM budget | Electron ≤130 MB, helper ≤60 MB. Electron idle measured 90 MB steady / 90.7 MB peak / 0.035% CPU at 144×44 on 2026-10-28; helper measured 12.5 MB private idle with SMTC and clipboard live on 2026-10-29. | Both under cap. Re-measure the helper when drag-out and fullscreen hooks land. Over either cap → stop and report before building more. |
-| Rest margins | The window stays 136 wide for every state, so the 94px rest pill leaves 21px of transparent margin each side that still receives clicks; hover states leave 4px | Decide at task 1.3: forward clicks through the empty margins with `setIgnoreMouseEvents` rather than resizing the window |
+| RAM budget | Electron ≤130 MB, helper ≤60 MB. Measured 2026-10-29 at 136×42 with the panel and tray installed: 99 MB private summed across 5 processes (main 33.4, renderer 28.1, gpu 15.0, utility 11.7, helper 10.8), 0.2% CPU idle. | Both under cap. Re-measure after the shelf, timer, and fullscreen hooks land. Over either cap → stop and report before building more. |
+| Rest margins | The window stays 136 wide for every state, so the 94px rest pill leaves 21px of transparent margin each side that still receives clicks; hover states leave 4px. Still unfixed after 1.3 and owned by no task. | Forward clicks through the empty margin with `setIgnoreMouseEvents` + a renderer hit test, or shrink the window per state; both need a decision. |
 | `Alt+Space` steal | Registering it kills the system window menu for every app while Beam runs | Accepted by user 2026-10-27 |
 | Multi-file drag-out | Solved 2026-10-29: helper OLE drag spun at 100% CPU; Electron's `webContents.startDrag` with a `files` array is the path | Prove with a real drop into Explorer at 3.4 |
 | SMTC on some players | Some apps publish partial metadata, no artwork | Show text without art, never crash |

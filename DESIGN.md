@@ -41,7 +41,7 @@ Defined in [`src/renderer/styles/tokens.css`](file:///d:/Beam/src/renderer/style
 | `--font-sans` | `Inter, 'Segoe UI Variable Text', 'Segoe UI', sans-serif` | Type stack |
 
 ### Light Theme (User Toggle)
-Light overrides every color token in `tokens.css:41-67`. The key differences:
+Light overrides every color token in the `[data-theme='light']` block of `tokens.css`. The key differences:
 
 | Token | Value | Purpose |
 |---|---|---|
@@ -64,11 +64,11 @@ Light overrides every color token in `tokens.css:41-67`. The key differences:
 
 - **Rest & Hover:** idle, playing, paused, timer, done, and files rest at `94×30`; drag rests at `128×30`. Music, timer, and done grow to `128×30` on hover or keyboard focus over 120ms. Idle and files stay `94×30` and only brighten. There is one `136×42` window for all states, so the window never resizes on hover; the pill grows inside it, centered.
 - **Zero-Flicker Hover:** Hover never resizes the window. It brightens the shell and border, grows the three states that have more to show, and swaps the resting fact for their actions. Nothing grows when there is nothing new to reveal.
-- **Smooth Panel Expansion:** On click, the window expands to `452×316` with a 150ms ease-out; Beam animates even when Windows has window animations off, because the OS toggle made the open read as a hard snap. The OS window resizes immediately while GPU-accelerated CSS transforms handle the 150ms scale/fade expansion internally; on collapse, CSS animates out over 150ms before the window snaps back to `136×42`.
+- **Smooth Panel Expansion:** On click, the window expands to `452×316` with a 150ms ease-out; Beam animates even when Windows has window animations off, because the OS toggle made the open read as a hard snap. The OS window resizes immediately while compositor-driven CSS transforms handle the 150ms scale/fade expansion internally; on collapse, CSS animates out over 150ms before the window snaps back to `136×42`.
 - **Screen-Aware Vertical Anchoring:** The panel anchors bottom-center and grows upward when the capsule is in the lower half of the display, and anchors top-center and grows downward when in the upper half.
 - **Edge Clamping:** Horizontal coordinates clamp to keep at least 8px margin from display boundaries.
 - **Click Isolation:** Transport buttons stop propagation and toggle playback directly; only clicks on the mascot, title, or empty capsule body trigger panel expansion.
-- **Lightweight Dismissal:** `Esc`, tray toggle, or clicking outside collapses the window without stealing active window focus.
+- **Lightweight Dismissal:** `Esc`, tray toggle, or clicking outside collapses the window. Opening focuses Beam so `Esc` and outside-click have a target; closing does not reactivate another app.
 - **Shadow Margins:** the `136×42` window leaves 21px on each side of the rest capsule and 6px above and below it; an expanded capsule leaves 4px on each side. The open window leaves 16px on all sides, so the panel shadow has room and the margin still counts as an outside click.
 
 ## 4. Radii & Component Hierarchy
@@ -114,7 +114,7 @@ Light overrides every color token in `tokens.css:41-67`. The key differences:
 - **Font Stack:** Inter variable vendored in `assets/fonts/` (fallback `Segoe UI Variable Text`, `Segoe UI`, `sans-serif`). Tabular numerals for timer and position digits.
 - **Type Scale:** `11 / 12 / 13 / 15 / 40px` only. Capsule title 12/600, capsule digits 15/600, panel title 15/600, settings rows and calendar title 13, hints and row metadata 11, timer digits 40. No 10px text.
 - **Spacing Scale:** `4 / 8 / 12 / 16px` (`--space-1`…`--space-4`). One 8px gap between panel body blocks; list internals use 4px.
-- **Motion Scale:** 120ms hover and content/action crossfade, 120ms width growth for music, timer, and done, 150ms panel grow, 100ms press (`scale(0.96)`). Transitions animate opacity, transform, background, border-color, box-shadow, the capsule width, and the timer action width; no other layout property animates. `prefers-reduced-motion` is honored.
+- **Motion Scale:** 120ms hover and content/action crossfade, 120ms width growth for music, timer, and done, 150ms panel grow, 100ms press (`scale(0.96)`). Transitions animate opacity, transform, background, border-color, box-shadow, the capsule width, and the timer action width; no other layout property animates. Beam always runs its own motion and ignores `prefers-reduced-motion`, because this machine has Windows animations off and honoring it made the panel open read as a hard snap (decision 2026-10-29).
 - **Public API:** `src/renderer/ui/index.ts` exporting pure HTML component functions (`pill`, `panel`, `iconSprite`, `middleTruncate`).
 - **Code Architecture:** `ui/capsule/` owns the capsule, `ui/panel/` owns the shell and tab navigation, `ui/panel/tabs/` owns one module per tab, and `ui/shared/` owns escaping, formatting, icons, and the mascot path.
 - **Styles Architecture:** One file per component under `src/renderer/styles/`: `tokens.css`, `base.css`, `capsule.css`, `panel/shell.css`, `panel/body.css`, `controls/buttons.css`, `controls/fields.css`, `controls/indicators.css`, and one file per tab under `tabs/`.
