@@ -12,6 +12,10 @@ _Avoid_: pill, bar, bubble
 The 136×42 transparent window that contains the capsule and its shadow margin. One size for every state; it never resizes on hover.
 _Avoid_: pill window
 
+**Pill position**:
+The capsule window's saved top-left on screen, stored with its display id in `%APPDATA%\Beam\settings.json` after a drag. It is restored at launch when that display still exists; Reset Position clears it and returns to the primary taskbar anchor.
+_Avoid_: window coordinates, drag position
+
 **Panel**:
 The visible 420×284 open surface with tabs. No footer.
 _Avoid_: popup, modal, card

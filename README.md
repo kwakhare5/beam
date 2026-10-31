@@ -4,9 +4,9 @@ Beam is an offline Windows 11 floating capsule for media controls, a file shelf,
 
 ## Current state
 
-- **App:** one 136×42 transparent window holding a 94×30 idle capsule, a tray icon, and a panel that opens to 452×316 (420×284 body) with a ~150ms transform. It uses `showInactive()` and never takes focus.
-- **Built:** the shared UI system (7 capsule states, 5 panels) in `showcase/app-preview.html`, the panel shell with five tabs rendering placeholder data, and the `BeamBridge` helper — `ping`, the live media session with artwork PNG, and the `CF_HDROP` clipboard at ~11 MB private idle.
-- **Not built:** the shelf, the live music/timer/calendar wiring, hover actions, window drag and persisted position, hotkey, settings, startup toggle, fullscreen hide, and the chime. Next task is 1.4; see `TASKS.md`.
+- **App:** one 136×42 transparent window holding a 94×30 idle capsule, a tray icon, and a panel that opens to 452×316 (420×284 body) with a ~150ms transform. It uses `showInactive()` and never takes focus. The capsule drags anywhere on its body; the position persists in `%APPDATA%\Beam\settings.json`, survives restarts, and Reset Position returns it to the taskbar anchor.
+- **Built:** the shared UI system (7 capsule states, 5 panels) in `showcase/app-preview.html`, the panel shell with five tabs rendering placeholder data, window drag with saved position and a real-mouse check in `verify.ps1`, and the `BeamBridge` helper — `ping`, the live media session with artwork PNG, and the `CF_HDROP` clipboard at ~11 MB private idle.
+- **Not built:** the shelf, the live music/timer/calendar wiring, hover actions, hotkey, settings screen, startup toggle, fullscreen hide, and the chime. Next task is 1.5; see `TASKS.md`.
 
 ## Commands
 

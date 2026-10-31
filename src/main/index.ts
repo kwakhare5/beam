@@ -3,6 +3,7 @@ import { mkdirSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { Bridge, type HelperEvent } from './bridge';
+import { getSettingsPath, loadSettings, saveSettings, type BeamSettings, type SavedPosition } from './settings';
 import { createTray } from './tray';
 
 const WINDOW_WIDTH = 136;
@@ -42,8 +43,35 @@ function anchorBounds(): Electron.Rectangle {
   };
 }
 
+function clampToWorkArea(bounds: Electron.Rectangle, workArea: Electron.Rectangle): Electron.Rectangle {
+  return {
+    x: Math.round(Math.min(Math.max(bounds.x, workArea.x), workArea.x + workArea.width - bounds.width)),
+    y: Math.round(Math.min(Math.max(bounds.y, workArea.y), workArea.y + workArea.height - bounds.height)),
+    width: bounds.width,
+    height: bounds.height
+  };
+}
+
+function savedPillBounds(saved: SavedPosition | null): Electron.Rectangle | null {
+  if (!saved) return null;
+  const bounds = { x: saved.x, y: saved.y, width: WINDOW_WIDTH, height: WINDOW_HEIGHT };
+  const display = screen.getAllDisplays().find(({ workArea }) => {
+    return (
+      bounds.x + bounds.width > workArea.x &&
+      bounds.x < workArea.x + workArea.width &&
+      bounds.y + bounds.height > workArea.y &&
+      bounds.y < workArea.y + workArea.height
+    );
+  });
+  if (!display) {
+    console.log('[settings] saved monitor is gone; anchoring on the primary display');
+    return null;
+  }
+  return clampToWorkArea(bounds, display.workArea);
+}
+
 function panelBounds(window: BrowserWindow): Electron.Rectangle {
-  const { workArea } = screen.getPrimaryDisplay();
+  const { workArea } = screen.getDisplayMatching(window.getBounds());
   const pill = window.getBounds();
   const center = pill.x + pill.width / 2;
   const x = Math.round(
@@ -71,6 +99,12 @@ type MusicPayload = {
   durationMs: number;
 };
 
+function readPoint(x: unknown, y: unknown): { x: number; y: number } | null {
+  if (typeof x !== 'number' || !Number.isFinite(x)) return null;
+  if (typeof y !== 'number' || !Number.isFinite(y)) return null;
+  return { x, y };
+}
+
 app.disableHardwareAcceleration();
 
 const gotLock = app.requestSingleInstanceLock();
@@ -81,7 +115,16 @@ if (!gotLock) {
   let win: BrowserWindow | null = null;
   let tray: ReturnType<typeof createTray> | null = null;
   let panelOpen = false;
+  let settings: BeamSettings = { version: 1, position: null };
+  let pillPosition: Electron.Rectangle = {
+    x: 0,
+    y: 0,
+    width: WINDOW_WIDTH,
+    height: WINDOW_HEIGHT
+  };
+  let windowDrag: { pointerX: number; pointerY: number; bounds: Electron.Rectangle } | null = null;
   const panelTest = process.env.BEAM_PANEL_TEST === '1';
+  const resetTest = process.env.BEAM_RESET_TEST === '1';
   const dragTest = process.env.BEAM_DRAG_TEST === '1';
   const onHelperEvent = (event: HelperEvent): void => {
     if (event.evt !== 'music.changed') return;
@@ -98,9 +141,9 @@ if (!gotLock) {
     onHelperEvent
   );
 
-  function createWindow(): void {
+  function createWindow(restored: boolean): void {
     win = new BrowserWindow({
-      ...anchorBounds(),
+      ...pillPosition,
       frame: false,
       transparent: true,
       backgroundColor: '#00000000',
@@ -120,10 +163,23 @@ if (!gotLock) {
       if (!win) return;
       const target = win;
       target.showInactive();
-      placeWindow(target, true);
-      setTimeout(() => {
-        if (!target.isDestroyed()) placeWindow(target, false);
-      }, 500);
+      if (restored) {
+        target.setBounds(pillPosition);
+        console.log(
+          `[window] restored=${pillPosition.x},${pillPosition.y},${pillPosition.width},${pillPosition.height}`
+        );
+        setTimeout(() => {
+          if (!target.isDestroyed()) target.setBounds(pillPosition);
+        }, 500);
+      } else {
+        placeWindow(target, true);
+        pillPosition = target.getBounds();
+        setTimeout(() => {
+          if (target.isDestroyed()) return;
+          placeWindow(target, false);
+          pillPosition = target.getBounds();
+        }, 500);
+      }
     });
 
     win.on('blur', () => {
@@ -151,6 +207,11 @@ if (!gotLock) {
   });
 
   app.whenReady().then(() => {
+    settings = loadSettings();
+    console.log(`[settings] path=${getSettingsPath()}`);
+    const restoredBounds = savedPillBounds(settings.position);
+    pillPosition = restoredBounds ?? anchorBounds();
+
     bridge.start();
     void bridge
       .ping()
@@ -169,7 +230,7 @@ if (!gotLock) {
       });
     }
 
-    createWindow();
+    createWindow(restoredBounds !== null);
     if (win) {
       const window = win;
       const openPanel = (): void => {
@@ -186,18 +247,80 @@ if (!gotLock) {
         panelOpen = false;
         window.webContents.send('beam:panel:dismiss');
       };
+      const startDrag = (x: number, y: number): void => {
+        if (panelOpen || window.isDestroyed()) return;
+        windowDrag = { pointerX: x, pointerY: y, bounds: window.getBounds() };
+      };
+      const moveDrag = (x: number, y: number): void => {
+        if (!windowDrag || window.isDestroyed()) return;
+        window.setBounds({
+          x: Math.round(windowDrag.bounds.x + x - windowDrag.pointerX),
+          y: Math.round(windowDrag.bounds.y + y - windowDrag.pointerY),
+          width: windowDrag.bounds.width,
+          height: windowDrag.bounds.height
+        });
+      };
+      const endDrag = (x: number, y: number): void => {
+        if (!windowDrag || window.isDestroyed()) return;
+        moveDrag(x, y);
+        const size = windowDrag.bounds;
+        const current = window.getBounds();
+        const display = screen.getDisplayMatching(current);
+        const settled = clampToWorkArea(
+          { x: current.x, y: current.y, width: size.width, height: size.height },
+          display.workArea
+        );
+        window.setBounds(settled);
+        pillPosition = settled;
+        settings.position = { x: settled.x, y: settled.y, displayId: display.id };
+        saveSettings(settings);
+        console.log(
+          `[move] end=${settled.x},${settled.y},${settled.width},${settled.height} display=${display.id}`
+        );
+        windowDrag = null;
+      };
+      const resetPosition = (): void => {
+        windowDrag = null;
+        settings.position = null;
+        saveSettings(settings);
+        pillPosition = anchorBounds();
+        console.log(
+          `[move] reset=${pillPosition.x},${pillPosition.y},${pillPosition.width},${pillPosition.height}`
+        );
+        if (panelOpen) closePanel();
+        else if (!window.isDestroyed()) window.setBounds(pillPosition);
+      };
+
       tray = createTray(
         () => {},
-        () => {
-          if (!window.isDestroyed()) placeWindow(window, true);
-        },
+        () => resetPosition(),
         () => (panelOpen ? closePanel() : openPanel())
       );
       console.log('[tray] ready');
 
+      ipcMain.on('beam:window:drag-start', (event, x: unknown, y: unknown) => {
+        const point = readPoint(x, y);
+        if (event.sender !== window.webContents || !point) return;
+        startDrag(point.x, point.y);
+      });
+      ipcMain.on('beam:window:drag-move', (event, x: unknown, y: unknown) => {
+        const point = readPoint(x, y);
+        if (event.sender !== window.webContents || !point) return;
+        moveDrag(point.x, point.y);
+      });
+      ipcMain.on('beam:window:drag-end', (event, x: unknown, y: unknown) => {
+        const point = readPoint(x, y);
+        if (event.sender !== window.webContents || !point) return;
+        endDrag(point.x, point.y);
+      });
+
       ipcMain.on('beam:panel:request-open', openPanel);
       ipcMain.on('beam:panel:collapsed', () => {
-        if (!window.isDestroyed()) placeWindow(window, true);
+        if (window.isDestroyed()) return;
+        window.setBounds(pillPosition);
+        console.log(
+          `[window] pill=${pillPosition.x},${pillPosition.y},${pillPosition.width},${pillPosition.height}`
+        );
       });
       ipcMain.on('beam:panel:timing', (_event, ms: number, reduced: boolean) => {
         console.log(`[panel] open ${ms}ms reduced=${reduced}`);
@@ -211,6 +334,11 @@ if (!gotLock) {
           closePanel();
           console.log('[panel] test-dismiss');
         }, 9600);
+      }
+      if (resetTest) {
+        setTimeout(() => {
+          if (!window.isDestroyed()) resetPosition();
+        }, 1200);
       }
     }
   });

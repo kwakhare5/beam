@@ -10,28 +10,32 @@ using System;
 using System.Runtime.InteropServices;
 public static class BeamScreen {
   [StructLayout(LayoutKind.Sequential)] public struct RECT { public int Left, Top, Right, Bottom; }
+  [StructLayout(LayoutKind.Sequential)] public struct POINT { public int X, Y; }
   [DllImport("user32.dll")] public static extern bool SetProcessDpiAwarenessContext(IntPtr ctx);
   [DllImport("user32.dll")] public static extern bool GetWindowRect(IntPtr hWnd, out RECT rect);
   [DllImport("user32.dll")] public static extern uint GetDpiForWindow(IntPtr hWnd);
   [DllImport("user32.dll")] public static extern IntPtr GetForegroundWindow();
+  [DllImport("user32.dll")] public static extern bool SetCursorPos(int x, int y);
+  [DllImport("user32.dll")] public static extern bool GetCursorPos(out POINT point);
+  [DllImport("user32.dll")] public static extern void mouse_event(uint flags, uint dx, uint dy, uint data, UIntPtr extra);
 }
 '@
 [BeamScreen]::SetProcessDpiAwarenessContext([IntPtr](-4)) | Out-Null
 
 
-Write-Host '[1/11] typecheck'
+Write-Host '[1/12] typecheck'
 & $tsc -p tsconfig.json --noEmit
 if ($LASTEXITCODE -ne 0) { Write-Host 'FAIL typecheck'; exit 1 }
 & $tsc -p tsconfig.renderer.json --noEmit
 if ($LASTEXITCODE -ne 0) { Write-Host 'FAIL typecheck (renderer)'; exit 1 }
 Write-Host 'PASS typecheck'
 
-Write-Host '[2/11] build'
+Write-Host '[2/12] build'
 & npm run build
 if ($LASTEXITCODE -ne 0) { Write-Host 'FAIL build'; exit 1 }
 Write-Host 'PASS build'
 
-Write-Host '[3/11] helper build'
+Write-Host '[3/12] helper build'
 $helperDir = Join-Path $PSScriptRoot 'native\BeamBridge\dist'
 if (Test-Path -LiteralPath $helperDir) { Remove-Item -LiteralPath $helperDir -Recurse -Force }
 & dotnet publish (Join-Path $PSScriptRoot 'native\BeamBridge\BeamBridge.csproj') -c Release -o $helperDir --nologo
@@ -42,7 +46,7 @@ $helperFiles = @(Get-ChildItem -LiteralPath $helperDir -File)
 if ($helperFiles.Count -ne 1) { Write-Host "FAIL helper build: expected one file, found $($helperFiles.Count)"; exit 1 }
 Write-Host 'PASS helper build (single exe)'
 
-Write-Host '[4/11] clipboard'
+Write-Host '[4/12] clipboard'
 $clipDir = Join-Path $env:TEMP 'beam-clip'
 if (Test-Path -LiteralPath $clipDir) { Remove-Item -LiteralPath $clipDir -Recurse -Force }
 New-Item -ItemType Directory -Path $clipDir | Out-Null
@@ -92,7 +96,7 @@ if ($clipAfter.Count -ne 3) {
 Remove-Item -LiteralPath $clipDir -Recurse -Force
 Write-Host 'PASS clipboard (3 real paths, survive helper exit)'
 
-Write-Host '[5/11] launch + focus'
+Write-Host '[5/12] launch + focus'
 $outLog = Join-Path $env:TEMP 'beam-verify.out.log'
 $errLog = Join-Path $env:TEMP 'beam-verify.err.log'
 Remove-Item -LiteralPath $outLog -ErrorAction SilentlyContinue
@@ -153,7 +157,7 @@ Write-Host "PASS launch (pid $($first.Id)) + pong 0.1.0"
 Write-Host 'PASS focus (pill appeared without taking the foreground)'
 Start-Sleep -Seconds 5
 
-Write-Host '[6/11] anchor'
+Write-Host '[6/12] anchor'
 $appOut = Get-Content -LiteralPath $outLog -Raw -ErrorAction SilentlyContinue
 $anchorMatches = [regex]::Matches($appOut, '\[window\] bounds=(-?\d+),(-?\d+),(\d+),(\d+) content=(-?\d+),(-?\d+),(\d+),(\d+) work=(-?\d+),(-?\d+),(\d+),(\d+)')
 if ($anchorMatches.Count -eq 0) {
@@ -225,7 +229,7 @@ if ([math]::Abs($waX - $wx) -gt 2 -or [math]::Abs($waY - $wy) -gt 2 -or [math]::
 }
 Write-Host "PASS anchor (pill 12px above the taskbar, centered; native rect matches; scale $scale)"
 
-Write-Host '[7/11] panel'
+Write-Host '[7/12] panel'
 $panelOut = $appOut
 for ($i = 0; $i -lt 50; $i++) {
   Start-Sleep -Milliseconds 300
@@ -274,7 +278,7 @@ if ($restoredW -gt 200 -or $restoredH -gt 100) {
 Remove-Item Env:BEAM_PANEL_TEST -ErrorAction SilentlyContinue
 Write-Host "PASS panel (open ${panelMs}ms reduced=$reduced, 452x316, dismissed back to the pill)"
 
-Write-Host '[8/11] helper memory'
+Write-Host '[8/12] helper memory'
 $helper = Get-Process BeamBridge -ErrorAction SilentlyContinue
 if (-not $helper) {
   Stop-Process -Id $first.Id -Force -ErrorAction SilentlyContinue
@@ -291,7 +295,7 @@ if ($helperMb -ge 60) {
 }
 Write-Host "PASS helper memory ($helperMb MB idle, cap 60 MB)"
 
-Write-Host '[9/11] single instance'
+Write-Host '[9/12] single instance'
 $second = Start-Process -FilePath $electron -ArgumentList '.' -WorkingDirectory $PSScriptRoot -PassThru
 Start-Sleep -Seconds 4
 if (-not $second.HasExited) {
@@ -308,7 +312,7 @@ if ($first.HasExited) {
 }
 Write-Host 'PASS single instance'
 
-Write-Host '[10/11] UI spec'
+Write-Host '[10/12] UI spec'
 $main = Get-Content (Join-Path $PSScriptRoot 'src\main\index.ts') -Raw
 $base = Get-Content (Join-Path $PSScriptRoot 'src\renderer\styles\base.css') -Raw
 $pill = Get-Content (Join-Path $PSScriptRoot 'src\renderer\styles\capsule.css') -Raw
@@ -598,7 +602,156 @@ if ($uiFail) {
 }
 Write-Host 'PASS UI spec'
 
-Write-Host '[11/11] quit cleanup'
+Write-Host '[11/12] move + persist'
+$settingsPath = $null
+$settingsBackup = Join-Path $env:TEMP 'beam-verify-settings.json'
+$hadSettings = $false
+try {
+  $moveOut = Get-Content -LiteralPath $outLog -Raw -ErrorAction SilentlyContinue
+  $settingsMatch = [regex]::Match($moveOut, '\[settings\] path=(.+)')
+  if (-not $settingsMatch.Success) { throw 'no [settings] path line in the app log' }
+  $settingsPath = $settingsMatch.Groups[1].Value.Trim()
+  $hadSettings = Test-Path -LiteralPath $settingsPath
+  if ($hadSettings) { Copy-Item -LiteralPath $settingsPath -Destination $settingsBackup -Force }
+  $panelBefore = ([regex]::Matches($moveOut, '\[panel\] bounds=')).Count
+
+  $moveShell = Get-Process electron -ErrorAction SilentlyContinue | Where-Object { $_.MainWindowHandle -ne 0 } | Select-Object -First 1
+  if (-not $moveShell) { throw 'no window to drag' }
+  $moveRect = New-Object BeamScreen+RECT
+  [BeamScreen]::GetWindowRect($moveShell.MainWindowHandle, [ref]$moveRect) | Out-Null
+  $dragX = [int](($moveRect.Left + $moveRect.Right) / 2)
+  $dragY = [int](($moveRect.Top + $moveRect.Bottom) / 2)
+  $cursorBefore = New-Object BeamScreen+POINT
+  [BeamScreen]::GetCursorPos([ref]$cursorBefore) | Out-Null
+  [BeamScreen]::SetCursorPos($dragX, $dragY) | Out-Null
+  Start-Sleep -Milliseconds 300
+  [BeamScreen]::mouse_event(0x0002, 0, 0, 0, [UIntPtr]::Zero)
+  Start-Sleep -Milliseconds 200
+  for ($step = 1; $step -le 4; $step++) {
+    [BeamScreen]::SetCursorPos($dragX + $step * 25, $dragY - $step * 15) | Out-Null
+    Start-Sleep -Milliseconds 120
+  }
+  Start-Sleep -Milliseconds 300
+  [BeamScreen]::mouse_event(0x0004, 0, 0, 0, [UIntPtr]::Zero)
+  [BeamScreen]::SetCursorPos($cursorBefore.X, $cursorBefore.Y) | Out-Null
+
+  $moveOut = ''
+  for ($i = 0; $i -lt 30; $i++) {
+    Start-Sleep -Milliseconds 200
+    $moveOut = Get-Content -LiteralPath $outLog -Raw -ErrorAction SilentlyContinue
+    if ($moveOut -match '\[move\] end=') { break }
+  }
+  $endMatch = [regex]::Match($moveOut, '\[move\] end=(-?\d+),(-?\d+),(\d+),(\d+) display=(\d+)')
+  if (-not $endMatch.Success) { throw 'the drag never ended in a [move] end line' }
+  $endX = [int]$endMatch.Groups[1].Value
+  $endY = [int]$endMatch.Groups[2].Value
+  $endW = [int]$endMatch.Groups[3].Value
+  $endH = [int]$endMatch.Groups[4].Value
+  if ($endX -eq $bx -and $endY -eq $by) { throw 'the window did not move' }
+  if ($endW -ne 136 -or $endH -lt 42 -or $endH -gt 48) { throw "the pill window resized to ${endW}x$endH" }
+  if (([regex]::Matches($moveOut, '\[panel\] bounds=')).Count -ne $panelBefore) {
+    throw 'the click after the drag opened the panel'
+  }
+  Start-Sleep -Milliseconds 200
+  $movedRect = New-Object BeamScreen+RECT
+  [BeamScreen]::GetWindowRect($moveShell.MainWindowHandle, [ref]$movedRect) | Out-Null
+  $movedNativeX = [int][math]::Round($movedRect.Left / $scale)
+  $movedNativeY = [int][math]::Round($movedRect.Top / $scale)
+  if ([math]::Abs($movedNativeX - $endX) -gt 2 -or [math]::Abs($movedNativeY - $endY) -gt 2) {
+    throw "the native rect $movedNativeX,$movedNativeY does not match the moved bounds $endX,$endY"
+  }
+  if (-not (Test-Path -LiteralPath $settingsPath)) { throw 'settings.json was not written' }
+  $savedPos = Get-Content -LiteralPath $settingsPath -Raw -Encoding UTF8 | ConvertFrom-Json
+  if ($null -eq $savedPos.position -or $savedPos.position.x -ne $endX -or $savedPos.position.y -ne $endY) {
+    throw 'settings.json does not hold the moved position'
+  }
+
+  $closed = $first.CloseMainWindow()
+  if (-not $closed) { throw 'the pill did not close for the restart' }
+  $appExited = $first.WaitForExit(8000)
+  Start-Sleep -Milliseconds 500
+  if (-not $appExited) { throw 'the app did not exit for the restart' }
+  if (@(Get-Process BeamBridge -ErrorAction SilentlyContinue).Count -ne 0) { throw 'the helper survived the restart quit' }
+
+  Remove-Item -LiteralPath $outLog -ErrorAction SilentlyContinue
+  Remove-Item -LiteralPath $errLog -ErrorAction SilentlyContinue
+  $first = Start-Process -FilePath $electron -ArgumentList '.' -WorkingDirectory $PSScriptRoot -PassThru -RedirectStandardOutput $outLog -RedirectStandardError $errLog
+  $restoreOut = ''
+  for ($i = 0; $i -lt 50; $i++) {
+    Start-Sleep -Milliseconds 200
+    if ($first.HasExited) { throw 'the app exited before restoring its position' }
+    $restoreOut = Get-Content -LiteralPath $outLog -Raw -ErrorAction SilentlyContinue
+    if ($restoreOut -match '\[window\] restored=') { break }
+  }
+  $restoredMatch = [regex]::Match($restoreOut, '\[window\] restored=(-?\d+),(-?\d+),(\d+),(\d+)')
+  if (-not $restoredMatch.Success) { throw 'the app did not restore a saved position' }
+  $restX = [int]$restoredMatch.Groups[1].Value
+  $restY = [int]$restoredMatch.Groups[2].Value
+  $restW = [int]$restoredMatch.Groups[3].Value
+  if ($restX -ne $endX -or $restY -ne $endY -or $restW -ne 136) {
+    throw "restored $restX,$restY ${restW} instead of $endX,$endY 136"
+  }
+  Start-Sleep -Seconds 1
+  $restoreShell = Get-Process electron -ErrorAction SilentlyContinue | Where-Object { $_.MainWindowHandle -ne 0 } | Select-Object -First 1
+  if (-not $restoreShell) { throw 'no window after the restart' }
+  $restoredRect = New-Object BeamScreen+RECT
+  [BeamScreen]::GetWindowRect($restoreShell.MainWindowHandle, [ref]$restoredRect) | Out-Null
+  $restNativeX = [int][math]::Round($restoredRect.Left / $scale)
+  $restNativeY = [int][math]::Round($restoredRect.Top / $scale)
+  if ([math]::Abs($restNativeX - $endX) -gt 2 -or [math]::Abs($restNativeY - $endY) -gt 2) {
+    throw "the restored native rect $restNativeX,$restNativeY does not match $endX,$endY"
+  }
+
+  $closed = $first.CloseMainWindow()
+  if (-not $closed) { throw 'the restored pill did not close for the reset run' }
+  $appExited = $first.WaitForExit(8000)
+  Start-Sleep -Milliseconds 500
+  if (-not $appExited) { throw 'the restored app did not exit for the reset run' }
+
+  $env:BEAM_RESET_TEST = '1'
+  Remove-Item -LiteralPath $outLog -ErrorAction SilentlyContinue
+  Remove-Item -LiteralPath $errLog -ErrorAction SilentlyContinue
+  $first = Start-Process -FilePath $electron -ArgumentList '.' -WorkingDirectory $PSScriptRoot -PassThru -RedirectStandardOutput $outLog -RedirectStandardError $errLog
+  $resetOut = ''
+  for ($i = 0; $i -lt 50; $i++) {
+    Start-Sleep -Milliseconds 200
+    if ($first.HasExited) { throw 'the app exited before resetting its position' }
+    $resetOut = Get-Content -LiteralPath $outLog -Raw -ErrorAction SilentlyContinue
+    if ($resetOut -match '\[move\] reset=') { break }
+  }
+  Remove-Item Env:BEAM_RESET_TEST -ErrorAction SilentlyContinue
+  $reset = [regex]::Match($resetOut, '\[move\] reset=(-?\d+),(-?\d+),(\d+),(\d+)')
+  if (-not $reset.Success) { throw 'Reset Position never ran' }
+  $resetX = [int]$reset.Groups[1].Value
+  $resetY = [int]$reset.Groups[2].Value
+  $anchorX = [int][math]::Round($wx + ($ww - 136) / 2)
+  $anchorY = $wy + $wh - 48
+  if ([math]::Abs($resetX - $anchorX) -gt 2 -or [math]::Abs($resetY - $anchorY) -gt 2) {
+    throw "Reset Position landed at $resetX,$resetY instead of $anchorX,$anchorY"
+  }
+  Start-Sleep -Milliseconds 400
+  $resetShell = Get-Process electron -ErrorAction SilentlyContinue | Where-Object { $_.MainWindowHandle -ne 0 } | Select-Object -First 1
+  if (-not $resetShell) { throw 'no window after Reset Position' }
+  $resetRect = New-Object BeamScreen+RECT
+  [BeamScreen]::GetWindowRect($resetShell.MainWindowHandle, [ref]$resetRect) | Out-Null
+  $resetNativeX = [int][math]::Round($resetRect.Left / $scale)
+  $resetNativeY = [int][math]::Round($resetRect.Top / $scale)
+  if ([math]::Abs($resetNativeX - $anchorX) -gt 2 -or [math]::Abs($resetNativeY - $anchorY) -gt 2) {
+    throw "the reset native rect $resetNativeX,$resetNativeY is not back at the anchor"
+  }
+  $resetSettings = Get-Content -LiteralPath $settingsPath -Raw -Encoding UTF8 | ConvertFrom-Json
+  if ($null -ne $resetSettings.position) { throw 'Reset Position did not clear the saved position' }
+} catch {
+  Get-Process electron,BeamBridge -ErrorAction SilentlyContinue | Stop-Process -Force
+  Remove-Item Env:BEAM_RESET_TEST -ErrorAction SilentlyContinue
+  if ($hadSettings -and $settingsPath) { Copy-Item -LiteralPath $settingsBackup -Destination $settingsPath -Force }
+  Write-Host "FAIL move: $($_.Exception.Message)"
+  exit 1
+}
+if ($hadSettings) { Copy-Item -LiteralPath $settingsBackup -Destination $settingsPath -Force } else { Remove-Item -LiteralPath $settingsPath -ErrorAction SilentlyContinue }
+Write-Host "PASS move (drag $bx,$by to $endX,$endY, saved, restart restored it, Reset returned to $anchorX,$anchorY)"
+
+Write-Host '[12/12] quit cleanup'
 $closed = $first.CloseMainWindow()
 if (-not $closed) {
   Get-Process electron,BeamBridge -ErrorAction SilentlyContinue | Stop-Process -Force

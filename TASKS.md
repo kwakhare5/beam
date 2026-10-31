@@ -24,9 +24,9 @@
 - [x] **1.3 Expand and collapse** — *Depends on: 1.6.*
   - 150ms screen-aware expand to the 452×316 window (420×284 panel, 16px shadow margin). Esc, outside click, and tray click all collapse it.
   - _Verify:_ measured animation duration 130–170ms; all three close paths work.
-- [ ] **1.4 Drag and persist** — *Depends on: 1.3.*
+- [x] **1.4 Drag and persist** — *Depends on: 1.3.*
   - Drag anywhere on the pill. Saved to `settings.json`. Restart restores it; if the saved monitor is gone at launch, fall back to the primary anchor. Tray → Reset Position returns to the taskbar anchor.
-  - _Verify:_ drag, restart, position identical. Reset returns to center.
+  - _Verify (proved 2026-10-31): a real mouse drag moves the window and writes `position` to `%APPDATA%\Beam\settings.json`; a relaunch restores the same bounds and native rect; the reset function the tray calls returns it to the primary anchor and clears the saved position. All three run in `verify.ps1` check 11. The tray menu click itself and the monitor-gone fallback are unproven (one display in this session)._
 - [ ] **1.5 Idle dim** — *Depends on: 1.1.*
   - No music, no timer → pill at 70% opacity; master mark unchanged.
   - _Verify:_ screenshot diff between active and idle states is visible; opacity value in computed style.

@@ -29,11 +29,11 @@ No network. No database. No server. Four parts, three seams.
 
 ### Current vs target (2026-10-29)
 
-Implemented: Electron shell with single-instance lock, the 136×42 window anchored above the taskbar with the 94×30 idle capsule, tray, panel open/collapse at 452×316 with a ~150ms transform, split UI modules/styles, the canonical preview, eleven `verify.ps1` checks, and `measure.ps1`.
+Implemented: Electron shell with single-instance lock, the 136×42 window anchored above the taskbar with the 94×30 idle capsule, tray, panel open/collapse at 452×316 with a ~150ms transform, pointer-captured window drag with a saved position (`settings.ts`), split UI modules/styles, the canonical preview, twelve `verify.ps1` checks (including a real-mouse drag → restart → reset run), and `measure.ps1`.
 
 Built in the helper: stdio client, SMTC read with PNG artwork, CF_HDROP clipboard, ping.
 
-Still target: `window.ts` (drag and persisted position), `hotkey.ts`, `settings.ts`, `src/shared/`, fullscreen detection, the timer owner, the shelf, the chime, and every tab's live wiring. Present-tense sections below describe that target until those tasks land.
+Still target: `window.ts` (geometry refactor), `hotkey.ts`, `src/shared/`, fullscreen detection, the timer owner, the shelf, the chime, and every tab's live wiring. Present-tense sections below describe that target until those tasks land.
 
 ---
 
@@ -69,11 +69,11 @@ D:\Beam
 ├── scripts/generate-icons.mjs
 ├── src/
 │   ├── main/
-│   │   ├── index.ts          app lifecycle, single-instance lock
-│   │   ├── window.ts         (planned) pill/panel geometry, anchoring, drag, close rules
+│   │   ├── index.ts          app lifecycle, single-instance lock, pill/panel geometry, window drag
+│   │   ├── window.ts         (planned) geometry refactor: pill/panel geometry, anchoring, drag, close rules
 │   │   ├── tray.ts           tray icon + menu (Settings stays disabled until 7.1)
 │   │   ├── hotkey.ts         (planned) Alt+Space register, fallback, rebind
-│   │   ├── settings.ts       (planned) read/write settings.json, defaults, versioned migration
+│   │   ├── settings.ts       read/write settings.json, defaults, versioned shape
 │   │   └── bridge.ts         spawn helper + JSON-lines client (ping and files.copy built; music commands and restart policy pending)
 │   ├── preload/index.ts      contextBridge surface (the only door)
 │   ├── renderer/
@@ -160,6 +160,7 @@ All channels prefixed `beam:`. Renderer can call, main can push. Built channels 
 | renderer → main | `beam:panel:request-open` | open the panel from a pill click | built |
 | renderer → main | `beam:panel:collapsed` | panel finished closing; window returns to 136×42 | built |
 | renderer → main | `beam:panel:timing` | measured open duration + reduced-motion flag | built |
+| renderer → main | `beam:window:drag-start` / `drag-move` / `drag-end` | pointer-captured window drag; main moves the window with `setBounds`, clamps it to the display work area, and saves the position | built |
 | main → renderer | `beam:panel:open` | start the open animation | built |
 | main → renderer | `beam:panel:dismiss` | close on blur or tray toggle | built |
 | renderer → main | `beam:drag-test` / `beam:drag-test:enabled` | drag-gesture test hook (`BEAM_DRAG_TEST=1`) | built |
@@ -192,6 +193,15 @@ drop lands on pill → renderer collects paths → beam:files:add
 → main stores paths in memory only → shelf renders 3 rows
 → user clicks Copy All → main calls files.copy → helper puts CF_HDROP on clipboard
 → user hits Ctrl+V in Explorer → 3 real files land
+```
+
+**Drag and restore**
+```
+pointerdown on the capsule → 4px movement threshold → renderer sends screen coordinates
+→ main sets bounds from the pointer delta with the size pinned, clamped to the display work area
+→ drag-end writes { x, y, displayId } to %APPDATA%\Beam\settings.json
+→ next launch restores it when the rect still intersects a current display, else the primary anchor
+→ tray Reset Position clears the saved position and re-anchors above the primary taskbar
 ```
 
 **Timer**
@@ -268,14 +278,16 @@ helper's WinEventHook sees a foreground change or the foreground window resize/m
 | 2026-10-28 | Files rows expose copy and remove on hover; the empty state is a dashed drop well | Task 3.3 already promised per-row copy, and the core action needs a visible target |
 | 2026-10-28 | Settings has five rows including Reset position, with real controls and dividers instead of a row gap | Read-only badges looked interactive; five 44px rows only fit 242px without the gap |
 | 2026-10-28 | Type scale 11/12/13/15/40 and spacing 4/8/12/16 | Five label sizes and three body rhythms made the panel look assembled from different screens |
+| 2026-10-31 | Window drag is renderer pointer capture plus main `setBounds` with the window size pinned | `setPosition` let Windows re-round the transparent window's height on every pointer move (42 grew to 141 in the first test); the renderer's 4px threshold keeps a plain click opening the panel |
+| 2026-10-31 | The saved position is the outer top-left plus `displayId`, restored only when that rect still intersects a current display | A monitor that was unplugged must not leave the pill offscreen; the primary taskbar anchor is the fallback, and Reset Position clears the value |
 
 UI decisions: ADR-0001 (component boundaries), ADR-0002 (original mascot), ADR-0003 (window, capsule, and panel sizes), ADR-0004 (vanilla shadcn-style), ADR-0005 (capsule interaction), ADR-0006 (landscape panel), ADR-0007 (capsule-to-panel interaction), ADR-0008 (content dynamics), ADR-0009 (state identity, panel completeness, and scale), ADR-0010 (capsule artwork, dot language, and panel clarity).
 
 ## 8. Status
 
-Phase 0: 0.1 built, 0.2 measured and passed, 0.3 built (ping/pong), 0.4a built (live SMTC events, PNG art), 0.4b built (CF_HDROP clipboard). 0.4c replaced by 3.4. 1.1 built (`placeWindow` anchors above the taskbar), 1.2 built (verify guards the foreground), 1.6 built (tray), 1.3 built (panel open/collapse, all three close paths proven by hand). Next: 1.4, then 1.5, then block B.
+Phase 0: 0.1 built, 0.2 measured and passed, 0.3 built (ping/pong), 0.4a built (live SMTC events, PNG art), 0.4b built (CF_HDROP clipboard). 0.4c replaced by 3.4. 1.1 built (`placeWindow` anchors above the taskbar), 1.2 built (verify guards the foreground), 1.6 built (tray), 1.3 built (panel open/collapse, all three close paths proven by hand), 1.4 built (drag + `settings.ts`; verify drags with a real mouse, restarts, and resets). Next: 1.5, then block B.
 
-Open: the transparent rest margins still swallow clicks (no task owns it); the helper restart policy, hotkey, settings file, fullscreen, shelf, timer, and live tabs are unbuilt.
+Open: the transparent rest margins still swallow clicks (no task owns it); multi-monitor restore and 100/150% scaling are unproven; the helper restart policy, hotkey, fullscreen, shelf, timer, and live tabs are unbuilt.
 
 ---
 
