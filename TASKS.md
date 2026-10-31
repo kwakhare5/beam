@@ -13,19 +13,19 @@
 ## A. Shell that feels right
 
 - [x] **1.1 Anchor above the taskbar** — *Depends on: nothing.*
-  - Read `workArea`, not screen size. The pill sits 12px above its bottom edge, horizontally centered on the primary monitor. Dragging to another monitor is allowed and persisted; if that monitor is gone at launch, fall back to primary.
-  - _Verify:_ taskbar at 40px vs double height → pill stays 12px above it. Drag to second monitor, restart → same spot. Unplug the second monitor → pill returns to primary, on screen. At 100%, 125%, and 150% display scaling the pill keeps its size and stays sharp.
+  - Read `workArea`, not screen size. The pill sits 12px above its bottom edge, horizontally centered on the primary monitor.
+  - _Verify (proved 2026-10-29 at 125%): the settled content rect keeps the pill 12px above the work area and centered, and the native window rect matches; check 6 in `verify.ps1`. Multi-monitor restore and 100/150% scaling are unproven and belong to 1.4 and 8.1.
 - [x] **1.2 Never steal focus** — *Depends on: 1.1.*
   - Pill does not take foreground on show. Panel closes without activating another app wrongly.
-  - _Verify:_ click a text field in Notepad, hover the pill, typing still goes to Notepad.
+  - _Verify (proved 2026-10-29): the foreground window handle is unchanged ~1s after launch and Beam's own handle never becomes foreground; this replaced the Notepad typing test, which the Store Notepad could not run from a script.
 - [x] **1.6 Tray** — *Depends on: 1.1.*
-  - Icon near clock. Menu: Settings, Reset Position, Quit. Quit exits the process cleanly, helper included. Built; Settings stays disabled until 1.3 and Reset needs a moved window from 1.4.
-  - _Verify:_ all three items act; `Get-Process Beam` empty after Quit.
+  - Icon near clock. Menu: Settings, Reset Position, Quit. Quit exits the process cleanly, helper included. Built; Settings stays disabled until the Settings screen lands at 7.1, and Reset needs a moved window from 1.4.
+  - _Verify (proved 2026-10-29): Quit exits the app and the helper. Settings is disabled until 7.1, and Reset Position is wired but unproven until 1.4 gives the window a moved position to reset from.
 - [x] **1.3 Expand and collapse** — *Depends on: 1.6.*
-  - 150ms screen-aware expand to the 452×332 window (420×300 panel, 16px shadow margin). Esc, outside click, and tray click all collapse it.
+  - 150ms screen-aware expand to the 452×316 window (420×284 panel, 16px shadow margin). Esc, outside click, and tray click all collapse it.
   - _Verify:_ measured animation duration 130–170ms; all three close paths work.
 - [ ] **1.4 Drag and persist** — *Depends on: 1.3.*
-  - Drag anywhere on the pill. Saved to `settings.json`. Restart restores it. Tray → Reset Position returns to taskbar anchor.
+  - Drag anywhere on the pill. Saved to `settings.json`. Restart restores it; if the saved monitor is gone at launch, fall back to the primary anchor. Tray → Reset Position returns to the taskbar anchor.
   - _Verify:_ drag, restart, position identical. Reset returns to center.
 - [ ] **1.5 Idle dim** — *Depends on: 1.1.*
   - No music, no timer → pill at 70% opacity; master mark unchanged.

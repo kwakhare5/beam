@@ -1,7 +1,7 @@
 # PRD.md — Product Requirements Document
 
 ## 1. Executive Summary
-Beam is a lightweight floating Windows 11 desktop bar that provides 1-click access to media controls, a multi-file drop shelf, a countdown timer, and a clean month calendar without switching windows or opening full apps. It runs 100% locally and offline on Electron with TypeScript, with zero cloud dependencies and zero API costs.
+Beam is a lightweight floating Windows 11 capsule that provides 1-click access to media controls, a multi-file drop shelf, a countdown timer, and a clean month calendar without switching windows or opening full apps. It runs 100% locally and offline on Electron with TypeScript, with zero cloud dependencies and zero API costs.
 
 ---
 
@@ -22,6 +22,7 @@ Beam is a lightweight floating Windows 11 desktop bar that provides 1-click acce
   - Dimmed capsule when idle (no music playing, no timer active).
   - System Tray icon (bottom-right near clock) with right-click menu: Settings, Reset Position, Quit.
   - Windows startup launch toggle in settings.
+  - Light and dark themes, switchable in Settings and remembered across restarts.
   - Global configurable keyboard shortcut to toggle panel visibility (default `Alt + Space`, rebindable in settings).
   - Correct at 100%, 125%, and 150% display scaling.
   - A second launch reveals the existing pill instead of starting another one.
@@ -70,7 +71,6 @@ Beam is a lightweight floating Windows 11 desktop bar that provides 1-click acce
 - **Clipboard History Manager:** Cut to future releases.
 - **Cloud Accounts, Sync & Multi-Device Sharing:** Fully out of scope; Beam is 100% offline.
 - **Music Scrubbing / Timeline Seeker:** Cut from V1 to prevent audio desync bugs.
-- **Light Theme Toggle:** moved into V1 on 2026-10-27; v1 will ship light and dark themes, switchable in settings and remembered across restarts.
 - **Hardware Controls (Monitor Brightness / Volume Sliders):** Hardware-dependent, cut from V1.
 
 ---
