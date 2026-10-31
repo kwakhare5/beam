@@ -23,19 +23,19 @@ public static class BeamScreen {
 [BeamScreen]::SetProcessDpiAwarenessContext([IntPtr](-4)) | Out-Null
 
 
-Write-Host '[1/14] typecheck'
+Write-Host '[1/15] typecheck'
 & $tsc -p tsconfig.json --noEmit
 if ($LASTEXITCODE -ne 0) { Write-Host 'FAIL typecheck'; exit 1 }
 & $tsc -p tsconfig.renderer.json --noEmit
 if ($LASTEXITCODE -ne 0) { Write-Host 'FAIL typecheck (renderer)'; exit 1 }
 Write-Host 'PASS typecheck'
 
-Write-Host '[2/14] build'
+Write-Host '[2/15] build'
 & npm run build
 if ($LASTEXITCODE -ne 0) { Write-Host 'FAIL build'; exit 1 }
 Write-Host 'PASS build'
 
-Write-Host '[3/14] helper build'
+Write-Host '[3/15] helper build'
 $helperDir = Join-Path $PSScriptRoot 'native\BeamBridge\dist'
 if (Test-Path -LiteralPath $helperDir) { Remove-Item -LiteralPath $helperDir -Recurse -Force }
 & dotnet publish (Join-Path $PSScriptRoot 'native\BeamBridge\BeamBridge.csproj') -c Release -o $helperDir --nologo
@@ -46,7 +46,7 @@ $helperFiles = @(Get-ChildItem -LiteralPath $helperDir -File)
 if ($helperFiles.Count -ne 1) { Write-Host "FAIL helper build: expected one file, found $($helperFiles.Count)"; exit 1 }
 Write-Host 'PASS helper build (single exe)'
 
-Write-Host '[4/14] clipboard'
+Write-Host '[4/15] clipboard'
 $clipDir = Join-Path $env:TEMP 'beam-clip'
 if (Test-Path -LiteralPath $clipDir) { Remove-Item -LiteralPath $clipDir -Recurse -Force }
 New-Item -ItemType Directory -Path $clipDir | Out-Null
@@ -96,7 +96,7 @@ if ($clipAfter.Count -ne 3) {
 Remove-Item -LiteralPath $clipDir -Recurse -Force
 Write-Host 'PASS clipboard (3 real paths, survive helper exit)'
 
-Write-Host '[5/14] launch + focus'
+Write-Host '[5/15] launch + focus'
 $outLog = Join-Path $env:TEMP 'beam-verify.out.log'
 $errLog = Join-Path $env:TEMP 'beam-verify.err.log'
 Remove-Item -LiteralPath $outLog -ErrorAction SilentlyContinue
@@ -158,7 +158,7 @@ Write-Host "PASS launch (pid $($first.Id)) + pong 0.1.0"
 Write-Host 'PASS focus (pill appeared without taking the foreground)'
 Start-Sleep -Seconds 5
 
-Write-Host '[6/14] anchor'
+Write-Host '[6/15] anchor'
 $appOut = Get-Content -LiteralPath $outLog -Raw -ErrorAction SilentlyContinue
 $anchorMatches = [regex]::Matches($appOut, '\[window\] bounds=(-?\d+),(-?\d+),(\d+),(\d+) content=(-?\d+),(-?\d+),(\d+),(\d+) work=(-?\d+),(-?\d+),(\d+),(\d+)')
 if ($anchorMatches.Count -eq 0) {
@@ -230,7 +230,7 @@ if ([math]::Abs($waX - $wx) -gt 2 -or [math]::Abs($waY - $wy) -gt 2 -or [math]::
 }
 Write-Host "PASS anchor (pill 12px above the taskbar, centered; native rect matches; scale $scale)"
 
-Write-Host '[7/14] idle dim'
+Write-Host '[7/15] idle dim'
 $idleOut = Get-Content -LiteralPath $outLog -Raw -ErrorAction SilentlyContinue
 $idleMatch = [regex]::Match($idleOut, '\[idle\] (\{.+\})')
 if (-not $idleMatch.Success) {
@@ -249,7 +249,7 @@ if ($idle.state -ne 'idle' -or $idle.markOpacity -ne '0.7' -or $idle.shellOpacit
 }
 Write-Host "PASS idle dim (star $($idle.markOpacity), shell $($idle.shellOpacity), master mark, label Beam)"
 
-Write-Host '[8/14] panel'
+Write-Host '[8/15] panel'
 $panelOut = $appOut
 for ($i = 0; $i -lt 50; $i++) {
   Start-Sleep -Milliseconds 300
@@ -298,7 +298,7 @@ if ($restoredW -gt 200 -or $restoredH -gt 100) {
 Remove-Item Env:BEAM_PANEL_TEST -ErrorAction SilentlyContinue
 Write-Host "PASS panel (open ${panelMs}ms reduced=$reduced, 452x316, dismissed back to the pill)"
 
-Write-Host '[9/14] helper memory'
+Write-Host '[9/15] helper memory'
 $helper = Get-Process BeamBridge -ErrorAction SilentlyContinue
 if (-not $helper) {
   Stop-Process -Id $first.Id -Force -ErrorAction SilentlyContinue
@@ -315,7 +315,7 @@ if ($helperMb -ge 60) {
 }
 Write-Host "PASS helper memory ($helperMb MB idle, cap 60 MB)"
 
-Write-Host '[10/14] single instance'
+Write-Host '[10/15] single instance'
 $second = Start-Process -FilePath $electron -ArgumentList '.' -WorkingDirectory $PSScriptRoot -PassThru
 Start-Sleep -Seconds 4
 if (-not $second.HasExited) {
@@ -332,7 +332,7 @@ if ($first.HasExited) {
 }
 Write-Host 'PASS single instance'
 
-Write-Host '[11/14] UI spec'
+Write-Host '[11/15] UI spec'
 $main = Get-Content (Join-Path $PSScriptRoot 'src\main\index.ts') -Raw
 $base = Get-Content (Join-Path $PSScriptRoot 'src\renderer\styles\base.css') -Raw
 $pill = Get-Content (Join-Path $PSScriptRoot 'src\renderer\styles\capsule.css') -Raw
@@ -622,7 +622,7 @@ if ($uiFail) {
 }
 Write-Host 'PASS UI spec'
 
-Write-Host '[12/14] move + persist'
+Write-Host '[12/15] move + persist'
 $settingsPath = $null
 $settingsBackup = Join-Path $env:TEMP 'beam-verify-settings.json'
 $hadSettings = $false
@@ -771,7 +771,7 @@ try {
 if ($hadSettings) { Copy-Item -LiteralPath $settingsBackup -Destination $settingsPath -Force } else { Remove-Item -LiteralPath $settingsPath -ErrorAction SilentlyContinue }
 Write-Host "PASS move (drag $bx,$by to $endX,$endY, saved, restart restored it, Reset returned to $anchorX,$anchorY)"
 
-Write-Host '[13/14] quit cleanup'
+Write-Host '[13/15] quit cleanup'
 $closed = $first.CloseMainWindow()
 if (-not $closed) {
   Get-Process electron,BeamBridge -ErrorAction SilentlyContinue | Stop-Process -Force
@@ -788,7 +788,7 @@ if (-not $appExited -or $helperLeft -ne 0) {
 }
 Write-Host 'PASS quit cleanup (app and helper exited)'
 
-Write-Host '[14/14] fullscreen'
+Write-Host '[14/15] fullscreen'
 $fsHarnessPath = Join-Path $env:TEMP 'beam-fs-harness.ps1'
 $fsStagePath = Join-Path $env:TEMP 'beam-fs-stage.txt'
 $fsProc = $null
@@ -904,8 +904,73 @@ if ($fsProc -and -not $fsProc.HasExited) {
   $fsProc.WaitForExit(5000) | Out-Null
   if (-not $fsProc.HasExited) { $fsProc.Kill() }
 }
-Remove-Item -LiteralPath $fsHarnessPath, $fsStagePath -ErrorAction SilentlyContinue
+Remove-Item -LiteralPath $fsStagePath -ErrorAction SilentlyContinue
 Write-Host 'PASS fullscreen (grow to monitor bounds -> active:true, shrink -> active:false, same foreground window)'
+
+Write-Host '[15/15] fullscreen hide'
+$hideOutLog = Join-Path $env:TEMP 'beam-fs-hide.out.log'
+$hideErrLog = Join-Path $env:TEMP 'beam-fs-hide.err.log'
+Remove-Item -LiteralPath $hideOutLog, $hideErrLog -ErrorAction SilentlyContinue
+$env:BEAM_FULLSCREEN_TEST = '1'
+$hideApp = $null
+$hideHarness = $null
+try {
+  $hideApp = Start-Process -FilePath $electron -ArgumentList '.' -WorkingDirectory $PSScriptRoot -PassThru -RedirectStandardOutput $hideOutLog -RedirectStandardError $hideErrLog
+  $hideOut = ''
+  for ($i = 0; $i -lt 50; $i++) {
+    Start-Sleep -Milliseconds 200
+    if ($hideApp.HasExited) { throw 'the app exited before the fullscreen run' }
+    $hideOut = Get-Content -LiteralPath $hideOutLog -Raw -ErrorAction SilentlyContinue
+    if ($hideOut -match '\[bridge\] pong') { break }
+  }
+  if ($hideOut -notmatch '\[bridge\] pong') { throw 'the app never answered the helper' }
+
+  $hideHarness = Start-Process 'C:\Windows\System32\WindowsPowerShell\v1.0\powershell.exe' -ArgumentList '-NoProfile', '-ExecutionPolicy', 'Bypass', '-File', $fsHarnessPath -PassThru
+
+  $hideHidden = $false
+  for ($i = 0; $i -lt 60; $i++) {
+    Start-Sleep -Milliseconds 200
+    $hideOut = Get-Content -LiteralPath $hideOutLog -Raw -ErrorAction SilentlyContinue
+    $hideVisible = @(Get-Process electron -ErrorAction SilentlyContinue | Where-Object { $_.MainWindowHandle -ne 0 }).Count
+    if ($hideOut -match '\[fullscreen\] hidden' -and $hideVisible -eq 0) { $hideHidden = $true; break }
+  }
+  if (-not $hideHidden) { throw 'the pill never hid when the window went fullscreen' }
+
+  $hideShown = $false
+  for ($i = 0; $i -lt 60; $i++) {
+    Start-Sleep -Milliseconds 200
+    $hideOut = Get-Content -LiteralPath $hideOutLog -Raw -ErrorAction SilentlyContinue
+    $hideVisible = @(Get-Process electron -ErrorAction SilentlyContinue | Where-Object { $_.MainWindowHandle -ne 0 }).Count
+    if ($hideOut -match '\[fullscreen\] shown \(tray\)' -and $hideVisible -ge 1) { $hideShown = $true; break }
+  }
+  if (-not $hideShown) { throw 'the tray click never brought the pill back' }
+
+  $hideHarness.WaitForExit(20000) | Out-Null
+  Start-Sleep -Milliseconds 1500
+  $hideOut = Get-Content -LiteralPath $hideOutLog -Raw -ErrorAction SilentlyContinue
+  $hideVisible = @(Get-Process electron -ErrorAction SilentlyContinue | Where-Object { $_.MainWindowHandle -ne 0 }).Count
+  $hideCount = ([regex]::Matches($hideOut, '\[fullscreen\] hidden')).Count
+  if ($hideCount -ne 1) { throw "the pill hid $hideCount times across one fullscreen trip" }
+  if ($hideVisible -lt 1) { throw 'the pill did not stay visible after the fullscreen window shrank' }
+
+  $closed = $hideApp.CloseMainWindow()
+  if (-not $closed) { throw 'the pill did not close after the fullscreen run' }
+  $exited = $hideApp.WaitForExit(8000)
+  Start-Sleep -Milliseconds 500
+  $hideHelperLeft = @(Get-Process BeamBridge -ErrorAction SilentlyContinue).Count
+  if (-not $exited -or $hideHelperLeft -ne 0) { throw "the app did not exit cleanly (exited=$exited helperLeft=$hideHelperLeft)" }
+} catch {
+  if ($hideHarness -and -not $hideHarness.HasExited) { $hideHarness.Kill() }
+  if ($hideApp -and -not $hideApp.HasExited) { $hideApp.Kill() }
+  Get-Process electron,BeamBridge -ErrorAction SilentlyContinue | Stop-Process -Force
+  Remove-Item Env:BEAM_FULLSCREEN_TEST -ErrorAction SilentlyContinue
+  Write-Host "FAIL fullscreen hide: $($_.Exception.Message)"
+  exit 1
+}
+Remove-Item Env:BEAM_FULLSCREEN_TEST -ErrorAction SilentlyContinue
+Remove-Item -LiteralPath $hideOutLog, $hideErrLog -ErrorAction SilentlyContinue
+Remove-Item -LiteralPath $fsHarnessPath, $fsStagePath -ErrorAction SilentlyContinue
+Write-Host 'PASS fullscreen hide (hid at fullscreen, tray click restored it, stayed shown after the exit)'
 
 Write-Host 'ALL CHECKS PASSED'
 exit 0
