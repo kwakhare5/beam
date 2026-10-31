@@ -115,6 +115,8 @@ if (!gotLock) {
   let win: BrowserWindow | null = null;
   let tray: ReturnType<typeof createTray> | null = null;
   let panelOpen = false;
+  let hiddenByFullscreen = false;
+  let fullscreenActive = false;
   let settings: BeamSettings = { version: 1, position: null };
   let pillPosition: Electron.Rectangle = {
     x: 0,
@@ -127,7 +129,15 @@ if (!gotLock) {
   const resetTest = process.env.BEAM_RESET_TEST === '1';
   const idleTest = process.env.BEAM_IDLE_TEST === '1';
   const dragTest = process.env.BEAM_DRAG_TEST === '1';
+  const fullscreenTest = process.env.BEAM_FULLSCREEN_TEST === '1';
+  let onFullscreen: (active: boolean) => void = () => {};
   const onHelperEvent = (event: HelperEvent): void => {
+    if (event.evt === 'fullscreen.changed') {
+      const payload = event.payload as { active?: unknown } | null;
+      fullscreenActive = payload?.active === true;
+      onFullscreen(fullscreenActive);
+      return;
+    }
     if (event.evt !== 'music.changed') return;
     const music = event.payload as MusicPayload | null;
     if (!music) {
@@ -163,7 +173,7 @@ if (!gotLock) {
     win.once('ready-to-show', () => {
       if (!win) return;
       const target = win;
-      target.showInactive();
+      if (!hiddenByFullscreen) target.showInactive();
       if (restored) {
         target.setBounds(pillPosition);
         console.log(
@@ -227,6 +237,7 @@ if (!gotLock) {
   app.on('second-instance', () => {
     if (!win) return;
     if (win.isMinimized()) win.restore();
+    hiddenByFullscreen = false;
     win.showInactive();
   });
 
@@ -258,7 +269,7 @@ if (!gotLock) {
     if (win) {
       const window = win;
       const openPanel = (): void => {
-        if (panelOpen || window.isDestroyed()) return;
+        if (panelOpen || window.isDestroyed() || !window.isVisible()) return;
         panelOpen = true;
         const bounds = panelBounds(window);
         window.setBounds(bounds);
@@ -271,6 +282,45 @@ if (!gotLock) {
         panelOpen = false;
         window.webContents.send('beam:panel:dismiss');
       };
+      const showPill = (source: string): void => {
+        if (window.isDestroyed()) return;
+        hiddenByFullscreen = false;
+        panelOpen = false;
+        window.showInactive();
+        console.log(`[fullscreen] shown (${source})`);
+      };
+      const hidePill = (): void => {
+        if (window.isDestroyed()) return;
+        windowDrag = null;
+        if (panelOpen) {
+          panelOpen = false;
+          window.webContents.send('beam:panel:dismiss');
+        }
+        window.setBounds(pillPosition);
+        hiddenByFullscreen = true;
+        window.hide();
+        console.log('[fullscreen] hidden');
+      };
+      const trayToggle = (): void => {
+        if (window.isDestroyed()) return;
+        if (!window.isVisible()) {
+          showPill('tray');
+          return;
+        }
+        if (panelOpen) closePanel();
+        else openPanel();
+      };
+      onFullscreen = (active: boolean): void => {
+        if (window.isDestroyed()) return;
+        if (active) {
+          if (!window.isVisible()) return;
+          hidePill();
+          if (fullscreenTest) setTimeout(() => trayToggle(), 1500);
+          return;
+        }
+        if (hiddenByFullscreen) showPill('fullscreen exit');
+      };
+      if (fullscreenActive) onFullscreen(true);
       const startDrag = (x: number, y: number): void => {
         if (panelOpen || window.isDestroyed()) return;
         windowDrag = { pointerX: x, pointerY: y, bounds: window.getBounds() };
@@ -318,7 +368,7 @@ if (!gotLock) {
       tray = createTray(
         () => {},
         () => resetPosition(),
-        () => (panelOpen ? closePanel() : openPanel())
+        () => trayToggle()
       );
       console.log('[tray] ready');
 

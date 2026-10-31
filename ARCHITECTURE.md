@@ -29,7 +29,7 @@ No network. No database. No server. Four parts, three seams.
 
 ### Current vs target (2026-10-29)
 
-Implemented: Electron shell with single-instance lock, the 136×42 window anchored above the taskbar with the 94×30 idle capsule, tray, panel open/collapse at 452×316 with a ~150ms transform, pointer-captured window drag with a saved position (`settings.ts`), the idle star dim asserted from computed style, split UI modules/styles, the canonical preview, thirteen `verify.ps1` checks (including a real-mouse drag → restart → reset run), and `measure.ps1`.
+Implemented: Electron shell with single-instance lock, the 136×42 window anchored above the taskbar with the 94×30 idle capsule, tray, panel open/collapse at 452×316 with a ~150ms transform, pointer-captured window drag with a saved position (`settings.ts`), the idle star dim asserted from computed style, hide-on-fullscreen with tray restore, split UI modules/styles, the canonical preview, fifteen `verify.ps1` checks (including a real-mouse drag → restart → reset run and a real borderless fullscreen window), and `measure.ps1`.
 
 Built in the helper: stdio client, SMTC read with PNG artwork, CF_HDROP clipboard, fullscreen detection, ping.
 
@@ -171,8 +171,9 @@ All channels prefixed `beam:`. Renderer can call, main can push. Built channels 
 | renderer → main | `beam:timer:start/stop` | presets or custom | planned |
 | renderer → main | `beam:settings:get/set` | settings screen | planned |
 | main → renderer | `beam:music:state` | pushed on `music.changed` | planned |
-| main → renderer | `beam:fullscreen` | hide the window | planned |
 | main → renderer | `beam:timer:tick` | seconds left, pushed by main (the timer owner) | planned |
+
+Fullscreen hide is main-only: main calls `win.hide()` / `win.showInactive()` itself and never messages the renderer for it.
 
 ---
 
@@ -217,7 +218,9 @@ renderer sends beam:timer:start {ms} → main stores deadline = now + ms
 helper's WinEventHook sees a foreground change or the foreground window resize/move
 → compares window rect against monitor bounds → fullscreen.changed
 → a 1s poll catches fullscreen entries that fire no event
-→ main hides window; hotkey or tray click restores
+→ main hides the window (built 1.9); the tray click shows the pill again without
+  opening the panel or taking focus; the hotkey (1.8) is not built
+→ if Beam hid the window it shows it again on active:false, but not after a user show
 ```
 
 ---
@@ -285,9 +288,9 @@ UI decisions: ADR-0001 (component boundaries), ADR-0002 (original mascot), ADR-0
 
 ## 8. Status
 
-Phase 0: 0.1 built, 0.2 measured and passed, 0.3 built (ping/pong), 0.4a built (live SMTC events, PNG art), 0.4b built (CF_HDROP clipboard), 0.5 built (fullscreen detection; verify drives a real borderless window). 0.4c replaced by 3.4. 1.1 built (`placeWindow` anchors above the taskbar), 1.2 built (verify guards the foreground), 1.6 built (tray), 1.3 built (panel open/collapse; timing measured from `transitionrun`), 1.4 built (drag + `settings.ts`; verify drags with a real mouse, restarts, and resets), 1.5 built (idle star 0.7 asserted from computed style). Next: 1.9, then block C.
+Phase 0: 0.1 built, 0.2 measured and passed, 0.3 built (ping/pong), 0.4a built (live SMTC events, PNG art), 0.4b built (CF_HDROP clipboard), 0.5 built (fullscreen detection; verify drives a real borderless window). 0.4c replaced by 3.4. 1.1 built (`placeWindow` anchors above the taskbar), 1.2 built (verify guards the foreground), 1.6 built (tray), 1.3 built (panel open/collapse; timing measured from `transitionrun`), 1.4 built (drag + `settings.ts`; verify drags with a real mouse, restarts, and resets), 1.5 built (idle star 0.7 asserted from computed style), 1.9 built (hide on fullscreen, tray restores; verify check 15). Next: block C (3.1).
 
-Open: the transparent rest margins still swallow clicks (no task owns it); multi-monitor restore and 100/150% scaling are unproven; the helper restart policy, hotkey, shelf, timer, and live tabs are unbuilt, and nothing yet consumes `fullscreen.changed` (1.9).
+Open: the transparent rest margins still swallow clicks (no task owns it); multi-monitor restore and 100/150% scaling are unproven; the helper restart policy, hotkey, shelf, timer, and live tabs are unbuilt.
 
 ---
 

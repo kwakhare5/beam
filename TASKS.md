@@ -36,9 +36,9 @@
 - [x] **0.5 Fullscreen detection** — *Depends on: 0.3.*
   - WinEventHook on foreground change plus `EVENT_OBJECT_LOCATIONCHANGE` on the foreground window, rect compared to monitor bounds, with a 1s fallback poll.
   - _Verify (proved 2026-10-31): a real borderless window grown from 600×400 to the 1920×1080 monitor bounds emits `fullscreen.changed {active:true}` in under a second, and shrinking emits `active:false`; the same foreground handle (1966838) held at every stage, so the flip came from the location change, not a focus switch. A maximized console at 1920×1020 stays false (maximized windows are excluded), and `fullscreen.get` replies `{"id":2,"active":false,"rect":...}`. Verify check 14 runs this. A video player was not used — the detector only sees window geometry, and this harness window exercises the same rect-vs-monitor path._
-- [ ] **1.9 Hide on fullscreen** — *Depends on: 0.5, 1.6.*
+- [x] **1.9 Hide on fullscreen** — *Depends on: 0.5, 1.6.*
   - `fullscreen.changed` hides the window; hotkey or tray brings it back.
-  - _Verify:_ fullscreen video hides it, tray restores it.
+  - _Verify (proved 2026-10-31): with the real borderless harness window covering the monitor the app logged `[fullscreen] hidden` and no Electron window had a main handle; 1.5s later the exact function bound to the tray click ran (`BEAM_FULLSCREEN_TEST=1`) and logged `[fullscreen] shown (tray)` with the window visible again; after the harness shrank the pill stayed visible and had hidden exactly once. Verify check 15 runs this on a fresh app instance. The real tray icon click and the hotkey are unproven (hotkey is 1.8); a real video player was not used._
 
 ## C. Shelf — the pill holds files
 
