@@ -125,6 +125,7 @@ if (!gotLock) {
   let windowDrag: { pointerX: number; pointerY: number; bounds: Electron.Rectangle } | null = null;
   const panelTest = process.env.BEAM_PANEL_TEST === '1';
   const resetTest = process.env.BEAM_RESET_TEST === '1';
+  const idleTest = process.env.BEAM_IDLE_TEST === '1';
   const dragTest = process.env.BEAM_DRAG_TEST === '1';
   const onHelperEvent = (event: HelperEvent): void => {
     if (event.evt !== 'music.changed') return;
@@ -179,6 +180,29 @@ if (!gotLock) {
           placeWindow(target, false);
           pillPosition = target.getBounds();
         }, 500);
+      }
+      if (idleTest) {
+        setTimeout(() => {
+          if (target.isDestroyed()) return;
+          void target.webContents
+            .executeJavaScript(
+              `(() => {
+                const pill = document.querySelector('.pill');
+                const mark = pill?.querySelector('.mascot');
+                const title = pill?.querySelector('.title');
+                if (!pill || !mark) return null;
+                return {
+                  state: pill.dataset.state,
+                  markOpacity: getComputedStyle(mark).opacity,
+                  shellOpacity: getComputedStyle(pill).opacity,
+                  label: title?.textContent ?? null,
+                  markMaster: (mark.getAttribute('src') ?? '').startsWith('data:image/svg+xml')
+                };
+              })()`
+            )
+            .then((probe: unknown) => console.log(`[idle] ${JSON.stringify(probe)}`))
+            .catch((error: unknown) => console.error('[idle] probe failed', error));
+        }, 800);
       }
     });
 
