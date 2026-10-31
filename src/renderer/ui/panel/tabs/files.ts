@@ -9,7 +9,10 @@ export interface FileRow {
   size: string;
   kind?: 'file' | 'folder';
   missing?: boolean;
+  path?: string;
 }
+
+export type CopyOutcome = { ok: boolean; count: number; error?: string };
 
 export function filesPanel(rows: FileRow[], copied = false, active = true): string {
   if (!rows.length) {
@@ -30,7 +33,7 @@ export function filesPanel(rows: FileRow[], copied = false, active = true): stri
         : `<span class="row-meta">${esc(row.kind === 'folder' ? 'Folder' : row.size)}</span>`;
       const copy = row.missing
         ? ''
-        : `<button type="button" class="row-action" aria-label="Copy ${esc(row.name)}">${icon('copy')}</button>`;
+        : `<button type="button" class="row-action"${row.path ? ` data-copy-path="${esc(row.path)}"` : ''} aria-label="Copy ${esc(row.name)}">${icon('copy')}</button>`;
       return `<div class="row${row.missing ? ' missing' : ''}" role="listitem"><div class="row-icon-box">${icon(rowIcon)}</div><span class="name" title="${esc(row.name)}">${esc(truncatedName)}</span>${meta}<div class="row-actions">${copy}<button type="button" class="row-action" aria-label="Remove ${esc(row.name)}">${icon('x')}</button></div></div>`;
     })
     .join('');
@@ -39,7 +42,7 @@ export function filesPanel(rows: FileRow[], copied = false, active = true): stri
   const copyIcon = copied ? icon('check') : icon('copy');
   const copyLabel = copied ? 'Copied' : 'Copy All';
 
-  const actions = `<div class="actions"><span class="sr-only" role="status">${copied ? 'Copied to clipboard' : ''}</span><button type="button" class="btn primary"${allMissing ? ' disabled' : ''}>${copyIcon}${copyLabel}</button><button type="button" class="btn ghost">${icon('plus')}Add files</button><button type="button" class="btn danger clear-all" data-armed="false">${icon('trash')}<span class="clear-all-label">Clear All</span></button></div>`;
+  const actions = `<div class="actions"><span class="sr-only" role="status">${copied ? 'Copied to clipboard' : ''}</span><button type="button" class="btn primary" data-copy-all${allMissing ? ' disabled' : ''}>${copyIcon}${copyLabel}</button><button type="button" class="btn ghost">${icon('plus')}Add files</button><button type="button" class="btn danger clear-all" data-armed="false">${icon('trash')}<span class="clear-all-label">Clear All</span></button></div>`;
 
   return panelBody('files', `<div class="file-list" role="list">${list}</div>${actions}`, '', active);
 }
@@ -76,5 +79,75 @@ export function bindClearAll(root: Document | Element): void {
     for (const button of clearButtons()) {
       if (button.dataset.armed === 'true') reset(button);
     }
+  });
+}
+
+export function bindFilesActions(
+  root: Document | Element,
+  copy: (paths: string[], source: 'row' | 'all') => Promise<CopyOutcome>
+): void {
+  const status = (text: string): void => {
+    const node = root.querySelector<HTMLElement>('#panel-files [role="status"]');
+    if (node) node.textContent = text;
+  };
+
+  const restore = (button: HTMLElement, inner: string, delay: number): void => {
+    window.setTimeout(() => {
+      if (!button.isConnected) return;
+      button.innerHTML = inner;
+      delete button.dataset.copied;
+    }, delay);
+  };
+
+  const copyRow = async (button: HTMLElement): Promise<void> => {
+    const path = button.dataset.copyPath;
+    if (!path || button.dataset.copied === 'true') return;
+    const inner = button.innerHTML;
+    button.dataset.copied = 'true';
+    button.innerHTML = icon('check');
+    try {
+      const result = await copy([path], 'row');
+      if (!result.ok) throw new Error(result.error ?? 'copy failed');
+      status('Copied to clipboard');
+      restore(button, inner, 1500);
+    } catch (error) {
+      button.innerHTML = inner;
+      delete button.dataset.copied;
+      status('Copy failed');
+      console.error('[files] copy failed', error);
+    }
+  };
+
+  const copyAll = async (button: HTMLElement): Promise<void> => {
+    if (button.dataset.copied === 'true') return;
+    const paths = [...root.querySelectorAll<HTMLElement>('#panel-files [data-copy-path]')]
+      .map((item) => item.dataset.copyPath)
+      .filter((path): path is string => typeof path === 'string' && path.length > 0);
+    if (!paths.length) return;
+    const inner = button.innerHTML;
+    button.dataset.copied = 'true';
+    try {
+      const result = await copy(paths, 'all');
+      if (!result.ok) throw new Error(result.error ?? 'copy failed');
+      button.innerHTML = `${icon('check')}Copied`;
+      status('Copied to clipboard');
+      restore(button, inner, 1800);
+    } catch (error) {
+      delete button.dataset.copied;
+      status('Copy failed');
+      console.error('[files] copy failed', error);
+    }
+  };
+
+  root.addEventListener('click', (event) => {
+    const target = event.target;
+    if (!(target instanceof Element)) return;
+    const rowButton = target.closest<HTMLElement>('[data-copy-path]');
+    if (rowButton) {
+      void copyRow(rowButton);
+      return;
+    }
+    const allButton = target.closest<HTMLElement>('[data-copy-all]');
+    if (allButton) void copyAll(allButton);
   });
 }

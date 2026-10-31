@@ -484,12 +484,13 @@
 </div>
 
 <script type="module">
-  import { bindArtFallback, bindClearAll, bindPanelTabs, iconSprite, panel, pill } from '../src/renderer/ui/index.ts';
+  import { bindArtFallback, bindClearAll, bindFilesActions, bindPanelTabs, iconSprite, panel, pill } from '../src/renderer/ui/index.ts';
 
   document.body.insertAdjacentHTML('afterbegin', iconSprite());
   bindPanelTabs(document);
   bindArtFallback(document);
   bindClearAll(document);
+  bindFilesActions(document, async (paths) => ({ ok: true, count: paths.length }));
 
   const track = {
     title: 'Midnight City',
@@ -502,18 +503,18 @@
   };
 
   const files = [
-    { name: 'invoice.pdf', size: '1.2 MB' },
-    { name: 'brief-final-v2.docx', size: '240 KB' },
-    { name: 'screenshots', size: 'folder', kind: 'folder' },
+    { name: 'invoice.pdf', size: '1.2 MB', path: 'D:\\Drop\\invoice.pdf' },
+    { name: 'brief-final-v2.docx', size: '240 KB', path: 'D:\\Drop\\brief-final-v2.docx' },
+    { name: 'screenshots', size: 'folder', kind: 'folder', path: 'D:\\Drop\\screenshots' },
     { name: 'old-notes.txt', size: 'missing', missing: true },
-    { name: 'contract.pdf', size: '88 KB' }
+    { name: 'contract.pdf', size: '88 KB', path: 'D:\\Drop\\contract.pdf' }
   ];
 
   const extraFiles = [
     ...files,
-    { name: 'archive-2026.zip', size: '18 MB' },
-    { name: 'notes.md', size: '4 KB' },
-    { name: 'design.fig', size: '6.1 MB' }
+    { name: 'archive-2026.zip', size: '18 MB', path: 'D:\\Drop\\archive-2026.zip' },
+    { name: 'notes.md', size: '4 KB', path: 'D:\\Drop\\notes.md' },
+    { name: 'design.fig', size: '6.1 MB', path: 'D:\\Drop\\design.fig' }
   ];
 
   const states = {

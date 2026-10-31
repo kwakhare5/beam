@@ -162,12 +162,12 @@ All channels prefixed `beam:`. Renderer can call, main can push. Built channels 
 | renderer → main | `beam:panel:collapsed` | panel finished closing; window returns to 136×42 | built |
 | renderer → main | `beam:panel:timing` | measured open duration + reduced-motion flag | built |
 | renderer → main | `beam:window:drag-start` / `drag-move` / `drag-end` | pointer-captured window drag; main moves the window with `setBounds`, clamps it to the display work area, and saves the position | built |
-| main → renderer | `beam:panel:open` | start the open animation | built |
+| main → renderer | `beam:panel:open` | start the open animation, carrying the shelf rows stat'd from disk | built |
 | main → renderer | `beam:panel:dismiss` | close on blur or tray toggle | built |
 | renderer → main | `beam:drag-test` / `beam:drag-test:enabled` | drag-gesture test hook (`BEAM_DRAG_TEST=1`) | built |
 | renderer → main | `beam:music:command` | toggle / next / prev | planned |
 | renderer → main | `beam:files:add` | paths from a drop; main dedupes, caps at 50, replies `{ count, accepted, truncated, limit }` | built |
-| renderer → main | `beam:files:copy` | copy one or all | planned |
+| renderer → main | `beam:files:copy` | copy one or all; payload `{ paths, source }`, main accepts only paths already on the shelf and calls `files.copy` | built |
 | renderer → main | `beam:files:drag` | start drag-out | planned |
 | renderer → main | `beam:timer:start/stop` | presets or custom | planned |
 | renderer → main | `beam:settings:get/set` | settings screen | planned |
@@ -177,6 +177,8 @@ All channels prefixed `beam:`. Renderer can call, main can push. Built channels 
 Fullscreen hide is main-only: main calls `win.hide()` / `win.showInactive()` itself and never messages the renderer for it.
 
 **Drops:** the renderer accepts file drops on the window, reads each real path with `webUtils.getPathForFile` (exposed through the preload; Electron 45 removed `File.path`), and sends the list over `beam:files:add`. Main owns the shelf as an in-memory string array: duplicates are skipped case-insensitively, the 50th entry is the cap, and the reply carries `{ count, accepted, truncated, limit }`. The renderer prints `N files` in the pill and shows `Max 50` for 2.4s when a drop was truncated. Nothing is copied or cached, and the shelf dies with the process. `BEAM_DROP_TEST=1` drives real drags through the DevTools protocol from main.
+
+**Copy:** every panel open stats each shelf path in main (name, byte size, folder/file, missing after a failed stat) and sends the rows with `beam:panel:open`; the renderer re-renders the Files tab from that payload and formats sizes. A row's 24px copy button or Copy All sends `{ paths, source }` over `beam:files:copy`; main maps each path back to its exact shelf entry, rejecting anything else, and calls `files.copy`. The renderer flips the button to a check (`Copied` on Copy All) for ~1.5s. `BEAM_COPY_TEST=1` drops 3 real files, opens the Files tab, clicks the first row's copy then Copy All; verify check 17 reads `CF_HDROP` after each step and pastes with Ctrl+V into a real Explorer folder.
 
 ---
 
@@ -291,9 +293,9 @@ UI decisions: ADR-0001 (component boundaries), ADR-0002 (original mascot), ADR-0
 
 ## 8. Status
 
-Phase 0: 0.1 built, 0.2 measured and passed, 0.3 built (ping/pong), 0.4a built (live SMTC events, PNG art), 0.4b built (CF_HDROP clipboard), 0.5 built (fullscreen detection; verify drives a real borderless window). 0.4c replaced by 3.4. 1.1 built (`placeWindow` anchors above the taskbar), 1.2 built (verify guards the foreground), 1.6 built (tray), 1.3 built (panel open/collapse; timing measured from `transitionrun`), 1.4 built (drag + `settings.ts`; verify drags with a real mouse, restarts, and resets), 1.5 built (idle star 0.7 asserted from computed style), 1.9 built (hide on fullscreen, tray restores; verify check 15), 3.1 built (drop shelf, paths in main memory, 50 cap, pill count; verify check 16). Next: 3.3, then the rest of block C.
+Phase 0: 0.1 built, 0.2 measured and passed, 0.3 built (ping/pong), 0.4a built (live SMTC events, PNG art), 0.4b built (CF_HDROP clipboard), 0.5 built (fullscreen detection; verify drives a real borderless window). 0.4c replaced by 3.4. 1.1 built (`placeWindow` anchors above the taskbar), 1.2 built (verify guards the foreground), 1.6 built (tray), 1.3 built (panel open/collapse; timing measured from `transitionrun`), 1.4 built (drag + `settings.ts`; verify drags with a real mouse, restarts, and resets), 1.5 built (idle star 0.7 asserted from computed style), 1.9 built (hide on fullscreen, tray restores; verify check 15), 3.1 built (drop shelf, paths in main memory, 50 cap, pill count; verify check 16), 3.3 built (live Files rows on open, row copy and Copy All with `Copied` feedback, Explorer paste; verify check 17). Next: 3.4, then 3.2 and 3.5.
 
-Open: the transparent rest margins still swallow clicks (no task owns it); multi-monitor restore and 100/150% scaling are unproven; the helper restart policy, hotkey, timer, and live tabs are unbuilt; the Files tab still renders placeholder rows (3.3 wires copy and the live list).
+Open: the transparent rest margins still swallow clicks (no task owns it); multi-monitor restore and 100/150% scaling are unproven; the helper restart policy, hotkey, timer, and the four placeholder tabs are unbuilt; row remove is drawn but inert until 3.5.
 
 ---
 
