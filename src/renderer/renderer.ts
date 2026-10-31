@@ -1,8 +1,12 @@
 import { bindArtFallback, bindPanelTabs, iconSprite, panel, pill, type PanelData } from './ui';
 
+type ShelfResult = { count: number; accepted: number; truncated: boolean; limit: number };
+
 type BeamApi = {
   dragTestEnabled(): Promise<boolean>;
   startDragTest(): void;
+  getPathForFile(file: File): string;
+  addFiles(paths: string[]): Promise<ShelfResult>;
   openPanel(): void;
   panelCollapsed(): void;
   beginWindowDrag(x: number, y: number): void;
@@ -29,6 +33,28 @@ if (app) {
     state: 'idle',
     title: 'Beam'
   });
+}
+
+const pillEl = app?.querySelector<HTMLElement>('.pill') ?? null;
+let shelfCount = 0;
+let noticeTimer: number | undefined;
+
+function fileLabel(count: number): string {
+  return count === 1 ? '1 file' : `${count} files`;
+}
+
+function setPill(state: string, label: string): void {
+  if (!pillEl) return;
+  pillEl.dataset.state = state;
+  const title = pillEl.querySelector<HTMLElement>('.title');
+  if (title) {
+    title.textContent = label;
+    title.title = label;
+  }
+}
+
+function showShelf(): void {
+  setPill(shelfCount > 0 ? 'files' : 'idle', shelfCount > 0 ? fileLabel(shelfCount) : 'Beam');
 }
 
 const beam = window.beam;
@@ -82,7 +108,61 @@ if (app && beam) {
     }
   });
 
-  const pillEl = app.querySelector<HTMLElement>('.pill');
+  let dragDepth = 0;
+  const hasFiles = (event: DragEvent): boolean => event.dataTransfer?.types.includes('Files') === true;
+  const dragLabel = (count: number): string => `+${fileLabel(Math.max(1, count))}`;
+
+  window.addEventListener('dragenter', (event) => {
+    if (!hasFiles(event)) return;
+    event.preventDefault();
+    dragDepth += 1;
+    setPill('drag', dragLabel(event.dataTransfer?.items.length ?? 1));
+  });
+
+  window.addEventListener('dragover', (event) => {
+    if (!hasFiles(event)) return;
+    event.preventDefault();
+    if (event.dataTransfer) event.dataTransfer.dropEffect = 'copy';
+    setPill('drag', dragLabel(event.dataTransfer?.items.length ?? 1));
+  });
+
+  window.addEventListener('dragleave', (event) => {
+    if (!hasFiles(event)) return;
+    dragDepth = Math.max(0, dragDepth - 1);
+    if (dragDepth === 0) showShelf();
+  });
+
+  window.addEventListener('drop', (event) => {
+    event.preventDefault();
+    dragDepth = 0;
+    const files = Array.from(event.dataTransfer?.files ?? []);
+    const paths = files.map((file) => beam.getPathForFile(file)).filter((path) => path.length > 0);
+    if (!paths.length) {
+      showShelf();
+      return;
+    }
+    void beam
+      .addFiles(paths)
+      .then((result) => {
+        shelfCount = result.count;
+        if (noticeTimer !== undefined) window.clearTimeout(noticeTimer);
+        if (result.truncated) {
+          setPill('files', `Max ${result.limit}`);
+          noticeTimer = window.setTimeout(() => {
+            noticeTimer = undefined;
+            showShelf();
+          }, 2400);
+        } else {
+          noticeTimer = undefined;
+          showShelf();
+        }
+      })
+      .catch((error: unknown) => {
+        console.error('[files] add failed', error);
+        showShelf();
+      });
+  });
+
   if (pillEl) {
     pillEl.draggable = false;
     pillEl.querySelectorAll('img').forEach((image) => {

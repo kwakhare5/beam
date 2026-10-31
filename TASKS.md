@@ -42,9 +42,9 @@
 
 ## C. Shelf — the pill holds files
 
-- [ ] **3.1 Drop in** — *Depends on: 1.1.*
+- [x] **3.1 Drop in** — *Depends on: 1.1.*
   - Drag files onto the pill → paths held in memory, count on the pill, 50-entry cap with a clear message. Renderer reads paths with `webUtils.getPathForFile` (Electron 45 removed `File.path`).
-  - _Verify:_ drop 3 files → pill reads "3 files"; drop 51 → capped at 50 with notice.
+  - _Verify (proved 2026-10-31): check 16 dispatches real Chromium drag events with 3 real files; the renderer read each path through `webUtils.getPathForFile`, main logged `[files] add=3 accepted=3 count=3 truncated=false`, and the pill read `3 files`. A second drop of 51 real files logged `add=51 accepted=47 count=50 truncated=true`, the pill read `Max 50`, and 2.6s later `50 files`. The `+N files` drag-over state exists in both the app and the preview but is not asserted by verify._
 - [ ] **3.3 Copy one / Copy All** — *Depends on: 3.1, 1.3.*
   - Copy button per row (hover or focus, 24px) plus Copy All. Goes through the helper's proven `files.copy`.
   - _Verify:_ Ctrl+V in Explorer pastes the real files.

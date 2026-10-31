@@ -12,6 +12,7 @@ const PILL_HEIGHT = 30;
 const PANEL_WIDTH = 452;
 const PANEL_HEIGHT = 316;
 const PILL_GAP = 12;
+const MAX_SHELF = 50;
 
 function placeWindow(window: BrowserWindow, resize: boolean): void {
   if (resize) window.setContentSize(WINDOW_WIDTH, WINDOW_HEIGHT);
@@ -117,6 +118,7 @@ if (!gotLock) {
   let panelOpen = false;
   let hiddenByFullscreen = false;
   let fullscreenActive = false;
+  let shelf: string[] = [];
   let settings: BeamSettings = { version: 1, position: null };
   let pillPosition: Electron.Rectangle = {
     x: 0,
@@ -130,6 +132,7 @@ if (!gotLock) {
   const idleTest = process.env.BEAM_IDLE_TEST === '1';
   const dragTest = process.env.BEAM_DRAG_TEST === '1';
   const fullscreenTest = process.env.BEAM_FULLSCREEN_TEST === '1';
+  const dropTest = process.env.BEAM_DROP_TEST === '1';
   let onFullscreen: (active: boolean) => void = () => {};
   const onHelperEvent = (event: HelperEvent): void => {
     if (event.evt === 'fullscreen.changed') {
@@ -388,6 +391,28 @@ if (!gotLock) {
         endDrag(point.x, point.y);
       });
 
+      ipcMain.handle('beam:files:add', (event, paths: unknown) => {
+        if (event.sender !== window.webContents) {
+          return { count: shelf.length, accepted: 0, truncated: false, limit: MAX_SHELF };
+        }
+        const list = Array.isArray(paths)
+          ? paths.filter((path): path is string => typeof path === 'string' && path.length > 0 && !path.includes('\0'))
+          : [];
+        let accepted = 0;
+        let truncated = false;
+        for (const path of list) {
+          if (shelf.some((held) => held.toLowerCase() === path.toLowerCase())) continue;
+          if (shelf.length >= MAX_SHELF) {
+            truncated = true;
+            break;
+          }
+          shelf.push(path);
+          accepted++;
+        }
+        console.log(`[files] add=${list.length} accepted=${accepted} count=${shelf.length} truncated=${truncated}`);
+        return { count: shelf.length, accepted, truncated, limit: MAX_SHELF };
+      });
+
       ipcMain.on('beam:panel:request-open', openPanel);
       ipcMain.on('beam:panel:collapsed', () => {
         if (window.isDestroyed()) return;
@@ -413,6 +438,65 @@ if (!gotLock) {
         setTimeout(() => {
           if (!window.isDestroyed()) resetPosition();
         }, 1200);
+      }
+      if (dropTest) {
+        setTimeout(() => {
+          void runDropTest(window).catch((error: unknown) => console.error('[drop] failed', error));
+        }, 1200);
+      }
+    }
+
+    async function runDropTest(target: BrowserWindow): Promise<void> {
+      const dir = join(tmpdir(), 'beam-droptest');
+      mkdirSync(dir, { recursive: true });
+      const write = (names: string[]): string[] => {
+        const paths = names.map((name) => join(dir, name));
+        for (const path of paths) writeFileSync(path, 'beam\n');
+        return paths;
+      };
+      const first = write(['one.txt', 'two.txt', 'three.txt']);
+      const many = write(Array.from({ length: 51 }, (_, index) => `extra-${String(index + 1).padStart(2, '0')}.txt`));
+
+      const probe = async (tag: string): Promise<void> => {
+        const dom = (await target.webContents.executeJavaScript(
+          `(() => { const pill = document.querySelector('.pill'); const title = pill?.querySelector('.title'); return { state: pill?.dataset.state ?? null, title: title?.textContent ?? null }; })()`
+        )) as { state: string | null; title: string | null };
+        console.log(`[drop] ${tag} state=${dom.state} title=${dom.title}`);
+      };
+
+      const point = (await target.webContents.executeJavaScript(
+        `(() => { const pill = document.querySelector('.pill'); if (!pill) return null; const rect = pill.getBoundingClientRect(); return { x: Math.round(rect.x + rect.width / 2), y: Math.round(rect.y + rect.height / 2) }; })()`
+      )) as { x: number; y: number } | null;
+      if (!point) {
+        console.error('[drop] pill missing');
+        return;
+      }
+
+      target.webContents.debugger.attach('1.3');
+      try {
+        const drag = async (paths: string[]): Promise<void> => {
+          const data = { items: [], files: paths, dragOperationsMask: 1 };
+          for (const type of ['dragEnter', 'dragOver', 'drop']) {
+            await target.webContents.debugger.sendCommand('Input.dispatchDragEvent', {
+              type,
+              x: point.x,
+              y: point.y,
+              data
+            });
+          }
+        };
+
+        await probe('start');
+        await drag(first);
+        await new Promise((resolve) => setTimeout(resolve, 400));
+        await probe('three');
+        await drag(many);
+        await new Promise((resolve) => setTimeout(resolve, 300));
+        await probe('capped');
+        await new Promise((resolve) => setTimeout(resolve, 2600));
+        await probe('settled');
+      } finally {
+        target.webContents.debugger.detach();
       }
     }
   });
