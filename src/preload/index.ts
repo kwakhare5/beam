@@ -1,8 +1,11 @@
-import { contextBridge, ipcRenderer } from 'electron';
+import { contextBridge, ipcRenderer, webUtils } from 'electron';
 
 contextBridge.exposeInMainWorld('beam', {
   dragTestEnabled: (): Promise<boolean> => ipcRenderer.invoke('beam:drag-test:enabled'),
   startDragTest: (): void => ipcRenderer.send('beam:drag-test'),
+  getPathForFile: (file: File): string => webUtils.getPathForFile(file),
+  addFiles: (paths: string[]): Promise<{ count: number; accepted: number; truncated: boolean; limit: number }> =>
+    ipcRenderer.invoke('beam:files:add', paths),
   openPanel: (): void => ipcRenderer.send('beam:panel:request-open'),
   panelCollapsed: (): void => ipcRenderer.send('beam:panel:collapsed'),
   beginWindowDrag: (x: number, y: number): void => ipcRenderer.send('beam:window:drag-start', x, y),

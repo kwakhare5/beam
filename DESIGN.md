@@ -87,7 +87,7 @@ Light overrides every color token in the `[data-theme='light']` block of `tokens
 - **Hover Reveal:** The resting pill shows one fact in a 46px slot: a title, digits, a check, or a count. Music and paused swap the thumbnail and title for three 28px transports at `128×30`; their overlay spans the full pill, leaving 14px on each side. Timer keeps its digits and reveals a 28px cancel at the slot end (the slot grows from 46 to 80). Done swaps the 16px check for `Done` plus a 28px dismiss. Idle and files reveal nothing and keep `94×30`.
 - **Done:** at rest the capsule shows the star and a centered 16px gold check with a gold 1px border. On hover or focus the check fades and `Done` plus a 28px dismiss fade in. No digits and no glow.
 - **Paused:** no glyph. Paused shows the album thumbnail (or the star) with a 6px amber dot and keeps the full 46px title slot; the title stays muted and the artwork stays crisp. The title fades out on hover for the transports.
-- **Shelf Count:** a non-empty shelf shows its count (`5 files`). A missing file turns the mascot dot red; the row carries the name and red `Missing` text. An empty shelf falls back to idle, so there is no `0 files` state.
+- **Shelf Count:** a non-empty shelf shows its count (`5 files`, `1 file`), capped at 50 entries. Dragging files over the capsule shows the drag state with the incoming count (`+3 files`). A drop that would pass the cap keeps 50 and the capsule reads `Max 50` for 2.4s before settling on `50 files`. A missing file turns the mascot dot red; the row carries the name and red `Missing` text. An empty shelf falls back to idle, so there is no `0 files` state.
 - **Status Dots:** 6px green while playing, amber when paused, red when a shelf file is missing. A timer carries the background music's dot. Gold stays brand and primary.
 - **Dual-State Collision (Timer + Music):** Countdown takes capsule prominence (digits only) with a 6px green dot on the mascot while audio plays, amber when paused.
 - **Precedence:** drag, then timer, then music, then files, then idle.
@@ -99,7 +99,7 @@ Light overrides every color token in the `[data-theme='light']` block of `tokens
 | Paused | 94 → 128 | track title, muted (46px rest) | — | 24px thumbnail + amber dot; hover: thumbnail and title fade, transports fade in |
 | Timer | 94 → 128 | digits only | 28px cancel on hover | tabular digits; green dot when music plays, amber when paused |
 | Done | 94 → 128 | gold check | `Done` + 28px dismiss on hover | gold 1px border |
-| Files | 94px | `5 files` | — | no growth; red dot when a file is missing |
+| Files | 94px | `5 files` | — | no growth; cap 50 with a `Max 50` notice; red dot when a file is missing |
 | Drag | 128px | `+3 files` | — | dashed gold border |
 
 ## 6. Panel Specifications
