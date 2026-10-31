@@ -27,9 +27,9 @@
 - [x] **1.4 Drag and persist** — *Depends on: 1.3.*
   - Drag anywhere on the pill. Saved to `settings.json`. Restart restores it; if the saved monitor is gone at launch, fall back to the primary anchor. Tray → Reset Position returns to the taskbar anchor.
   - _Verify (proved 2026-10-31): a real mouse drag moves the window and writes `position` to `%APPDATA%\Beam\settings.json`; a relaunch restores the same bounds and native rect; the reset function the tray calls returns it to the primary anchor and clears the saved position. All three run in `verify.ps1` check 11. The tray menu click itself and the monitor-gone fallback are unproven (one display in this session)._
-- [ ] **1.5 Idle dim** — *Depends on: 1.1.*
-  - No music, no timer → pill at 70% opacity; master mark unchanged.
-  - _Verify:_ screenshot diff between active and idle states is visible; opacity value in computed style.
+- [x] **1.5 Idle dim** — *Depends on: 1.1.*
+  - No music, no timer → idle capsule. The approved design dims the star and label to 70% and keeps the solid shell opaque (the older "pill at 70% opacity" wording is superseded by the solid-shell decision).
+  - _Verify (proved 2026-10-31): the running app reports `{state:"idle", markOpacity:"0.7", shellOpacity:"1", label:"Beam", markMaster:true}` from `getComputedStyle`; verify check 7 asserts it. The canonical preview's idle and playing-rest frames differ in 895 of 5712 pixels (15.7%); captures `.scratch/idle-idle.png` and `.scratch/idle-playing.png`. Hover restore is CSS-only and still checked by the UI spec._
 
 ## B. Fullscreen seam
 

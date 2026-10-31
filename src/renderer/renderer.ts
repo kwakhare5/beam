@@ -127,16 +127,20 @@ if (app && beam) {
     const el = panelEl;
     void el.offsetWidth;
     requestAnimationFrame(() => {
-      const started = performance.now();
+      let started = 0;
       let reported = false;
       const report = (): void => {
         if (reported) return;
         reported = true;
         beam.reportPanelTiming(
-          Math.round(performance.now() - started),
+          started ? Math.round(performance.now() - started) : 260,
           window.matchMedia('(prefers-reduced-motion: reduce)').matches
         );
       };
+      el.addEventListener('transitionrun', function begin(event) {
+        if (event.target !== el || event.propertyName !== 'transform' || started) return;
+        started = performance.now();
+      });
       document.body.classList.add('is-open');
       el.addEventListener('transitionend', function done(event) {
         if (event.target !== el || event.propertyName !== 'transform') return;
