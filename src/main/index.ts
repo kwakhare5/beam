@@ -1,7 +1,7 @@
 import { app, BrowserWindow, ipcMain, nativeImage, screen } from 'electron';
-import { mkdirSync, writeFileSync } from 'node:fs';
+import { mkdirSync, statSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
-import { join } from 'node:path';
+import { basename, join } from 'node:path';
 import { Bridge, type HelperEvent } from './bridge';
 import { getSettingsPath, loadSettings, saveSettings, type BeamSettings, type SavedPosition } from './settings';
 import { createTray } from './tray';
@@ -100,6 +100,16 @@ type MusicPayload = {
   durationMs: number;
 };
 
+type ShelfRow = {
+  path: string;
+  name: string;
+  sizeBytes: number;
+  kind: 'file' | 'folder';
+  missing: boolean;
+};
+
+type CopyResult = { ok: boolean; count: number; error?: string };
+
 function readPoint(x: unknown, y: unknown): { x: number; y: number } | null {
   if (typeof x !== 'number' || !Number.isFinite(x)) return null;
   if (typeof y !== 'number' || !Number.isFinite(y)) return null;
@@ -119,6 +129,21 @@ if (!gotLock) {
   let hiddenByFullscreen = false;
   let fullscreenActive = false;
   let shelf: string[] = [];
+  const shelfRows = (): ShelfRow[] =>
+    shelf.map((path) => {
+      try {
+        const stats = statSync(path);
+        return {
+          path,
+          name: basename(path),
+          sizeBytes: stats.size,
+          kind: stats.isDirectory() ? ('folder' as const) : ('file' as const),
+          missing: false
+        };
+      } catch {
+        return { path, name: basename(path), sizeBytes: 0, kind: 'file' as const, missing: true };
+      }
+    });
   let settings: BeamSettings = { version: 1, position: null };
   let pillPosition: Electron.Rectangle = {
     x: 0,
@@ -133,6 +158,7 @@ if (!gotLock) {
   const dragTest = process.env.BEAM_DRAG_TEST === '1';
   const fullscreenTest = process.env.BEAM_FULLSCREEN_TEST === '1';
   const dropTest = process.env.BEAM_DROP_TEST === '1';
+  const copyTest = process.env.BEAM_COPY_TEST === '1';
   let onFullscreen: (active: boolean) => void = () => {};
   const onHelperEvent = (event: HelperEvent): void => {
     if (event.evt === 'fullscreen.changed') {
@@ -278,7 +304,7 @@ if (!gotLock) {
         window.setBounds(bounds);
         console.log(`[panel] bounds=${bounds.x},${bounds.y},${bounds.width},${bounds.height}`);
         window.focus();
-        window.webContents.send('beam:panel:open');
+        window.webContents.send('beam:panel:open', shelfRows());
       };
       const closePanel = (): void => {
         if (!panelOpen || window.isDestroyed()) return;
@@ -413,6 +439,31 @@ if (!gotLock) {
         return { count: shelf.length, accepted, truncated, limit: MAX_SHELF };
       });
 
+      ipcMain.handle('beam:files:copy', async (event, payload: unknown): Promise<CopyResult> => {
+        if (event.sender !== window.webContents) return { ok: false, count: 0, error: 'untrusted sender' };
+        const data = payload as { paths?: unknown; source?: unknown } | null;
+        const source = data?.source === 'row' || data?.source === 'all' ? data.source : null;
+        const requested = Array.isArray(data?.paths)
+          ? data.paths.filter((path): path is string => typeof path === 'string' && path.length > 0)
+          : [];
+        const held = new Map(shelf.map((path) => [path.toLowerCase(), path]));
+        const canonical = requested.map((path) => held.get(path.toLowerCase()));
+        const paths = canonical.filter((path): path is string => path !== undefined);
+        if (!source || !requested.length || paths.length !== requested.length) {
+          console.error(`[files] copy rejected source=${source} requested=${requested.length}`);
+          return { ok: false, count: 0, error: 'paths must come from the shelf' };
+        }
+        try {
+          await bridge.copy(paths);
+          console.log(`[files] copy=${paths.length} source=${source} ok=true`);
+          return { ok: true, count: paths.length };
+        } catch (error) {
+          const message = error instanceof Error ? error.message : String(error);
+          console.error(`[files] copy=${paths.length} source=${source} ok=false ${message}`);
+          return { ok: false, count: 0, error: message };
+        }
+      });
+
       ipcMain.on('beam:panel:request-open', openPanel);
       ipcMain.on('beam:panel:collapsed', () => {
         if (window.isDestroyed()) return;
@@ -442,6 +493,11 @@ if (!gotLock) {
       if (dropTest) {
         setTimeout(() => {
           void runDropTest(window).catch((error: unknown) => console.error('[drop] failed', error));
+        }, 1200);
+      }
+      if (copyTest) {
+        setTimeout(() => {
+          void runCopyTest(window, openPanel).catch((error: unknown) => console.error('[copy] failed', error));
         }, 1200);
       }
     }
@@ -498,6 +554,61 @@ if (!gotLock) {
       } finally {
         target.webContents.debugger.detach();
       }
+    }
+
+    async function runCopyTest(target: BrowserWindow, openPanel: () => void): Promise<void> {
+      const dir = join(tmpdir(), 'beam-copytest');
+      mkdirSync(dir, { recursive: true });
+      const paths = ['alpha.txt', 'beta.txt', 'gamma.txt'].map((name) => join(dir, name));
+      paths.forEach((path, index) => writeFileSync(path, `beam ${index}\n`));
+
+      const point = (await target.webContents.executeJavaScript(
+        `(() => { const pill = document.querySelector('.pill'); if (!pill) return null; const rect = pill.getBoundingClientRect(); return { x: Math.round(rect.x + rect.width / 2), y: Math.round(rect.y + rect.height / 2) }; })()`
+      )) as { x: number; y: number } | null;
+      if (!point) {
+        console.error('[copy] pill missing');
+        return;
+      }
+
+      target.webContents.debugger.attach('1.3');
+      try {
+        const data = { items: [], files: paths, dragOperationsMask: 1 };
+        for (const type of ['dragEnter', 'dragOver', 'drop']) {
+          await target.webContents.debugger.sendCommand('Input.dispatchDragEvent', {
+            type,
+            x: point.x,
+            y: point.y,
+            data
+          });
+        }
+      } finally {
+        target.webContents.debugger.detach();
+      }
+      await new Promise((resolve) => setTimeout(resolve, 500));
+
+      openPanel();
+      await new Promise((resolve) => setTimeout(resolve, 500));
+      await target.webContents.executeJavaScript(`document.querySelector('#tab-files')?.click()`);
+      await new Promise((resolve) => setTimeout(resolve, 300));
+      const panel = (await target.webContents.executeJavaScript(
+        `(() => {
+          const rows = [...document.querySelectorAll('#panel-files [data-copy-path]')];
+          return {
+            rows: rows.length,
+            all: !!document.querySelector('#panel-files [data-copy-all]'),
+            names: rows.map((button) => button.closest('.row')?.querySelector('.name')?.getAttribute('title')).join(','),
+            sizes: [...document.querySelectorAll('#panel-files .row-meta')].map((node) => node.textContent).join(',')
+          };
+        })()`
+      )) as { rows: number; all: boolean; names: string; sizes: string };
+      console.log(`[copy] panel rows=${panel.rows} all=${panel.all} names=${panel.names} sizes=${panel.sizes}`);
+
+      await target.webContents.executeJavaScript(`document.querySelector('#panel-files [data-copy-path]')?.click()`);
+      await new Promise((resolve) => setTimeout(resolve, 4000));
+
+      await target.webContents.executeJavaScript(`document.querySelector('#panel-files [data-copy-all]')?.click()`);
+      await new Promise((resolve) => setTimeout(resolve, 600));
+      console.log('[copy] done');
     }
   });
 

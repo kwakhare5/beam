@@ -45,9 +45,9 @@
 - [x] **3.1 Drop in** — *Depends on: 1.1.*
   - Drag files onto the pill → paths held in memory, count on the pill, 50-entry cap with a clear message. Renderer reads paths with `webUtils.getPathForFile` (Electron 45 removed `File.path`).
   - _Verify (proved 2026-10-31): check 16 dispatches real Chromium drag events with 3 real files; the renderer read each path through `webUtils.getPathForFile`, main logged `[files] add=3 accepted=3 count=3 truncated=false`, and the pill read `3 files`. A second drop of 51 real files logged `add=51 accepted=47 count=50 truncated=true`, the pill read `Max 50`, and 2.6s later `50 files`. The `+N files` drag-over state exists in both the app and the preview but is not asserted by verify._
-- [ ] **3.3 Copy one / Copy All** — *Depends on: 3.1, 1.3.*
-  - Copy button per row (hover or focus, 24px) plus Copy All. Goes through the helper's proven `files.copy`.
-  - _Verify:_ Ctrl+V in Explorer pastes the real files.
+- [x] **3.3 Copy one / Copy All** — *Depends on: 3.1, 1.3.*
+  - Copy button per row (hover or focus, 24px) plus Copy All. Goes through the helper's proven `files.copy`. Built: the panel open event carries the live shelf stat'd in main, both buttons send `{ paths, source }` and main accepts only shelf paths; `Copied` feedback lasts 1.5s/1.8s.
+  - _Verify (proved 2026-10-31): verify check 17 drops 3 real files, asserts the Files tab shows `alpha.txt,beta.txt,gamma.txt` at `7 B`, row copy leaves exactly `alpha.txt` on the clipboard, Copy All leaves all 3, and Ctrl+V into a real Explorer folder lands all 3 with matching sizes. `.\verify.ps1` exit 0, 17/17 PASS._
 - [ ] **3.4 Drag out** — *Depends on: 3.1.*
   - Drag a row, or the pill while it holds files, to Explorer or an email client. Electron's `webContents.startDrag` with the real paths; the target decides copy vs move (Ctrl/Shift override). Replaces 0.4c.
   - _Verify:_ manual drag into Explorer lands the files with the same names and sizes; a missing file cannot start a drag.

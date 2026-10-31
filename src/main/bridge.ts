@@ -1,6 +1,6 @@
 import { spawn, type ChildProcess } from 'node:child_process';
 
-type HelperReply = { id: number; pong?: boolean; version?: string };
+type HelperReply = { id: number; pong?: boolean; version?: string; ok?: boolean; error?: string };
 
 export type HelperEvent = { evt: string; payload?: unknown };
 
@@ -57,6 +57,11 @@ export class Bridge {
     return reply.version ?? 'unknown';
   }
 
+  async copy(paths: string[]): Promise<void> {
+    const reply = await this.send('files.copy', { paths });
+    if (reply.ok !== true) throw new Error(reply.error ?? 'helper refused the copy');
+  }
+
   stop(): Promise<void> {
     const child = this.child;
     if (!child) return Promise.resolve();
@@ -75,14 +80,14 @@ export class Bridge {
     });
   }
 
-  private send(cmd: string): Promise<HelperReply> {
+  private send(cmd: string, payload: Record<string, unknown> = {}): Promise<HelperReply> {
     const stdin = this.child?.stdin;
     if (!stdin) return Promise.reject(new Error('helper not running'));
 
     const id = this.nextId++;
     return new Promise((resolve, reject) => {
       this.pending.set(id, { resolve, reject });
-      stdin.write(`${JSON.stringify({ id, cmd })}\n`);
+      stdin.write(`${JSON.stringify({ id, cmd, ...payload })}\n`);
     });
   }
 

@@ -21,21 +21,22 @@ public static class BeamScreen {
 }
 '@
 [BeamScreen]::SetProcessDpiAwarenessContext([IntPtr](-4)) | Out-Null
+[BeamScreen]::SetCursorPos(8, 8) | Out-Null
 
 
-Write-Host '[1/16] typecheck'
+Write-Host '[1/17] typecheck'
 & $tsc -p tsconfig.json --noEmit
 if ($LASTEXITCODE -ne 0) { Write-Host 'FAIL typecheck'; exit 1 }
 & $tsc -p tsconfig.renderer.json --noEmit
 if ($LASTEXITCODE -ne 0) { Write-Host 'FAIL typecheck (renderer)'; exit 1 }
 Write-Host 'PASS typecheck'
 
-Write-Host '[2/16] build'
+Write-Host '[2/17] build'
 & npm run build
 if ($LASTEXITCODE -ne 0) { Write-Host 'FAIL build'; exit 1 }
 Write-Host 'PASS build'
 
-Write-Host '[3/16] helper build'
+Write-Host '[3/17] helper build'
 $helperDir = Join-Path $PSScriptRoot 'native\BeamBridge\dist'
 if (Test-Path -LiteralPath $helperDir) { Remove-Item -LiteralPath $helperDir -Recurse -Force }
 & dotnet publish (Join-Path $PSScriptRoot 'native\BeamBridge\BeamBridge.csproj') -c Release -o $helperDir --nologo
@@ -46,7 +47,7 @@ $helperFiles = @(Get-ChildItem -LiteralPath $helperDir -File)
 if ($helperFiles.Count -ne 1) { Write-Host "FAIL helper build: expected one file, found $($helperFiles.Count)"; exit 1 }
 Write-Host 'PASS helper build (single exe)'
 
-Write-Host '[4/16] clipboard'
+Write-Host '[4/17] clipboard'
 $clipDir = Join-Path $env:TEMP 'beam-clip'
 if (Test-Path -LiteralPath $clipDir) { Remove-Item -LiteralPath $clipDir -Recurse -Force }
 New-Item -ItemType Directory -Path $clipDir | Out-Null
@@ -96,7 +97,7 @@ if ($clipAfter.Count -ne 3) {
 Remove-Item -LiteralPath $clipDir -Recurse -Force
 Write-Host 'PASS clipboard (3 real paths, survive helper exit)'
 
-Write-Host '[5/16] launch + focus'
+Write-Host '[5/17] launch + focus'
 $outLog = Join-Path $env:TEMP 'beam-verify.out.log'
 $errLog = Join-Path $env:TEMP 'beam-verify.err.log'
 Remove-Item -LiteralPath $outLog -ErrorAction SilentlyContinue
@@ -158,7 +159,7 @@ Write-Host "PASS launch (pid $($first.Id)) + pong 0.1.0"
 Write-Host 'PASS focus (pill appeared without taking the foreground)'
 Start-Sleep -Seconds 5
 
-Write-Host '[6/16] anchor'
+Write-Host '[6/17] anchor'
 $appOut = Get-Content -LiteralPath $outLog -Raw -ErrorAction SilentlyContinue
 $anchorMatches = [regex]::Matches($appOut, '\[window\] bounds=(-?\d+),(-?\d+),(\d+),(\d+) content=(-?\d+),(-?\d+),(\d+),(\d+) work=(-?\d+),(-?\d+),(\d+),(\d+)')
 if ($anchorMatches.Count -eq 0) {
@@ -230,7 +231,7 @@ if ([math]::Abs($waX - $wx) -gt 2 -or [math]::Abs($waY - $wy) -gt 2 -or [math]::
 }
 Write-Host "PASS anchor (pill 12px above the taskbar, centered; native rect matches; scale $scale)"
 
-Write-Host '[7/16] idle dim'
+Write-Host '[7/17] idle dim'
 $idleOut = Get-Content -LiteralPath $outLog -Raw -ErrorAction SilentlyContinue
 $idleMatch = [regex]::Match($idleOut, '\[idle\] (\{.+\})')
 if (-not $idleMatch.Success) {
@@ -249,7 +250,7 @@ if ($idle.state -ne 'idle' -or $idle.markOpacity -ne '0.7' -or $idle.shellOpacit
 }
 Write-Host "PASS idle dim (star $($idle.markOpacity), shell $($idle.shellOpacity), master mark, label Beam)"
 
-Write-Host '[8/16] panel'
+Write-Host '[8/17] panel'
 $panelOut = $appOut
 for ($i = 0; $i -lt 50; $i++) {
   Start-Sleep -Milliseconds 300
@@ -298,7 +299,7 @@ if ($restoredW -gt 200 -or $restoredH -gt 100) {
 Remove-Item Env:BEAM_PANEL_TEST -ErrorAction SilentlyContinue
 Write-Host "PASS panel (open ${panelMs}ms reduced=$reduced, 452x316, dismissed back to the pill)"
 
-Write-Host '[9/16] helper memory'
+Write-Host '[9/17] helper memory'
 $helper = Get-Process BeamBridge -ErrorAction SilentlyContinue
 if (-not $helper) {
   Stop-Process -Id $first.Id -Force -ErrorAction SilentlyContinue
@@ -315,7 +316,7 @@ if ($helperMb -ge 60) {
 }
 Write-Host "PASS helper memory ($helperMb MB idle, cap 60 MB)"
 
-Write-Host '[10/16] single instance'
+Write-Host '[10/17] single instance'
 $second = Start-Process -FilePath $electron -ArgumentList '.' -WorkingDirectory $PSScriptRoot -PassThru
 Start-Sleep -Seconds 4
 if (-not $second.HasExited) {
@@ -332,7 +333,7 @@ if ($first.HasExited) {
 }
 Write-Host 'PASS single instance'
 
-Write-Host '[11/16] UI spec'
+Write-Host '[11/17] UI spec'
 $main = Get-Content (Join-Path $PSScriptRoot 'src\main\index.ts') -Raw
 $base = Get-Content (Join-Path $PSScriptRoot 'src\renderer\styles\base.css') -Raw
 $pill = Get-Content (Join-Path $PSScriptRoot 'src\renderer\styles\capsule.css') -Raw
@@ -626,7 +627,7 @@ if ($uiFail) {
 }
 Write-Host 'PASS UI spec'
 
-Write-Host '[12/16] move + persist'
+Write-Host '[12/17] move + persist'
 $settingsPath = $null
 $settingsBackup = Join-Path $env:TEMP 'beam-verify-settings.json'
 $hadSettings = $false
@@ -784,7 +785,7 @@ try {
 if ($hadSettings) { Copy-Item -LiteralPath $settingsBackup -Destination $settingsPath -Force } else { Remove-Item -LiteralPath $settingsPath -ErrorAction SilentlyContinue }
 Write-Host "PASS move (drag $bx,$by to $endX,$endY, saved, restart restored it, Reset returned to $anchorX,$anchorY)"
 
-Write-Host '[13/16] quit cleanup'
+Write-Host '[13/17] quit cleanup'
 $closed = $first.CloseMainWindow()
 if (-not $closed) {
   Get-Process electron,BeamBridge -ErrorAction SilentlyContinue | Stop-Process -Force
@@ -801,7 +802,7 @@ if (-not $appExited -or $helperLeft -ne 0) {
 }
 Write-Host 'PASS quit cleanup (app and helper exited)'
 
-Write-Host '[14/16] fullscreen'
+Write-Host '[14/17] fullscreen'
 $fsHarnessPath = Join-Path $env:TEMP 'beam-fs-harness.ps1'
 $fsStagePath = Join-Path $env:TEMP 'beam-fs-stage.txt'
 $fsProc = $null
@@ -920,7 +921,7 @@ if ($fsProc -and -not $fsProc.HasExited) {
 Remove-Item -LiteralPath $fsStagePath -ErrorAction SilentlyContinue
 Write-Host 'PASS fullscreen (grow to monitor bounds -> active:true, shrink -> active:false, same foreground window)'
 
-Write-Host '[15/16] fullscreen hide'
+Write-Host '[15/17] fullscreen hide'
 $hideOutLog = Join-Path $env:TEMP 'beam-fs-hide.out.log'
 $hideErrLog = Join-Path $env:TEMP 'beam-fs-hide.err.log'
 Remove-Item -LiteralPath $hideOutLog, $hideErrLog -ErrorAction SilentlyContinue
@@ -985,7 +986,7 @@ Remove-Item -LiteralPath $hideOutLog, $hideErrLog -ErrorAction SilentlyContinue
 Remove-Item -LiteralPath $fsHarnessPath, $fsStagePath -ErrorAction SilentlyContinue
 Write-Host 'PASS fullscreen hide (hid at fullscreen, tray click restored it, stayed shown after the exit)'
 
-Write-Host '[16/16] drop'
+Write-Host '[16/17] drop'
 $dropOutLog = Join-Path $env:TEMP 'beam-drop-verify.out.log'
 $dropErrLog = Join-Path $env:TEMP 'beam-drop-verify.err.log'
 Remove-Item -LiteralPath $dropOutLog, $dropErrLog -ErrorAction SilentlyContinue
@@ -1029,6 +1030,108 @@ try {
 Remove-Item Env:BEAM_DROP_TEST -ErrorAction SilentlyContinue
 Remove-Item -LiteralPath $dropOutLog, $dropErrLog -ErrorAction SilentlyContinue
 Write-Host 'PASS drop (3 real files read with webUtils, pill 3 files; 51 more capped at 50 with Max 50)'
+
+Write-Host '[17/17] copy'
+$copyOutLog = Join-Path $env:TEMP 'beam-copy-verify.out.log'
+$copyErrLog = Join-Path $env:TEMP 'beam-copy-verify.err.log'
+Remove-Item -LiteralPath $copyOutLog, $copyErrLog -ErrorAction SilentlyContinue
+$env:BEAM_COPY_TEST = '1'
+$copyApp = $null
+$copyPasteDir = Join-Path $env:TEMP ("beam-copy-paste-" + $PID)
+try {
+  $copyApp = Start-Process -FilePath $electron -ArgumentList '.' -WorkingDirectory $PSScriptRoot -PassThru -RedirectStandardOutput $copyOutLog -RedirectStandardError $copyErrLog
+  $copyOut = ''
+  $copyStop = (Get-Date).AddSeconds(25)
+  while ((Get-Date) -lt $copyStop) {
+    Start-Sleep -Milliseconds 150
+    if ($copyApp.HasExited) { throw 'the app exited before the copy run' }
+    $copyOut = Get-Content -LiteralPath $copyOutLog -Raw -ErrorAction SilentlyContinue
+    if ($copyOut -match '\[files\] copy=1 source=row ok=true') { break }
+  }
+  if ($copyOut -notmatch '\[copy\] panel rows=3 all=true names=alpha\.txt,beta\.txt,gamma\.txt sizes=7 B,7 B,7 B') {
+    throw 'the Files tab never showed the three dropped files'
+  }
+  if ($copyOut -notmatch '\[files\] copy=1 source=row ok=true') { throw 'the row copy never reached the helper' }
+  $rowPaths = @(Get-DropPaths)
+  if ($rowPaths.Count -ne 1 -or $rowPaths[0] -notmatch 'alpha\.txt$') {
+    throw "the row copy left $($rowPaths.Count) paths on the clipboard"
+  }
+
+  $copyStop = (Get-Date).AddSeconds(20)
+  while ((Get-Date) -lt $copyStop) {
+    Start-Sleep -Milliseconds 150
+    $copyOut = Get-Content -LiteralPath $copyOutLog -Raw -ErrorAction SilentlyContinue
+    if ($copyOut -match '\[files\] copy=3 source=all ok=true') { break }
+  }
+  if ($copyOut -notmatch '\[files\] copy=3 source=all ok=true') { throw 'Copy All never reached the helper' }
+  $allPaths = @(Get-DropPaths)
+  $copySources = @('alpha.txt', 'beta.txt', 'gamma.txt') | ForEach-Object { Join-Path (Join-Path $env:TEMP 'beam-copytest') $_ }
+  $copyMissing = @($copySources | Where-Object { $allPaths -notcontains $_ })
+  if ($allPaths.Count -ne 3 -or $copyMissing.Count -ne 0) {
+    throw "Copy All left $($allPaths.Count) paths on the clipboard (missing $($copyMissing -join ','))"
+  }
+
+  New-Item -ItemType Directory -Path $copyPasteDir | Out-Null
+  $copyShell = New-Object -ComObject WScript.Shell
+  Start-Process explorer.exe -ArgumentList $copyPasteDir | Out-Null
+  $pasteName = Split-Path -Leaf $copyPasteDir
+  $pasteFocused = $false
+  for ($i = 0; $i -lt 60; $i++) {
+    Start-Sleep -Milliseconds 200
+    if ($copyShell.AppActivate($pasteName)) { $pasteFocused = $true; break }
+  }
+  if (-not $pasteFocused) { throw 'the paste folder never took the foreground' }
+  Start-Sleep -Milliseconds 500
+  $copyShell.SendKeys('^v')
+  $pasted = $false
+  for ($i = 0; $i -lt 60; $i++) {
+    Start-Sleep -Milliseconds 250
+    $landed = @($copySources | Where-Object { Test-Path -LiteralPath (Join-Path $copyPasteDir (Split-Path -Leaf $_)) })
+    if ($landed.Count -eq 3) {
+      $pasted = $true
+      break
+    }
+  }
+  if (-not $pasted) { throw 'Ctrl+V in Explorer pasted nothing' }
+  foreach ($source in $copySources) {
+    $target = Join-Path $copyPasteDir (Split-Path -Leaf $source)
+    if ((Get-Item -LiteralPath $source).Length -ne (Get-Item -LiteralPath $target).Length) {
+      throw "the pasted file $target has a different size"
+    }
+  }
+  if ($copyShell.AppActivate($pasteName)) {
+    Start-Sleep -Milliseconds 300
+    $copyShell.SendKeys('%{F4}')
+  }
+
+  if ($copyOut -notmatch '\[copy\] done') {
+    $copyStop = (Get-Date).AddSeconds(10)
+    while ((Get-Date) -lt $copyStop) {
+      Start-Sleep -Milliseconds 150
+      $copyOut = Get-Content -LiteralPath $copyOutLog -Raw -ErrorAction SilentlyContinue
+      if ($copyOut -match '\[copy\] done') { break }
+    }
+  }
+  if ($copyOut -notmatch '\[copy\] done') { throw 'the copy harness never finished' }
+
+  $closed = $copyApp.CloseMainWindow()
+  if (-not $closed) { throw 'the pill did not close after the copy run' }
+  $exited = $copyApp.WaitForExit(8000)
+  Start-Sleep -Milliseconds 500
+  $copyHelperLeft = @(Get-Process BeamBridge -ErrorAction SilentlyContinue).Count
+  if (-not $exited -or $copyHelperLeft -ne 0) { throw "the app did not exit cleanly (exited=$exited helperLeft=$copyHelperLeft)" }
+} catch {
+  if ($copyApp -and -not $copyApp.HasExited) { $copyApp.Kill() }
+  Get-Process electron,BeamBridge -ErrorAction SilentlyContinue | Stop-Process -Force
+  Remove-Item Env:BEAM_COPY_TEST -ErrorAction SilentlyContinue
+  Write-Host "FAIL copy: $($_.Exception.Message)"
+  exit 1
+}
+Remove-Item Env:BEAM_COPY_TEST -ErrorAction SilentlyContinue
+Remove-Item -LiteralPath $copyOutLog, $copyErrLog -ErrorAction SilentlyContinue
+Remove-Item -LiteralPath $copyPasteDir -Recurse -Force -ErrorAction SilentlyContinue
+Remove-Item -LiteralPath (Join-Path $env:TEMP 'beam-copytest') -Recurse -Force -ErrorAction SilentlyContinue
+Write-Host 'PASS copy (row copy put alpha.txt on the clipboard, Copy All put all 3 paths, Ctrl+V pasted them into Explorer)'
 
 Write-Host 'ALL CHECKS PASSED'
 exit 0

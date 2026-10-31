@@ -1,18 +1,31 @@
-import { bindArtFallback, bindPanelTabs, iconSprite, panel, pill, type PanelData } from './ui';
+import {
+  bindArtFallback,
+  bindFilesActions,
+  bindPanelTabs,
+  formatSize,
+  iconSprite,
+  panel,
+  pill,
+  type PanelData,
+  type Tab
+} from './ui';
 
 type ShelfResult = { count: number; accepted: number; truncated: boolean; limit: number };
+type ShelfFile = { path: string; name: string; sizeBytes: number; kind: 'file' | 'folder'; missing: boolean };
+type CopyResult = { ok: boolean; count: number; error?: string };
 
 type BeamApi = {
   dragTestEnabled(): Promise<boolean>;
   startDragTest(): void;
   getPathForFile(file: File): string;
   addFiles(paths: string[]): Promise<ShelfResult>;
+  copyFiles(paths: string[], source: 'row' | 'all'): Promise<CopyResult>;
   openPanel(): void;
   panelCollapsed(): void;
   beginWindowDrag(x: number, y: number): void;
   moveWindowDrag(x: number, y: number): void;
   endWindowDrag(x: number, y: number): void;
-  onPanelOpen(callback: () => void): void;
+  onPanelOpen(callback: (files: ShelfFile[]) => void): void;
   onPanelDismiss(callback: () => void): void;
   reportPanelTiming(ms: number, reduced: boolean): void;
 };
@@ -68,15 +81,21 @@ const panelData: PanelData = {
 };
 
 let panelEl: HTMLElement | null = null;
+let wrapEl: HTMLElement | null = null;
 
-function mountPanel(): void {
-  if (panelEl || !app) return;
-  const wrap = document.createElement('div');
-  wrap.className = 'panel-wrap';
-  wrap.innerHTML = panel('music', panelData);
-  app.appendChild(wrap);
-  bindPanelTabs(wrap);
-  panelEl = document.querySelector<HTMLElement>('.panel-wrap .panel');
+function renderPanel(): void {
+  if (!app) return;
+  if (!wrapEl) {
+    wrapEl = document.createElement('div');
+    wrapEl.className = 'panel-wrap';
+    app.appendChild(wrapEl);
+    bindPanelTabs(wrapEl);
+    if (beam) bindFilesActions(wrapEl, (paths, source) => beam.copyFiles(paths, source));
+  }
+  const selected = wrapEl.querySelector<HTMLElement>('[role="tab"][aria-selected="true"]');
+  const active = (selected?.id.replace('tab-', '') ?? 'music') as Tab;
+  wrapEl.innerHTML = panel(active, panelData);
+  panelEl = wrapEl.querySelector<HTMLElement>('.panel');
 }
 
 function dismissPanel(): void {
@@ -201,8 +220,15 @@ if (app && beam) {
     pillEl.addEventListener('pointercancel', endPress);
   }
 
-  beam.onPanelOpen(() => {
-    mountPanel();
+  beam.onPanelOpen((files) => {
+    panelData.files = files.map((file) => ({
+      path: file.path,
+      name: file.name,
+      size: formatSize(file.sizeBytes),
+      kind: file.kind,
+      missing: file.missing
+    }));
+    renderPanel();
     if (!panelEl) return;
     const el = panelEl;
     void el.offsetWidth;

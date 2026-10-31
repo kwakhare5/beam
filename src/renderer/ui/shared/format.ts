@@ -24,3 +24,14 @@ export function middleTruncate(str: string, maxLength: number): string {
   const back = Math.floor((maxLength - 1) / 2);
   return str.slice(0, front) + '…' + str.slice(-back);
 }
+
+export function formatSize(bytes: number): string {
+  if (!Number.isFinite(bytes) || bytes < 0) return '';
+  if (bytes < 1024) return `${Math.round(bytes)} B`;
+  const kb = bytes / 1024;
+  if (kb < 1024) return `${Math.round(kb)} KB`;
+  const mb = kb / 1024;
+  if (mb < 1024) return `${mb < 10 ? Math.round(mb * 10) / 10 : Math.round(mb)} MB`;
+  const gb = mb / 1024;
+  return `${gb < 10 ? Math.round(gb * 10) / 10 : Math.round(gb)} GB`;
+}
