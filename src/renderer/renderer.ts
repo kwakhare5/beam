@@ -5,6 +5,9 @@ type BeamApi = {
   startDragTest(): void;
   openPanel(): void;
   panelCollapsed(): void;
+  beginWindowDrag(x: number, y: number): void;
+  moveWindowDrag(x: number, y: number): void;
+  endWindowDrag(x: number, y: number): void;
   onPanelOpen(callback: () => void): void;
   onPanelDismiss(callback: () => void): void;
   reportPanelTiming(ms: number, reduced: boolean): void;
@@ -57,6 +60,8 @@ function dismissPanel(): void {
 }
 
 if (app && beam) {
+  let suppressClick = false;
+
   void beam.dragTestEnabled().then((enabled) => {
     if (!enabled) return;
 
@@ -68,10 +73,53 @@ if (app && beam) {
   });
 
   app.addEventListener('click', (event) => {
+    if (suppressClick) {
+      suppressClick = false;
+      return;
+    }
     if (!document.body.classList.contains('is-open') && !(event.target as Element).closest('button')) {
       beam.openPanel();
     }
   });
+
+  const pillEl = app.querySelector<HTMLElement>('.pill');
+  if (pillEl) {
+    pillEl.draggable = false;
+    pillEl.querySelectorAll('img').forEach((image) => {
+      image.draggable = false;
+    });
+    let press: { id: number; x: number; y: number; dragging: boolean } | null = null;
+
+    pillEl.addEventListener('pointerdown', (event) => {
+      if (event.button !== 0 || document.body.classList.contains('is-open')) return;
+      if ((event.target as Element).closest('button')) return;
+      suppressClick = false;
+      press = { id: event.pointerId, x: event.screenX, y: event.screenY, dragging: false };
+      pillEl.setPointerCapture(event.pointerId);
+    });
+
+    pillEl.addEventListener('pointermove', (event) => {
+      if (!press || event.pointerId !== press.id) return;
+      if (!press.dragging) {
+        if (Math.hypot(event.screenX - press.x, event.screenY - press.y) < 4) return;
+        press.dragging = true;
+        beam.beginWindowDrag(event.screenX, event.screenY);
+        return;
+      }
+      beam.moveWindowDrag(event.screenX, event.screenY);
+    });
+
+    const endPress = (event: PointerEvent): void => {
+      if (!press || event.pointerId !== press.id) return;
+      if (press.dragging) {
+        beam.endWindowDrag(event.screenX, event.screenY);
+        suppressClick = true;
+      }
+      press = null;
+    };
+    pillEl.addEventListener('pointerup', endPress);
+    pillEl.addEventListener('pointercancel', endPress);
+  }
 
   beam.onPanelOpen(() => {
     mountPanel();
