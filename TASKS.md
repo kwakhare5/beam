@@ -33,9 +33,9 @@
 
 ## B. Fullscreen seam
 
-- [ ] **0.5 Fullscreen detection** — *Depends on: 0.3.*
+- [x] **0.5 Fullscreen detection** — *Depends on: 0.3.*
   - WinEventHook on foreground change plus `EVENT_OBJECT_LOCATIONCHANGE` on the foreground window, rect compared to monitor bounds, with a 1s fallback poll.
-  - _Verify:_ entering a fullscreen video logs `active: true`, leaving logs `false`; a video made fullscreen inside an already-focused window also flips it, with no foreground change.
+  - _Verify (proved 2026-10-31): a real borderless window grown from 600×400 to the 1920×1080 monitor bounds emits `fullscreen.changed {active:true}` in under a second, and shrinking emits `active:false`; the same foreground handle (1966838) held at every stage, so the flip came from the location change, not a focus switch. A maximized console at 1920×1020 stays false (maximized windows are excluded), and `fullscreen.get` replies `{"id":2,"active":false,"rect":...}`. Verify check 14 runs this. A video player was not used — the detector only sees window geometry, and this harness window exercises the same rect-vs-monitor path._
 - [ ] **1.9 Hide on fullscreen** — *Depends on: 0.5, 1.6.*
   - `fullscreen.changed` hides the window; hotkey or tray brings it back.
   - _Verify:_ fullscreen video hides it, tray restores it.

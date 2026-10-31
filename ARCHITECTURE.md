@@ -31,9 +31,9 @@ No network. No database. No server. Four parts, three seams.
 
 Implemented: Electron shell with single-instance lock, the 136×42 window anchored above the taskbar with the 94×30 idle capsule, tray, panel open/collapse at 452×316 with a ~150ms transform, pointer-captured window drag with a saved position (`settings.ts`), the idle star dim asserted from computed style, split UI modules/styles, the canonical preview, thirteen `verify.ps1` checks (including a real-mouse drag → restart → reset run), and `measure.ps1`.
 
-Built in the helper: stdio client, SMTC read with PNG artwork, CF_HDROP clipboard, ping.
+Built in the helper: stdio client, SMTC read with PNG artwork, CF_HDROP clipboard, fullscreen detection, ping.
 
-Still target: `window.ts` (geometry refactor), `hotkey.ts`, `src/shared/`, fullscreen detection, the timer owner, the shelf, the chime, and every tab's live wiring. Present-tense sections below describe that target until those tasks land.
+Still target: `window.ts` (geometry refactor), `hotkey.ts`, `src/shared/`, the timer owner, the shelf, the chime, and every tab's live wiring. Present-tense sections below describe that target until those tasks land.
 
 ---
 
@@ -147,7 +147,7 @@ Rules: helper never prints anything else to stdout (stderr is for logs). Any mal
 
 **Clipboard:** Windows keeps `CF_HDROP` alive only while the owning process lives. The helper owns the clipboard, so a helper crash breaks paste until it restarts. Accepted; covered by a restart test in task 8.1. Built at 0.4b: `DROPFILES` + double-null UTF-16 paths in moveable global memory, five clipboard-open retries; data is rendered immediately, so it survives the helper exiting.
 
-**Fullscreen:** detection listens to foreground changes, `EVENT_OBJECT_LOCATIONCHANGE` on the foreground window, and a 1s fallback poll. Foreground events alone miss a video that goes fullscreen inside an already-focused window.
+**Fullscreen:** detection listens to foreground changes, `EVENT_OBJECT_LOCATIONCHANGE` on the foreground window, and a 1s fallback poll. Foreground events alone miss a video that goes fullscreen inside an already-focused window. Built at 0.5 in `native/BeamBridge/FullscreenWatcher.cs` on its own message-loop thread: both hooks are out-of-context, the foreground window's DWM frame bounds are compared to its monitor with a 2px tolerance, and maximized, cloaked, shell, and own-process windows are ignored so a maximized window never counts. It emits `fullscreen.changed { active }` on a flip only, and answers `fullscreen.get` from a live probe. Proved 2026-10-31 with a real borderless window grown from 600×400 to 1920×1080 and back: `active:true` then `false` with the same foreground handle throughout (verify check 14).
 
 ---
 
@@ -285,9 +285,9 @@ UI decisions: ADR-0001 (component boundaries), ADR-0002 (original mascot), ADR-0
 
 ## 8. Status
 
-Phase 0: 0.1 built, 0.2 measured and passed, 0.3 built (ping/pong), 0.4a built (live SMTC events, PNG art), 0.4b built (CF_HDROP clipboard). 0.4c replaced by 3.4. 1.1 built (`placeWindow` anchors above the taskbar), 1.2 built (verify guards the foreground), 1.6 built (tray), 1.3 built (panel open/collapse; timing measured from `transitionrun`), 1.4 built (drag + `settings.ts`; verify drags with a real mouse, restarts, and resets), 1.5 built (idle star 0.7 asserted from computed style). Next: 0.5, then 1.9, then block C.
+Phase 0: 0.1 built, 0.2 measured and passed, 0.3 built (ping/pong), 0.4a built (live SMTC events, PNG art), 0.4b built (CF_HDROP clipboard), 0.5 built (fullscreen detection; verify drives a real borderless window). 0.4c replaced by 3.4. 1.1 built (`placeWindow` anchors above the taskbar), 1.2 built (verify guards the foreground), 1.6 built (tray), 1.3 built (panel open/collapse; timing measured from `transitionrun`), 1.4 built (drag + `settings.ts`; verify drags with a real mouse, restarts, and resets), 1.5 built (idle star 0.7 asserted from computed style). Next: 1.9, then block C.
 
-Open: the transparent rest margins still swallow clicks (no task owns it); multi-monitor restore and 100/150% scaling are unproven; the helper restart policy, hotkey, fullscreen, shelf, timer, and live tabs are unbuilt.
+Open: the transparent rest margins still swallow clicks (no task owns it); multi-monitor restore and 100/150% scaling are unproven; the helper restart policy, hotkey, shelf, timer, and live tabs are unbuilt, and nothing yet consumes `fullscreen.changed` (1.9).
 
 ---
 
