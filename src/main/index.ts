@@ -1,5 +1,5 @@
 import { app, BrowserWindow, ipcMain, nativeImage, screen } from 'electron';
-import { mkdirSync, statSync, writeFileSync } from 'node:fs';
+import { existsSync, mkdirSync, statSync, unlinkSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { basename, join } from 'node:path';
 import { Bridge, type HelperEvent } from './bridge';
@@ -155,10 +155,10 @@ if (!gotLock) {
   const panelTest = process.env.BEAM_PANEL_TEST === '1';
   const resetTest = process.env.BEAM_RESET_TEST === '1';
   const idleTest = process.env.BEAM_IDLE_TEST === '1';
-  const dragTest = process.env.BEAM_DRAG_TEST === '1';
   const fullscreenTest = process.env.BEAM_FULLSCREEN_TEST === '1';
   const dropTest = process.env.BEAM_DROP_TEST === '1';
   const copyTest = process.env.BEAM_COPY_TEST === '1';
+  const dragoutTest = process.env.BEAM_DRAGOUT_TEST === '1';
   let onFullscreen: (active: boolean) => void = () => {};
   const onHelperEvent = (event: HelperEvent): void => {
     if (event.evt === 'fullscreen.changed') {
@@ -281,18 +281,6 @@ if (!gotLock) {
       .ping()
       .then((version) => console.log(`[bridge] pong ${version}`))
       .catch((error: unknown) => console.error('[bridge] ping failed', error));
-
-    ipcMain.handle('beam:drag-test:enabled', () => dragTest);
-    if (dragTest) {
-      ipcMain.on('beam:drag-test', (event) => {
-        const dir = join(tmpdir(), 'beam-dragtest');
-        mkdirSync(dir, { recursive: true });
-        const paths = ['one.txt', 'two.txt', 'three.txt'].map((name) => join(dir, name));
-        for (const path of paths) writeFileSync(path, 'beam\n');
-        console.log(`[drag] start ${paths.length} files`);
-        event.sender.startDrag({ file: paths[0], files: paths, icon: nativeImage.createEmpty() });
-      });
-    }
 
     createWindow(restoredBounds !== null);
     if (win) {
@@ -464,6 +452,36 @@ if (!gotLock) {
         }
       });
 
+      ipcMain.on('beam:files:drag', (event, paths: unknown) => {
+        if (event.sender !== window.webContents) return;
+        const requested = Array.isArray(paths)
+          ? paths.filter((path): path is string => typeof path === 'string' && path.length > 0)
+          : [];
+        const held = new Map(shelf.map((path) => [path.toLowerCase(), path]));
+        const canonical = requested.map((path) => held.get(path.toLowerCase()));
+        const dragPaths = canonical.filter((path): path is string => path !== undefined);
+        if (!requested.length || dragPaths.length !== requested.length) {
+          console.error(`[files] drag rejected requested=${requested.length} inShelf=${dragPaths.length}`);
+          return;
+        }
+        const missing = dragPaths.filter((path) => {
+          try {
+            statSync(path);
+            return false;
+          } catch {
+            return true;
+          }
+        });
+        const first = dragPaths[0];
+        if (!first || missing.length) {
+          console.error(`[files] drag rejected missing=${missing.length}`);
+          return;
+        }
+        const icon = nativeImage.createFromPath(join(app.getAppPath(), 'assets', 'tray.ico'));
+        console.log(`[files] drag=${dragPaths.length} ok=true`);
+        event.sender.startDrag({ file: first, files: dragPaths, icon });
+      });
+
       ipcMain.on('beam:panel:request-open', openPanel);
       ipcMain.on('beam:panel:collapsed', () => {
         if (window.isDestroyed()) return;
@@ -498,6 +516,13 @@ if (!gotLock) {
       if (copyTest) {
         setTimeout(() => {
           void runCopyTest(window, openPanel).catch((error: unknown) => console.error('[copy] failed', error));
+        }, 1200);
+      }
+      if (dragoutTest) {
+        setTimeout(() => {
+          void runDragoutTest(window, openPanel, closePanel).catch((error: unknown) =>
+            console.error('[dragout] failed', error)
+          );
         }, 1200);
       }
     }
@@ -609,6 +634,95 @@ if (!gotLock) {
       await target.webContents.executeJavaScript(`document.querySelector('#panel-files [data-copy-all]')?.click()`);
       await new Promise((resolve) => setTimeout(resolve, 600));
       console.log('[copy] done');
+    }
+
+    async function runDragoutTest(
+      target: BrowserWindow,
+      openPanel: () => void,
+      closePanel: () => void
+    ): Promise<void> {
+      const dir = join(tmpdir(), 'beam-dragout');
+      mkdirSync(dir, { recursive: true });
+      const paths = ['alpha.txt', 'beta.txt', 'gamma.txt'].map((name) => join(dir, name));
+      paths.forEach((path, index) => writeFileSync(path, `beam ${index}\n`));
+
+      const point = (await target.webContents.executeJavaScript(
+        `(() => { const pill = document.querySelector('.pill'); if (!pill) return null; const rect = pill.getBoundingClientRect(); return { x: Math.round(rect.x + rect.width / 2), y: Math.round(rect.y + rect.height / 2) }; })()`
+      )) as { x: number; y: number } | null;
+      if (!point) {
+        console.error('[dragout] pill missing');
+        return;
+      }
+
+      target.webContents.debugger.attach('1.3');
+      try {
+        const data = { items: [], files: paths, dragOperationsMask: 1 };
+        for (const type of ['dragEnter', 'dragOver', 'drop']) {
+          await target.webContents.debugger.sendCommand('Input.dispatchDragEvent', {
+            type,
+            x: point.x,
+            y: point.y,
+            data
+          });
+        }
+      } finally {
+        target.webContents.debugger.detach();
+      }
+      await new Promise((resolve) => setTimeout(resolve, 500));
+
+      openPanel();
+      await new Promise((resolve) => setTimeout(resolve, 500));
+      await target.webContents.executeJavaScript(`document.querySelector('#tab-files')?.click()`);
+      await new Promise((resolve) => setTimeout(resolve, 300));
+      const row = (await target.webContents.executeJavaScript(
+        `(() => {
+          const row = document.querySelector('#panel-files [data-drag-path]');
+          if (!row) return null;
+          const rect = row.getBoundingClientRect();
+          return { name: row.querySelector('.name')?.getAttribute('title') ?? '', x: rect.x + rect.width / 2, y: rect.y + rect.height / 2 };
+        })()`
+      )) as { name: string; x: number; y: number } | null;
+      if (!row) {
+        console.error('[dragout] row missing');
+        return;
+      }
+      const content = target.getContentBounds();
+      const scale = screen.getDisplayMatching(content).scaleFactor;
+      console.log(
+        `[dragout] row=${row.name} x=${Math.round(content.x + row.x)} y=${Math.round(content.y + row.y)} scale=${scale}`
+      );
+
+      const marker = join(tmpdir(), 'beam-dragout-continue');
+      for (let index = 0; index < 150; index++) {
+        if (existsSync(marker)) break;
+        await new Promise((resolve) => setTimeout(resolve, 200));
+      }
+
+      unlinkSync(paths[1]);
+      closePanel();
+      await new Promise((resolve) => setTimeout(resolve, 500));
+      openPanel();
+      await new Promise((resolve) => setTimeout(resolve, 500));
+      await target.webContents.executeJavaScript(`document.querySelector('#tab-files')?.click()`);
+      await new Promise((resolve) => setTimeout(resolve, 300));
+      const guard = (await target.webContents.executeJavaScript(
+        `(() => {
+          const rows = [...document.querySelectorAll('#panel-files .row')];
+          const names = (list) => list.map((row) => row.querySelector('.name')?.getAttribute('title')).join(',');
+          const missing = rows.filter((row) => row.classList.contains('missing'));
+          return {
+            draggable: names(rows.filter((row) => row.hasAttribute('data-drag-path'))),
+            missing: names(missing),
+            missingDraggable: missing.some((row) => row.hasAttribute('data-drag-path'))
+          };
+        })()`
+      )) as { draggable: string; missing: string; missingDraggable: boolean };
+      console.log(
+        `[dragout] guard draggable=${guard.draggable} missing=${guard.missing} missingDraggable=${guard.missingDraggable}`
+      );
+      await target.webContents.executeJavaScript(`window.beam.startFileDrag(['C:\\\\Windows\\\\not-on-the-shelf.txt'])`);
+      await new Promise((resolve) => setTimeout(resolve, 300));
+      console.log('[dragout] done');
     }
   });
 

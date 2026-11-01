@@ -29,7 +29,7 @@ No network. No database. No server. Four parts, three seams.
 
 ### Current vs target (2026-10-29)
 
-Implemented: Electron shell with single-instance lock, the 136×42 window anchored above the taskbar with the 94×30 idle capsule, tray, panel open/collapse at 452×316 with a ~150ms transform, pointer-captured window drag with a saved position (`settings.ts`), the idle star dim asserted from computed style, hide-on-fullscreen with tray restore, a file drop shelf (paths only, deduped, 50 cap, pill count), split UI modules/styles, the canonical preview, sixteen `verify.ps1` checks (including a real-mouse drag → restart → reset run and a real borderless fullscreen window), and `measure.ps1`.
+Implemented: Electron shell with single-instance lock, the 136×42 window anchored above the taskbar with the 94×30 idle capsule, tray, panel open/collapse at 452×316 with a ~150ms transform, pointer-captured window drag with a saved position (`settings.ts`), the idle star dim asserted from computed style, hide-on-fullscreen with tray restore, a file drop shelf (paths only, deduped, 50 cap, pill count), live Files rows with copy and drag-out, split UI modules/styles, the canonical preview, eighteen `verify.ps1` checks (including a real-mouse window drag → restart → reset, a real copy paste and a real row drag-out into Explorer, and a real borderless fullscreen window), and `measure.ps1`.
 
 Built in the helper: stdio client, SMTC read with PNG artwork, CF_HDROP clipboard, fullscreen detection, ping.
 
@@ -142,7 +142,7 @@ Events (helper → main), unsolicited, no `id`:
 
 Rules: helper never prints anything else to stdout (stderr is for logs). Any malformed line is dropped and logged. Main restarts the helper on exit, max 3 times in 60s, then shows a tray warning (not built yet). The helper exits on stdin EOF, so a killed main cannot orphan it; on quit, main closes stdin and waits up to 1.5s for that exit before killing, so the art folder is wiped.
 
-**Drag-out never goes through the helper.** 0.4c tried `DoDragDrop` on a dedicated STA thread: Windows kept the mouse capture with Chromium's window, so the drag loop spun at 100% CPU and never dropped. The code was deleted 2026-10-29. The renderer starts the drag from its own `dragstart` gesture and main calls `webContents.startDrag({ file, files, icon })`, which uses Chromium's native drag source and accepts multiple paths.
+**Drag-out never goes through the helper.** 0.4c tried `DoDragDrop` on a dedicated STA thread: Windows kept the mouse capture with Chromium's window, so the drag loop spun at 100% CPU and never dropped. The code was deleted 2026-10-29. The renderer starts the drag from its own `dragstart` gesture and main calls `webContents.startDrag({ file, files, icon })`, which uses Chromium's native drag source and accepts multiple paths. Built 2026-10-31 for Files rows only: a row is draggable when its path is on the shelf and still exists; `beam:files:drag` re-checks both in main and ignores anything else. The capsule keeps moving the window (DESIGN Pointer Drag) — one pointer gesture cannot do both. The old `BEAM_DRAG_TEST` hook was removed.
 
 **Artwork:** the helper saves the current thumbnail to `%TEMP%\Beam\art\<hash>.png`, overwrites it per track, and wipes the folder on start and quit. This is the one allowed disk write; the file shelf stays paths-only in memory.
 
@@ -164,11 +164,10 @@ All channels prefixed `beam:`. Renderer can call, main can push. Built channels 
 | renderer → main | `beam:window:drag-start` / `drag-move` / `drag-end` | pointer-captured window drag; main moves the window with `setBounds`, clamps it to the display work area, and saves the position | built |
 | main → renderer | `beam:panel:open` | start the open animation, carrying the shelf rows stat'd from disk | built |
 | main → renderer | `beam:panel:dismiss` | close on blur or tray toggle | built |
-| renderer → main | `beam:drag-test` / `beam:drag-test:enabled` | drag-gesture test hook (`BEAM_DRAG_TEST=1`) | built |
 | renderer → main | `beam:music:command` | toggle / next / prev | planned |
 | renderer → main | `beam:files:add` | paths from a drop; main dedupes, caps at 50, replies `{ count, accepted, truncated, limit }` | built |
 | renderer → main | `beam:files:copy` | copy one or all; payload `{ paths, source }`, main accepts only paths already on the shelf and calls `files.copy` | built |
-| renderer → main | `beam:files:drag` | start drag-out | planned |
+| renderer → main | `beam:files:drag` | start drag-out; payload `string[]`, main accepts only existing shelf paths and calls `startDrag` | built |
 | renderer → main | `beam:timer:start/stop` | presets or custom | planned |
 | renderer → main | `beam:settings:get/set` | settings screen | planned |
 | main → renderer | `beam:music:state` | pushed on `music.changed` | planned |
@@ -288,14 +287,16 @@ helper's WinEventHook sees a foreground change or the foreground window resize/m
 | 2026-10-28 | Type scale 11/12/13/15/40 and spacing 4/8/12/16 | Five label sizes and three body rhythms made the panel look assembled from different screens |
 | 2026-10-31 | Window drag is renderer pointer capture plus main `setBounds` with the window size pinned | `setPosition` let Windows re-round the transparent window's height on every pointer move (42 grew to 141 in the first test); the renderer's 4px threshold keeps a plain click opening the panel |
 | 2026-10-31 | The saved position is the outer top-left plus `displayId`, restored only when that rect still intersects a current display | A monitor that was unplugged must not leave the pill offscreen; the primary taskbar anchor is the fallback, and Reset Position clears the value |
+| 2026-10-31 | Drag-out starts from Files rows only; the capsule keeps its window-move gesture | The capsule's pointer drag was locked to moving the window (ADR-0005), and one gesture cannot also hand files to Explorer; rows give drag-out a clear surface |
+| 2026-10-31 | Pointer-down is ignored for 200ms after a panel starts closing | In the 160ms before the window shrinks, the capsule sits centered in the panel-sized window, so a click there could drag the window instead of landing on the panel |
 
 UI decisions: ADR-0001 (component boundaries), ADR-0002 (original mascot), ADR-0003 (window, capsule, and panel sizes), ADR-0004 (vanilla shadcn-style), ADR-0005 (capsule interaction), ADR-0006 (landscape panel), ADR-0007 (capsule-to-panel interaction), ADR-0008 (content dynamics), ADR-0009 (state identity, panel completeness, and scale), ADR-0010 (capsule artwork, dot language, and panel clarity).
 
 ## 8. Status
 
-Phase 0: 0.1 built, 0.2 measured and passed, 0.3 built (ping/pong), 0.4a built (live SMTC events, PNG art), 0.4b built (CF_HDROP clipboard), 0.5 built (fullscreen detection; verify drives a real borderless window). 0.4c replaced by 3.4. 1.1 built (`placeWindow` anchors above the taskbar), 1.2 built (verify guards the foreground), 1.6 built (tray), 1.3 built (panel open/collapse; timing measured from `transitionrun`), 1.4 built (drag + `settings.ts`; verify drags with a real mouse, restarts, and resets), 1.5 built (idle star 0.7 asserted from computed style), 1.9 built (hide on fullscreen, tray restores; verify check 15), 3.1 built (drop shelf, paths in main memory, 50 cap, pill count; verify check 16), 3.3 built (live Files rows on open, row copy and Copy All with `Copied` feedback, Explorer paste; verify check 17). Next: 3.4, then 3.2 and 3.5.
+Phase 0: 0.1 built, 0.2 measured and passed, 0.3 built (ping/pong), 0.4a built (live SMTC events, PNG art), 0.4b built (CF_HDROP clipboard), 0.5 built (fullscreen detection; verify drives a real borderless window). 0.4c replaced by 3.4. 1.1 built (`placeWindow` anchors above the taskbar), 1.2 built (verify guards the foreground), 1.6 built (tray), 1.3 built (panel open/collapse; timing measured from `transitionrun`), 1.4 built (drag + `settings.ts`; verify drags with a real mouse, restarts, and resets), 1.5 built (idle star 0.7 asserted from computed style), 1.9 built (hide on fullscreen, tray restores; verify check 15), 3.1 built (drop shelf, paths in main memory, 50 cap, pill count; verify check 16), 3.3 built (live Files rows on open, row copy and Copy All with `Copied` feedback, Explorer paste; verify check 17), 3.4 built (Files rows drag out through `startDrag`; missing and off-shelf paths rejected; verify drags a real file into Explorer). Next: 3.2, then 3.5.
 
-Open: the transparent rest margins still swallow clicks (no task owns it); multi-monitor restore and 100/150% scaling are unproven; the helper restart policy, hotkey, timer, and the four placeholder tabs are unbuilt; row remove is drawn but inert until 3.5.
+Open: the transparent rest margins still swallow clicks (no task owns it); multi-monitor restore and 100/150% scaling are unproven; the helper restart policy, hotkey, timer, and the four placeholder tabs are unbuilt; row remove is drawn but inert until 3.5. verify now writes its settings to `BEAM_SETTINGS_PATH` and never touches the user's saved position.
 
 ---
 

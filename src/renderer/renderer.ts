@@ -1,5 +1,6 @@
 import {
   bindArtFallback,
+  bindFileDrag,
   bindFilesActions,
   bindPanelTabs,
   formatSize,
@@ -15,11 +16,10 @@ type ShelfFile = { path: string; name: string; sizeBytes: number; kind: 'file' |
 type CopyResult = { ok: boolean; count: number; error?: string };
 
 type BeamApi = {
-  dragTestEnabled(): Promise<boolean>;
-  startDragTest(): void;
   getPathForFile(file: File): string;
   addFiles(paths: string[]): Promise<ShelfResult>;
   copyFiles(paths: string[], source: 'row' | 'all'): Promise<CopyResult>;
+  startFileDrag(paths: string[]): void;
   openPanel(): void;
   panelCollapsed(): void;
   beginWindowDrag(x: number, y: number): void;
@@ -90,7 +90,10 @@ function renderPanel(): void {
     wrapEl.className = 'panel-wrap';
     app.appendChild(wrapEl);
     bindPanelTabs(wrapEl);
-    if (beam) bindFilesActions(wrapEl, (paths, source) => beam.copyFiles(paths, source));
+    if (beam) {
+      bindFilesActions(wrapEl, (paths, source) => beam.copyFiles(paths, source));
+      bindFileDrag(wrapEl, (paths) => beam.startFileDrag(paths));
+    }
   }
   const selected = wrapEl.querySelector<HTMLElement>('[role="tab"][aria-selected="true"]');
   const active = (selected?.id.replace('tab-', '') ?? 'music') as Tab;
@@ -98,24 +101,22 @@ function renderPanel(): void {
   panelEl = wrapEl.querySelector<HTMLElement>('.panel');
 }
 
+let closingTimer: number | undefined;
+
 function dismissPanel(): void {
   if (!document.body.classList.contains('is-open')) return;
   document.body.classList.remove('is-open');
+  document.body.classList.add('is-closing');
+  if (closingTimer !== undefined) window.clearTimeout(closingTimer);
+  closingTimer = window.setTimeout(() => {
+    closingTimer = undefined;
+    document.body.classList.remove('is-closing');
+  }, 200);
   setTimeout(() => beam?.panelCollapsed(), 160);
 }
 
 if (app && beam) {
   let suppressClick = false;
-
-  void beam.dragTestEnabled().then((enabled) => {
-    if (!enabled) return;
-
-    app.draggable = true;
-    app.addEventListener('dragstart', (event) => {
-      event.preventDefault();
-      beam.startDragTest();
-    });
-  });
 
   app.addEventListener('click', (event) => {
     if (suppressClick) {
@@ -190,7 +191,8 @@ if (app && beam) {
     let press: { id: number; x: number; y: number; dragging: boolean } | null = null;
 
     pillEl.addEventListener('pointerdown', (event) => {
-      if (event.button !== 0 || document.body.classList.contains('is-open')) return;
+      if (event.button !== 0) return;
+      if (document.body.classList.contains('is-open') || document.body.classList.contains('is-closing')) return;
       if ((event.target as Element).closest('button')) return;
       suppressClick = false;
       press = { id: event.pointerId, x: event.screenX, y: event.screenY, dragging: false };

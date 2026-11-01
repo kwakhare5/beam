@@ -34,7 +34,8 @@ export function filesPanel(rows: FileRow[], copied = false, active = true): stri
       const copy = row.missing
         ? ''
         : `<button type="button" class="row-action"${row.path ? ` data-copy-path="${esc(row.path)}"` : ''} aria-label="Copy ${esc(row.name)}">${icon('copy')}</button>`;
-      return `<div class="row${row.missing ? ' missing' : ''}" role="listitem"><div class="row-icon-box">${icon(rowIcon)}</div><span class="name" title="${esc(row.name)}">${esc(truncatedName)}</span>${meta}<div class="row-actions">${copy}<button type="button" class="row-action" aria-label="Remove ${esc(row.name)}">${icon('x')}</button></div></div>`;
+      const drag = row.path && !row.missing ? ` draggable="true" data-drag-path="${esc(row.path)}"` : '';
+      return `<div class="row${row.missing ? ' missing' : ''}" role="listitem"${drag}><div class="row-icon-box">${icon(rowIcon)}</div><span class="name" title="${esc(row.name)}">${esc(truncatedName)}</span>${meta}<div class="row-actions">${copy}<button type="button" class="row-action" aria-label="Remove ${esc(row.name)}">${icon('x')}</button></div></div>`;
     })
     .join('');
 
@@ -79,6 +80,19 @@ export function bindClearAll(root: Document | Element): void {
     for (const button of clearButtons()) {
       if (button.dataset.armed === 'true') reset(button);
     }
+  });
+}
+
+export function bindFileDrag(root: Document | Element, startDrag: (paths: string[]) => void): void {
+  root.addEventListener('dragstart', (event) => {
+    const target = event.target;
+    if (!(target instanceof Element)) return;
+    const row = target.closest<HTMLElement>('[data-drag-path]');
+    if (!row) return;
+    const path = row.dataset.dragPath;
+    if (!path) return;
+    event.preventDefault();
+    startDrag([path]);
   });
 }
 

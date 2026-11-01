@@ -484,13 +484,14 @@
 </div>
 
 <script type="module">
-  import { bindArtFallback, bindClearAll, bindFilesActions, bindPanelTabs, iconSprite, panel, pill } from '../src/renderer/ui/index.ts';
+  import { bindArtFallback, bindClearAll, bindFileDrag, bindFilesActions, bindPanelTabs, iconSprite, panel, pill } from '../src/renderer/ui/index.ts';
 
   document.body.insertAdjacentHTML('afterbegin', iconSprite());
   bindPanelTabs(document);
   bindArtFallback(document);
   bindClearAll(document);
   bindFilesActions(document, async (paths) => ({ ok: true, count: paths.length }));
+  bindFileDrag(document, () => {});
 
   const track = {
     title: 'Midnight City',
