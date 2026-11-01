@@ -1,5 +1,6 @@
 import { app, BrowserWindow, ipcMain, nativeImage, screen } from 'electron';
 import { existsSync, mkdirSync, statSync, unlinkSync, writeFileSync } from 'node:fs';
+import { readFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { basename, join } from 'node:path';
 import { Bridge, type HelperEvent } from './bridge';
@@ -100,6 +101,8 @@ type MusicPayload = {
   durationMs: number;
 };
 
+type MusicView = { title: string; artist: string; playing: boolean; art: string | null };
+
 type ShelfRow = {
   path: string;
   name: string;
@@ -162,6 +165,65 @@ if (!gotLock) {
   const missingTest = process.env.BEAM_MISSING_TEST === '1';
   const clearTest = process.env.BEAM_CLEAR_TEST === '1';
   const emptyTest = process.env.BEAM_EMPTY_TEST === '1';
+  const musicTest = process.env.BEAM_MUSIC_TEST === '1';
+  let musicView: MusicView | null = null;
+  let musicRequest = 0;
+
+  function probeMusic(started: number, attempt = 0): void {
+    if (!win || win.isDestroyed()) return;
+    void win.webContents
+      .executeJavaScript(
+        `new Promise((resolve) => requestAnimationFrame(() => requestAnimationFrame(() => {
+          const pill = document.querySelector('.pill');
+          const title = pill?.querySelector('.title');
+          const mark = pill?.querySelector('.mascot');
+          const pip = pill?.querySelector('.media-pip');
+          resolve({
+            state: pill?.dataset.state ?? null,
+            label: title?.textContent ?? null,
+            art: (mark?.getAttribute('src') ?? '').startsWith('data:image/png'),
+            pip: pip ? (pip.classList.contains('paused') ? 'paused' : pip.classList.contains('danger') ? 'danger' : 'playing') : null
+          });
+        })))`
+      )
+      .then((probe: unknown) => {
+        console.log(`[music] probe ${JSON.stringify({ ...(probe as object), ms: Date.now() - started })}`);
+      })
+      .catch(() => {
+        if (attempt < 20) setTimeout(() => probeMusic(started, attempt + 1), 100);
+      });
+  }
+
+  function sendMusic(): void {
+    if (!win || win.isDestroyed()) return;
+    win.webContents.send('beam:music:state', musicView);
+    if (musicTest && musicView) probeMusic(Date.now());
+  }
+
+  async function applyMusic(payload: MusicPayload | null): Promise<void> {
+    const request = ++musicRequest;
+    if (!payload || (!payload.title && !payload.artist)) {
+      musicView = null;
+      if (musicTest) console.log('[music] input null');
+      sendMusic();
+      return;
+    }
+    let art: string | null = null;
+    if (payload.artPath) {
+      try {
+        art = `data:image/png;base64,${(await readFile(payload.artPath)).toString('base64')}`;
+      } catch (error) {
+        console.error('[music] art read failed', error);
+      }
+    }
+    if (request !== musicRequest) return;
+    musicView = { title: payload.title, artist: payload.artist, playing: payload.playing, art };
+    if (musicTest) {
+      console.log(`[music] input ${JSON.stringify({ title: payload.title, playing: payload.playing, hasArt: Boolean(art) })}`);
+    }
+    sendMusic();
+  }
+
   let onFullscreen: (active: boolean) => void = () => {};
   const onHelperEvent = (event: HelperEvent): void => {
     if (event.evt === 'fullscreen.changed') {
@@ -174,10 +236,11 @@ if (!gotLock) {
     const music = event.payload as MusicPayload | null;
     if (!music) {
       console.log('[music] none');
-      return;
+    } else {
+      console.log(`[music] ${music.title} - ${music.artist} (${music.app})`);
+      console.log(`[music] art ${music.artPath ?? 'none'}`);
     }
-    console.log(`[music] ${music.title} - ${music.artist} (${music.app})`);
-    console.log(`[music] art ${music.artPath ?? 'none'}`);
+    void applyMusic(music);
   };
   const bridge = new Bridge(
     join(app.getAppPath(), 'native', 'BeamBridge', 'dist', 'BeamBridge.exe'),
@@ -262,6 +325,8 @@ if (!gotLock) {
     win.webContents.on('will-navigate', (event) => {
       event.preventDefault();
     });
+
+    win.webContents.on('did-finish-load', () => sendMusic());
 
     void win.loadFile(join(__dirname, '../renderer/index.html'));
   }

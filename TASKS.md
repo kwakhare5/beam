@@ -60,9 +60,9 @@
 
 ## D. Music
 
-- [ ] **2.1 Live state on the pill** — *Depends on: 0.4a.*
-  - Title, artist, artwork thumbnail. Empty state when nothing plays.
-  - _Verify:_ changing track in Spotify updates the pill within 1s.
+- [x] **2.1 Live state on the pill** — *Depends on: 0.4a.*
+  - Title and artwork thumbnail. Empty state when nothing plays. Artist stays panel-only: DESIGN's pill has one 46px title slot.
+  - _Verify (proved 2026-11-01): check 21 matches the live SMTC title, playing/paused state, dot, and art in 9–29ms; a real Spotify track change moved the pill in 15ms. While a track is active, verify prints SKIP for the idle, drop-count, and clear pill labels and asserts their data elsewhere._
 - [ ] **2.2 Hover controls** — *Depends on: 2.1.*
   - Play/Pause, Prev, Next fade in on hover. Fixed window size.
   - _Verify:_ all three buttons change Spotify's real playback state.

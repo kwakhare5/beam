@@ -11,11 +11,13 @@ import {
   type PanelData,
   type Tab
 } from './ui';
+import { MASCOTS } from './ui/shared/mascots';
 
 type ShelfResult = { count: number; accepted: number; truncated: boolean; limit: number };
 type ShelfFile = { path: string; name: string; sizeBytes: number; kind: 'file' | 'folder'; missing: boolean };
 type CopyResult = { ok: boolean; count: number; error?: string };
 type FileChange = { ok: boolean; files: ShelfFile[] };
+type MusicState = { title: string; artist: string; playing: boolean; art: string | null };
 
 type BeamApi = {
   getPathForFile(file: File): string;
@@ -31,6 +33,7 @@ type BeamApi = {
   endWindowDrag(x: number, y: number): void;
   onPanelOpen(callback: (files: ShelfFile[]) => void): void;
   onPanelDismiss(callback: () => void): void;
+  onMusicState(callback: (state: MusicState | null) => void): void;
   reportPanelTiming(ms: number, reduced: boolean): void;
 };
 
@@ -54,29 +57,49 @@ if (app) {
 
 const pillEl = app?.querySelector<HTMLElement>('.pill') ?? null;
 let shelfCount = 0;
+let shelfMissing = false;
+let music: MusicState | null = null;
+let override: { state: string; label: string } | null = null;
 let noticeTimer: number | undefined;
+let musicClearTimer: number | undefined;
 
 function fileLabel(count: number): string {
   return count === 1 ? '1 file' : `${count} files`;
 }
 
-function setPip(danger: boolean): void {
+function setPip(state: 'playing' | 'paused' | 'danger' | null): void {
   const wrap = pillEl?.querySelector('.mascot-wrap');
   if (!wrap) return;
-  const pip = wrap.querySelector<HTMLElement>('.media-pip');
-  if (danger && !pip) {
-    const dot = document.createElement('span');
-    dot.className = 'media-pip danger';
-    dot.setAttribute('aria-hidden', 'true');
-    wrap.appendChild(dot);
-  } else if (!danger && pip) {
-    pip.remove();
+  let pip = wrap.querySelector<HTMLElement>('.media-pip');
+  if (!state) {
+    pip?.remove();
+    return;
   }
+  if (!pip) {
+    pip = document.createElement('span');
+    pip.setAttribute('aria-hidden', 'true');
+    wrap.appendChild(pip);
+  }
+  pip.className = `media-pip ${state}`;
 }
 
-function setPill(state: string, label: string): void {
+function setMark(art: string | null): void {
+  const mark = pillEl?.querySelector<HTMLImageElement>('.mascot');
+  if (!mark) return;
+  mark.classList.toggle('pill-art', Boolean(art));
+  mark.classList.remove('art-fallback-img');
+  delete mark.dataset.fallback;
+  mark.src = art ?? MASCOTS.master;
+}
+
+function renderPill(): void {
   if (!pillEl) return;
+  const state = override?.state ?? (music ? (music.playing ? 'playing' : 'paused') : shelfCount > 0 ? 'files' : 'idle');
+  const label = override?.label ?? (music ? music.title : shelfCount > 0 ? fileLabel(shelfCount) : 'Beam');
   pillEl.dataset.state = state;
+  pillEl.classList.toggle('expands', Boolean(music));
+  setMark(music ? music.art : null);
+  setPip(shelfMissing ? 'danger' : music ? (music.playing ? 'playing' : 'paused') : null);
   const title = pillEl.querySelector<HTMLElement>('.title');
   if (title) {
     title.textContent = label;
@@ -84,8 +107,14 @@ function setPill(state: string, label: string): void {
   }
 }
 
+function setPill(state: string, label: string): void {
+  override = { state, label };
+  renderPill();
+}
+
 function showShelf(): void {
-  setPill(shelfCount > 0 ? 'files' : 'idle', shelfCount > 0 ? fileLabel(shelfCount) : 'Beam');
+  override = null;
+  renderPill();
 }
 
 const beam = window.beam;
@@ -110,7 +139,7 @@ function applyFiles(files: ShelfFile[]): void {
     missing: file.missing
   }));
   shelfCount = files.length;
-  setPip(files.some((file) => file.missing));
+  shelfMissing = files.some((file) => file.missing);
   showShelf();
   renderPanel();
 }
@@ -303,6 +332,25 @@ if (app && beam) {
   });
 
   beam.onPanelDismiss(dismissPanel);
+
+  beam.onMusicState((state) => {
+    if (state) {
+      if (musicClearTimer !== undefined) {
+        window.clearTimeout(musicClearTimer);
+        musicClearTimer = undefined;
+      }
+      music = state;
+      renderPill();
+      return;
+    }
+    if (!music) return;
+    if (musicClearTimer !== undefined) return;
+    musicClearTimer = window.setTimeout(() => {
+      musicClearTimer = undefined;
+      music = null;
+      renderPill();
+    }, 500);
+  });
 
   window.addEventListener('keydown', (event) => {
     if (event.key === 'Escape') dismissPanel();
