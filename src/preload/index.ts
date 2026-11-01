@@ -10,6 +10,8 @@ type ShelfFile = {
 
 type CopyResult = { ok: boolean; count: number; error?: string };
 
+type MusicState = { title: string; artist: string; playing: boolean; art: string | null };
+
 contextBridge.exposeInMainWorld('beam', {
   getPathForFile: (file: File): string => webUtils.getPathForFile(file),
   addFiles: (paths: string[]): Promise<{ count: number; accepted: number; truncated: boolean; limit: number }> =>
@@ -30,6 +32,9 @@ contextBridge.exposeInMainWorld('beam', {
   },
   onPanelDismiss: (callback: () => void): void => {
     ipcRenderer.on('beam:panel:dismiss', () => callback());
+  },
+  onMusicState: (callback: (state: MusicState | null) => void): void => {
+    ipcRenderer.on('beam:music:state', (_event, state: MusicState | null) => callback(state));
   },
   reportPanelTiming: (ms: number, reduced: boolean): void =>
     ipcRenderer.send('beam:panel:timing', ms, reduced)

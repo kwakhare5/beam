@@ -172,7 +172,7 @@ All channels prefixed `beam:`. Renderer can call, main can push. Built channels 
 | renderer → main | `beam:files:clear` | wipe the shelf; replies `{ ok, files: [] }` | built |
 | renderer → main | `beam:timer:start/stop` | presets or custom | planned |
 | renderer → main | `beam:settings:get/set` | settings screen | planned |
-| main → renderer | `beam:music:state` | pushed on `music.changed` | planned |
+| main → renderer | `beam:music:state` | pushed on `music.changed` and again on `did-finish-load`; `{ title, artist, playing, art }` with `art` a PNG data URL or null | built |
 | main → renderer | `beam:timer:tick` | seconds left, pushed by main (the timer owner) | planned |
 
 Fullscreen hide is main-only: main calls `win.hide()` / `win.showInactive()` itself and never messages the renderer for it.
@@ -190,9 +190,11 @@ Fullscreen hide is main-only: main calls `win.hide()` / `win.showInactive()` its
 Spotify changes track
 → Windows raises SMTC event
 → helper fires music.changed {title, artist, artPath}
-→ main forwards beam:music:state
-→ renderer swaps pill text + art
+→ main reads the PNG once and sends beam:music:state { title, artist, playing, art: data URL }
+→ renderer swaps pill title + 24px art + green/amber dot
 ```
+
+The sandboxed renderer cannot read `%TEMP%\Beam\art\`, so main converts the helper's PNG to a `data:image/png;base64` URL per change; a changed track drops any in-flight read. A null session is held for 500ms before the pill leaves the track, because Spotify publishes a null gap between songs. A missing shelf file's danger dot outranks the music dot.
 
 **Copy 3 files**
 ```
@@ -291,6 +293,7 @@ helper's WinEventHook sees a foreground change or the foreground window resize/m
 | 2026-10-31 | The saved position is the outer top-left plus `displayId`, restored only when that rect still intersects a current display | A monitor that was unplugged must not leave the pill offscreen; the primary taskbar anchor is the fallback, and Reset Position clears the value |
 | 2026-10-31 | Drag-out starts from Files rows only; the capsule keeps its window-move gesture | The capsule's pointer drag was locked to moving the window (ADR-0005), and one gesture cannot also hand files to Explorer; rows give drag-out a clear surface |
 | 2026-10-31 | Pointer-down is ignored for 200ms after a panel starts closing | In the 160ms before the window shrinks, the capsule sits centered in the panel-sized window, so a click there could drag the window instead of landing on the panel |
+| 2026-11-01 | Music art crosses the IPC seam as a base64 PNG data URL; a null session is held 500ms; a missing-file danger dot outranks the music dot | The sandbox cannot read the helper's temp PNG, Spotify emits a null gap between tracks that would blink the pill, and a deleted shelf file needs its warning even while music plays. Verified at check 21 (9–29ms) and by a real track change (15ms) |
 
 UI decisions: ADR-0001 (component boundaries), ADR-0002 (original mascot), ADR-0003 (window, capsule, and panel sizes), ADR-0004 (vanilla shadcn-style), ADR-0005 (capsule interaction), ADR-0006 (landscape panel), ADR-0007 (capsule-to-panel interaction), ADR-0008 (content dynamics), ADR-0009 (state identity, panel completeness, and scale), ADR-0010 (capsule artwork, dot language, and panel clarity).
 
