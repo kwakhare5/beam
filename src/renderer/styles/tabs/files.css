@@ -133,3 +133,11 @@
 .row.missing .row-icon-box svg {
   color: var(--destructive);
 }
+
+.shelf-note {
+  margin-right: auto;
+  align-self: center;
+  font-size: 11px;
+  color: var(--muted-foreground);
+  white-space: nowrap;
+}

@@ -54,9 +54,9 @@
 - [x] **3.2 Missing-file badge** — *Depends on: 3.1.*
   - Existence rechecked on panel open. Built: a failed stat marks the row red `Missing` (tooltip `File moved or deleted`), drops its copy button and drag, and gives the pill its red danger pip; a healthy reopen removes the pip.
   - _Verify (proved 2026-10-31): verify check 19 drops 3 files (`[missing] start pip=false rows=3`), deletes `beta.txt`, reopens the panel, and asserts `[missing] end badge=Missing title=File moved or deleted copies=0 drags=2 pip=true`. `.\verify.ps1` exit 0, 19/19 PASS._
-- [ ] **3.5 Clear All** — *Depends on: 3.1, 1.6.*
-  - Wipes the shelf. Restarting the app also wipes it. While the shelf holds files, it shows a one-line warning that quitting clears it.
-  - _Verify:_ Clear All empties the list; restart starts empty; warning row visible with 3 files and gone at 0.
+- [x] **3.5 Clear All** — *Depends on: 3.1, 1.6.*
+  - Wipes the shelf. Restarting the app also wipes it. While the shelf holds files, it shows a one-line warning that quitting clears it. Built: row × removes its own path, the armed Clear All empties main's shelf, and an 11px `Files clear on quit` note sits at the left of the actions row only while rows exist. The pill returns to `Beam` and the tab shows the drop well at zero.
+  - _Verify (proved 2026-10-31): verify check 20 drops 3 files (`[clear] three rows=3 note=Files clear on quit ... title=3 files`), removes one (`[files] remove=0 count=2`, `rows=2 ... title=2 files`), confirms Clear All twice (`[files] clear=2`, `rows=0 note= well=true state=idle title=Beam`), then relaunches and asserts `[empty] rows=0 well=true state=idle title=Beam`. `.\verify.ps1` exit 0, 20/20 PASS._
 
 ## D. Music
 

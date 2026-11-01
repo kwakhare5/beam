@@ -28,19 +28,19 @@ public static class BeamScreen {
 [BeamScreen]::SetCursorPos(8, 8) | Out-Null
 
 
-Write-Host '[1/19] typecheck'
+Write-Host '[1/20] typecheck'
 & $tsc -p tsconfig.json --noEmit
 if ($LASTEXITCODE -ne 0) { Write-Host 'FAIL typecheck'; exit 1 }
 & $tsc -p tsconfig.renderer.json --noEmit
 if ($LASTEXITCODE -ne 0) { Write-Host 'FAIL typecheck (renderer)'; exit 1 }
 Write-Host 'PASS typecheck'
 
-Write-Host '[2/19] build'
+Write-Host '[2/20] build'
 & npm run build
 if ($LASTEXITCODE -ne 0) { Write-Host 'FAIL build'; exit 1 }
 Write-Host 'PASS build'
 
-Write-Host '[3/19] helper build'
+Write-Host '[3/20] helper build'
 $helperDir = Join-Path $PSScriptRoot 'native\BeamBridge\dist'
 if (Test-Path -LiteralPath $helperDir) { Remove-Item -LiteralPath $helperDir -Recurse -Force }
 & dotnet publish (Join-Path $PSScriptRoot 'native\BeamBridge\BeamBridge.csproj') -c Release -o $helperDir --nologo
@@ -51,7 +51,7 @@ $helperFiles = @(Get-ChildItem -LiteralPath $helperDir -File)
 if ($helperFiles.Count -ne 1) { Write-Host "FAIL helper build: expected one file, found $($helperFiles.Count)"; exit 1 }
 Write-Host 'PASS helper build (single exe)'
 
-Write-Host '[4/19] clipboard'
+Write-Host '[4/20] clipboard'
 $clipDir = Join-Path $env:TEMP 'beam-clip'
 if (Test-Path -LiteralPath $clipDir) { Remove-Item -LiteralPath $clipDir -Recurse -Force }
 New-Item -ItemType Directory -Path $clipDir | Out-Null
@@ -101,7 +101,7 @@ if ($clipAfter.Count -ne 3) {
 Remove-Item -LiteralPath $clipDir -Recurse -Force
 Write-Host 'PASS clipboard (3 real paths, survive helper exit)'
 
-Write-Host '[5/19] launch + focus'
+Write-Host '[5/20] launch + focus'
 $outLog = Join-Path $env:TEMP 'beam-verify.out.log'
 $errLog = Join-Path $env:TEMP 'beam-verify.err.log'
 Remove-Item -LiteralPath $outLog -ErrorAction SilentlyContinue
@@ -165,7 +165,7 @@ Write-Host "PASS launch (pid $($first.Id)) + pong 0.1.0"
 Write-Host 'PASS focus (pill appeared without taking the foreground)'
 Start-Sleep -Seconds 5
 
-Write-Host '[6/19] anchor'
+Write-Host '[6/20] anchor'
 $appOut = Get-Content -LiteralPath $outLog -Raw -ErrorAction SilentlyContinue
 $anchorMatches = [regex]::Matches($appOut, '\[window\] bounds=(-?\d+),(-?\d+),(\d+),(\d+) content=(-?\d+),(-?\d+),(\d+),(\d+) work=(-?\d+),(-?\d+),(\d+),(\d+)')
 if ($anchorMatches.Count -eq 0) {
@@ -237,7 +237,7 @@ if ([math]::Abs($waX - $wx) -gt 2 -or [math]::Abs($waY - $wy) -gt 2 -or [math]::
 }
 Write-Host "PASS anchor (pill 12px above the taskbar, centered; native rect matches; scale $scale)"
 
-Write-Host '[7/19] idle dim'
+Write-Host '[7/20] idle dim'
 $idleOut = Get-Content -LiteralPath $outLog -Raw -ErrorAction SilentlyContinue
 $idleMatch = [regex]::Match($idleOut, '\[idle\] (\{.+\})')
 if (-not $idleMatch.Success) {
@@ -256,7 +256,7 @@ if ($idle.state -ne 'idle' -or $idle.markOpacity -ne '0.7' -or $idle.shellOpacit
 }
 Write-Host "PASS idle dim (star $($idle.markOpacity), shell $($idle.shellOpacity), master mark, label Beam)"
 
-Write-Host '[8/19] panel'
+Write-Host '[8/20] panel'
 $panelOut = $appOut
 for ($i = 0; $i -lt 50; $i++) {
   Start-Sleep -Milliseconds 300
@@ -305,7 +305,7 @@ if ($restoredW -gt 200 -or $restoredH -gt 100) {
 Remove-Item Env:BEAM_PANEL_TEST -ErrorAction SilentlyContinue
 Write-Host "PASS panel (open ${panelMs}ms reduced=$reduced, 452x316, dismissed back to the pill)"
 
-Write-Host '[9/19] helper memory'
+Write-Host '[9/20] helper memory'
 $helper = Get-Process BeamBridge -ErrorAction SilentlyContinue
 if (-not $helper) {
   Stop-Process -Id $first.Id -Force -ErrorAction SilentlyContinue
@@ -322,7 +322,7 @@ if ($helperMb -ge 60) {
 }
 Write-Host "PASS helper memory ($helperMb MB idle, cap 60 MB)"
 
-Write-Host '[10/19] single instance'
+Write-Host '[10/20] single instance'
 $second = Start-Process -FilePath $electron -ArgumentList '.' -WorkingDirectory $PSScriptRoot -PassThru
 Start-Sleep -Seconds 4
 if (-not $second.HasExited) {
@@ -339,7 +339,7 @@ if ($first.HasExited) {
 }
 Write-Host 'PASS single instance'
 
-Write-Host '[11/19] UI spec'
+Write-Host '[11/20] UI spec'
 $main = Get-Content (Join-Path $PSScriptRoot 'src\main\index.ts') -Raw
 $base = Get-Content (Join-Path $PSScriptRoot 'src\renderer\styles\base.css') -Raw
 $pill = Get-Content (Join-Path $PSScriptRoot 'src\renderer\styles\capsule.css') -Raw
@@ -633,7 +633,7 @@ if ($uiFail) {
 }
 Write-Host 'PASS UI spec'
 
-Write-Host '[12/19] move + persist'
+Write-Host '[12/20] move + persist'
 $settingsPath = $null
 $settingsBackup = Join-Path $env:TEMP 'beam-verify-settings.json'
 $hadSettings = $false
@@ -791,7 +791,7 @@ try {
 if ($hadSettings) { Copy-Item -LiteralPath $settingsBackup -Destination $settingsPath -Force } else { Remove-Item -LiteralPath $settingsPath -ErrorAction SilentlyContinue }
 Write-Host "PASS move (drag $bx,$by to $endX,$endY, saved, restart restored it, Reset returned to $anchorX,$anchorY)"
 
-Write-Host '[13/19] quit cleanup'
+Write-Host '[13/20] quit cleanup'
 $closed = $first.CloseMainWindow()
 if (-not $closed) {
   Get-Process electron,BeamBridge -ErrorAction SilentlyContinue | Stop-Process -Force
@@ -808,7 +808,7 @@ if (-not $appExited -or $helperLeft -ne 0) {
 }
 Write-Host 'PASS quit cleanup (app and helper exited)'
 
-Write-Host '[14/19] fullscreen'
+Write-Host '[14/20] fullscreen'
 $fsHarnessPath = Join-Path $env:TEMP 'beam-fs-harness.ps1'
 $fsStagePath = Join-Path $env:TEMP 'beam-fs-stage.txt'
 $fsProc = $null
@@ -927,7 +927,7 @@ if ($fsProc -and -not $fsProc.HasExited) {
 Remove-Item -LiteralPath $fsStagePath -ErrorAction SilentlyContinue
 Write-Host 'PASS fullscreen (grow to monitor bounds -> active:true, shrink -> active:false, same foreground window)'
 
-Write-Host '[15/19] fullscreen hide'
+Write-Host '[15/20] fullscreen hide'
 $hideOutLog = Join-Path $env:TEMP 'beam-fs-hide.out.log'
 $hideErrLog = Join-Path $env:TEMP 'beam-fs-hide.err.log'
 Remove-Item -LiteralPath $hideOutLog, $hideErrLog -ErrorAction SilentlyContinue
@@ -992,7 +992,7 @@ Remove-Item -LiteralPath $hideOutLog, $hideErrLog -ErrorAction SilentlyContinue
 Remove-Item -LiteralPath $fsHarnessPath, $fsStagePath -ErrorAction SilentlyContinue
 Write-Host 'PASS fullscreen hide (hid at fullscreen, tray click restored it, stayed shown after the exit)'
 
-Write-Host '[16/19] drop'
+Write-Host '[16/20] drop'
 $dropOutLog = Join-Path $env:TEMP 'beam-drop-verify.out.log'
 $dropErrLog = Join-Path $env:TEMP 'beam-drop-verify.err.log'
 Remove-Item -LiteralPath $dropOutLog, $dropErrLog -ErrorAction SilentlyContinue
@@ -1037,7 +1037,7 @@ Remove-Item Env:BEAM_DROP_TEST -ErrorAction SilentlyContinue
 Remove-Item -LiteralPath $dropOutLog, $dropErrLog -ErrorAction SilentlyContinue
 Write-Host 'PASS drop (3 real files read with webUtils, pill 3 files; 51 more capped at 50 with Max 50)'
 
-Write-Host '[17/19] copy'
+Write-Host '[17/20] copy'
 $copyOutLog = Join-Path $env:TEMP 'beam-copy-verify.out.log'
 $copyErrLog = Join-Path $env:TEMP 'beam-copy-verify.err.log'
 Remove-Item -LiteralPath $copyOutLog, $copyErrLog -ErrorAction SilentlyContinue
@@ -1139,7 +1139,7 @@ Remove-Item -LiteralPath $copyPasteDir -Recurse -Force -ErrorAction SilentlyCont
 Remove-Item -LiteralPath (Join-Path $env:TEMP 'beam-copytest') -Recurse -Force -ErrorAction SilentlyContinue
 Write-Host 'PASS copy (row copy put alpha.txt on the clipboard, Copy All put all 3 paths, Ctrl+V pasted them into Explorer)'
 
-Write-Host '[18/19] drag out'
+Write-Host '[18/20] drag out'
 $dragOutLog = Join-Path $env:TEMP 'beam-dragout-verify.out.log'
 $dragOutErr = Join-Path $env:TEMP 'beam-dragout-verify.err.log'
 $dragMarker = Join-Path $env:TEMP 'beam-dragout-continue'
@@ -1246,7 +1246,7 @@ Remove-Item -LiteralPath $dragPaste -Recurse -Force -ErrorAction SilentlyContinu
 Remove-Item -LiteralPath (Join-Path $env:TEMP 'beam-dragout') -Recurse -Force -ErrorAction SilentlyContinue
 Write-Host 'PASS drag out (a real mouse drag dropped alpha.txt into Explorer; the deleted beta.txt row lost its drag; an off-shelf path was rejected)'
 
-Write-Host '[19/19] missing badge'
+Write-Host '[19/20] missing badge'
 $missingOut = Join-Path $env:TEMP 'beam-missing-verify.out.log'
 $missingErr = Join-Path $env:TEMP 'beam-missing-verify.err.log'
 Remove-Item -LiteralPath $missingOut, $missingErr -ErrorAction SilentlyContinue
@@ -1286,6 +1286,80 @@ Remove-Item Env:BEAM_MISSING_TEST -ErrorAction SilentlyContinue
 Remove-Item -LiteralPath $missingOut, $missingErr -ErrorAction SilentlyContinue
 Remove-Item -LiteralPath (Join-Path $env:TEMP 'beam-missing') -Recurse -Force -ErrorAction SilentlyContinue
 Write-Host 'PASS missing badge (deleted file shows Missing with the File moved or deleted tooltip, no copy or drag, and the pill gains a red pip)'
+
+Write-Host '[20/20] clear all'
+$clearOut = Join-Path $env:TEMP 'beam-clear-verify.out.log'
+$clearErr = Join-Path $env:TEMP 'beam-clear-verify.err.log'
+Remove-Item -LiteralPath $clearOut, $clearErr -ErrorAction SilentlyContinue
+Remove-Item -LiteralPath (Join-Path $env:TEMP 'beam-clear') -Recurse -Force -ErrorAction SilentlyContinue
+$env:BEAM_CLEAR_TEST = '1'
+$clearApp = $null
+$emptyApp = $null
+try {
+  $clearApp = Start-Process -FilePath $electron -ArgumentList '.' -WorkingDirectory $PSScriptRoot -PassThru -RedirectStandardOutput $clearOut -RedirectStandardError $clearErr
+  $clearLog = ''
+  $clearStop = (Get-Date).AddSeconds(25)
+  while ((Get-Date) -lt $clearStop) {
+    Start-Sleep -Milliseconds 150
+    if ($clearApp.HasExited) { throw 'the app exited before the clear run' }
+    $clearLog = Get-Content -LiteralPath $clearOut -Raw -ErrorAction SilentlyContinue
+    if ($clearLog -match '\[clear\] done') { break }
+  }
+  if ($clearLog -notmatch '\[clear\] three rows=3 note=Files clear on quit well=false state=files title=3 files') {
+    throw 'three files did not show the quit warning'
+  }
+  if ($clearLog -notmatch '\[clear\] removed rows=2 note=Files clear on quit well=false state=files title=2 files') {
+    throw 'the row remove did not leave two files and the warning'
+  }
+  if ($clearLog -notmatch '\[files\] remove=0 count=2') { throw 'main did not record the row remove' }
+  if ($clearLog -notmatch '\[clear\] empty rows=0 note= well=true state=idle title=Beam') {
+    throw 'Clear All did not empty the list and return the pill to Beam'
+  }
+  if ($clearLog -notmatch '\[files\] clear=2') { throw 'main did not record Clear All' }
+  if ($clearLog -notmatch '\[clear\] done') { throw 'the clear harness never finished' }
+
+  $closed = $clearApp.CloseMainWindow()
+  if (-not $closed) { throw 'the pill did not close after the clear run' }
+  $clearExited = $clearApp.WaitForExit(8000)
+  Start-Sleep -Milliseconds 500
+  $clearHelperLeft = @(Get-Process BeamBridge -ErrorAction SilentlyContinue).Count
+  if (-not $clearExited -or $clearHelperLeft -ne 0) { throw "the app did not exit cleanly (exited=$clearExited helperLeft=$clearHelperLeft)" }
+
+  Remove-Item Env:BEAM_CLEAR_TEST -ErrorAction SilentlyContinue
+  Remove-Item -LiteralPath $clearOut, $clearErr -ErrorAction SilentlyContinue
+  $env:BEAM_EMPTY_TEST = '1'
+  $emptyApp = Start-Process -FilePath $electron -ArgumentList '.' -WorkingDirectory $PSScriptRoot -PassThru -RedirectStandardOutput $clearOut -RedirectStandardError $clearErr
+  $emptyLog = ''
+  $emptyStop = (Get-Date).AddSeconds(20)
+  while ((Get-Date) -lt $emptyStop) {
+    Start-Sleep -Milliseconds 150
+    if ($emptyApp.HasExited) { throw 'the app exited before the restart probe' }
+    $emptyLog = Get-Content -LiteralPath $clearOut -Raw -ErrorAction SilentlyContinue
+    if ($emptyLog -match '\[empty\] done') { break }
+  }
+  if ($emptyLog -notmatch '\[empty\] rows=0 well=true state=idle title=Beam') {
+    throw 'the restarted app did not start with an empty shelf'
+  }
+  if ($emptyLog -notmatch '\[empty\] done') { throw 'the restart probe never finished' }
+
+  $closed = $emptyApp.CloseMainWindow()
+  if (-not $closed) { throw 'the restarted pill did not close' }
+  $emptyExited = $emptyApp.WaitForExit(8000)
+  Start-Sleep -Milliseconds 500
+  $emptyHelperLeft = @(Get-Process BeamBridge -ErrorAction SilentlyContinue).Count
+  if (-not $emptyExited -or $emptyHelperLeft -ne 0) { throw "the restarted app did not exit cleanly (exited=$emptyExited helperLeft=$emptyHelperLeft)" }
+} catch {
+  if ($emptyApp -and -not $emptyApp.HasExited) { $emptyApp.Kill() }
+  if ($clearApp -and -not $clearApp.HasExited) { $clearApp.Kill() }
+  Get-Process electron,BeamBridge -ErrorAction SilentlyContinue | Stop-Process -Force
+  Remove-Item Env:BEAM_CLEAR_TEST, Env:BEAM_EMPTY_TEST -ErrorAction SilentlyContinue
+  Write-Host "FAIL clear all: $($_.Exception.Message)"
+  exit 1
+}
+Remove-Item Env:BEAM_CLEAR_TEST, Env:BEAM_EMPTY_TEST -ErrorAction SilentlyContinue
+Remove-Item -LiteralPath $clearOut, $clearErr -ErrorAction SilentlyContinue
+Remove-Item -LiteralPath (Join-Path $env:TEMP 'beam-clear') -Recurse -Force -ErrorAction SilentlyContinue
+Write-Host 'PASS clear all (row remove left 2 files with the warning, Clear All emptied the list back to Beam, and a restart started empty)'
 
 Remove-Item Env:BEAM_SETTINGS_PATH -ErrorAction SilentlyContinue
 Remove-Item -LiteralPath (Join-Path $env:TEMP 'beam-verify-active-settings.json') -ErrorAction SilentlyContinue

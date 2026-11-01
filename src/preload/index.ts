@@ -17,6 +17,9 @@ contextBridge.exposeInMainWorld('beam', {
   copyFiles: (paths: string[], source: 'row' | 'all'): Promise<CopyResult> =>
     ipcRenderer.invoke('beam:files:copy', { paths, source }),
   startFileDrag: (paths: string[]): void => ipcRenderer.send('beam:files:drag', paths),
+  removeFile: (path: string): Promise<{ ok: boolean; files: ShelfFile[] }> =>
+    ipcRenderer.invoke('beam:files:remove', path),
+  clearFiles: (): Promise<{ ok: boolean; files: ShelfFile[] }> => ipcRenderer.invoke('beam:files:clear'),
   openPanel: (): void => ipcRenderer.send('beam:panel:request-open'),
   panelCollapsed: (): void => ipcRenderer.send('beam:panel:collapsed'),
   beginWindowDrag: (x: number, y: number): void => ipcRenderer.send('beam:window:drag-start', x, y),
