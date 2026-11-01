@@ -18,25 +18,29 @@ public static class BeamScreen {
   [DllImport("user32.dll")] public static extern bool SetCursorPos(int x, int y);
   [DllImport("user32.dll")] public static extern bool GetCursorPos(out POINT point);
   [DllImport("user32.dll")] public static extern void mouse_event(uint flags, uint dx, uint dy, uint data, UIntPtr extra);
+  [DllImport("user32.dll", CharSet = CharSet.Unicode)] public static extern IntPtr FindWindow(string cls, string title);
+  [DllImport("user32.dll")] public static extern bool SetWindowPos(IntPtr hWnd, IntPtr insertAfter, int x, int y, int cx, int cy, uint flags);
+  [DllImport("user32.dll")] public static extern bool SetForegroundWindow(IntPtr hWnd);
+  [DllImport("user32.dll")] public static extern bool PostMessage(IntPtr hWnd, uint msg, IntPtr wParam, IntPtr lParam);
 }
 '@
 [BeamScreen]::SetProcessDpiAwarenessContext([IntPtr](-4)) | Out-Null
 [BeamScreen]::SetCursorPos(8, 8) | Out-Null
 
 
-Write-Host '[1/17] typecheck'
+Write-Host '[1/18] typecheck'
 & $tsc -p tsconfig.json --noEmit
 if ($LASTEXITCODE -ne 0) { Write-Host 'FAIL typecheck'; exit 1 }
 & $tsc -p tsconfig.renderer.json --noEmit
 if ($LASTEXITCODE -ne 0) { Write-Host 'FAIL typecheck (renderer)'; exit 1 }
 Write-Host 'PASS typecheck'
 
-Write-Host '[2/17] build'
+Write-Host '[2/18] build'
 & npm run build
 if ($LASTEXITCODE -ne 0) { Write-Host 'FAIL build'; exit 1 }
 Write-Host 'PASS build'
 
-Write-Host '[3/17] helper build'
+Write-Host '[3/18] helper build'
 $helperDir = Join-Path $PSScriptRoot 'native\BeamBridge\dist'
 if (Test-Path -LiteralPath $helperDir) { Remove-Item -LiteralPath $helperDir -Recurse -Force }
 & dotnet publish (Join-Path $PSScriptRoot 'native\BeamBridge\BeamBridge.csproj') -c Release -o $helperDir --nologo
@@ -47,7 +51,7 @@ $helperFiles = @(Get-ChildItem -LiteralPath $helperDir -File)
 if ($helperFiles.Count -ne 1) { Write-Host "FAIL helper build: expected one file, found $($helperFiles.Count)"; exit 1 }
 Write-Host 'PASS helper build (single exe)'
 
-Write-Host '[4/17] clipboard'
+Write-Host '[4/18] clipboard'
 $clipDir = Join-Path $env:TEMP 'beam-clip'
 if (Test-Path -LiteralPath $clipDir) { Remove-Item -LiteralPath $clipDir -Recurse -Force }
 New-Item -ItemType Directory -Path $clipDir | Out-Null
@@ -97,13 +101,15 @@ if ($clipAfter.Count -ne 3) {
 Remove-Item -LiteralPath $clipDir -Recurse -Force
 Write-Host 'PASS clipboard (3 real paths, survive helper exit)'
 
-Write-Host '[5/17] launch + focus'
+Write-Host '[5/18] launch + focus'
 $outLog = Join-Path $env:TEMP 'beam-verify.out.log'
 $errLog = Join-Path $env:TEMP 'beam-verify.err.log'
 Remove-Item -LiteralPath $outLog -ErrorAction SilentlyContinue
 Remove-Item -LiteralPath $errLog -ErrorAction SilentlyContinue
 $env:BEAM_PANEL_TEST = '1'
 $env:BEAM_IDLE_TEST = '1'
+$env:BEAM_SETTINGS_PATH = Join-Path $env:TEMP 'beam-verify-active-settings.json'
+Remove-Item -LiteralPath $env:BEAM_SETTINGS_PATH -ErrorAction SilentlyContinue
 $fgBefore = [BeamScreen]::GetForegroundWindow()
 $first = Start-Process -FilePath $electron -ArgumentList '.' -WorkingDirectory $PSScriptRoot -PassThru -RedirectStandardOutput $outLog -RedirectStandardError $errLog
 $appOut = ''
@@ -159,7 +165,7 @@ Write-Host "PASS launch (pid $($first.Id)) + pong 0.1.0"
 Write-Host 'PASS focus (pill appeared without taking the foreground)'
 Start-Sleep -Seconds 5
 
-Write-Host '[6/17] anchor'
+Write-Host '[6/18] anchor'
 $appOut = Get-Content -LiteralPath $outLog -Raw -ErrorAction SilentlyContinue
 $anchorMatches = [regex]::Matches($appOut, '\[window\] bounds=(-?\d+),(-?\d+),(\d+),(\d+) content=(-?\d+),(-?\d+),(\d+),(\d+) work=(-?\d+),(-?\d+),(\d+),(\d+)')
 if ($anchorMatches.Count -eq 0) {
@@ -231,7 +237,7 @@ if ([math]::Abs($waX - $wx) -gt 2 -or [math]::Abs($waY - $wy) -gt 2 -or [math]::
 }
 Write-Host "PASS anchor (pill 12px above the taskbar, centered; native rect matches; scale $scale)"
 
-Write-Host '[7/17] idle dim'
+Write-Host '[7/18] idle dim'
 $idleOut = Get-Content -LiteralPath $outLog -Raw -ErrorAction SilentlyContinue
 $idleMatch = [regex]::Match($idleOut, '\[idle\] (\{.+\})')
 if (-not $idleMatch.Success) {
@@ -250,7 +256,7 @@ if ($idle.state -ne 'idle' -or $idle.markOpacity -ne '0.7' -or $idle.shellOpacit
 }
 Write-Host "PASS idle dim (star $($idle.markOpacity), shell $($idle.shellOpacity), master mark, label Beam)"
 
-Write-Host '[8/17] panel'
+Write-Host '[8/18] panel'
 $panelOut = $appOut
 for ($i = 0; $i -lt 50; $i++) {
   Start-Sleep -Milliseconds 300
@@ -299,7 +305,7 @@ if ($restoredW -gt 200 -or $restoredH -gt 100) {
 Remove-Item Env:BEAM_PANEL_TEST -ErrorAction SilentlyContinue
 Write-Host "PASS panel (open ${panelMs}ms reduced=$reduced, 452x316, dismissed back to the pill)"
 
-Write-Host '[9/17] helper memory'
+Write-Host '[9/18] helper memory'
 $helper = Get-Process BeamBridge -ErrorAction SilentlyContinue
 if (-not $helper) {
   Stop-Process -Id $first.Id -Force -ErrorAction SilentlyContinue
@@ -316,7 +322,7 @@ if ($helperMb -ge 60) {
 }
 Write-Host "PASS helper memory ($helperMb MB idle, cap 60 MB)"
 
-Write-Host '[10/17] single instance'
+Write-Host '[10/18] single instance'
 $second = Start-Process -FilePath $electron -ArgumentList '.' -WorkingDirectory $PSScriptRoot -PassThru
 Start-Sleep -Seconds 4
 if (-not $second.HasExited) {
@@ -333,7 +339,7 @@ if ($first.HasExited) {
 }
 Write-Host 'PASS single instance'
 
-Write-Host '[11/17] UI spec'
+Write-Host '[11/18] UI spec'
 $main = Get-Content (Join-Path $PSScriptRoot 'src\main\index.ts') -Raw
 $base = Get-Content (Join-Path $PSScriptRoot 'src\renderer\styles\base.css') -Raw
 $pill = Get-Content (Join-Path $PSScriptRoot 'src\renderer\styles\capsule.css') -Raw
@@ -627,7 +633,7 @@ if ($uiFail) {
 }
 Write-Host 'PASS UI spec'
 
-Write-Host '[12/17] move + persist'
+Write-Host '[12/18] move + persist'
 $settingsPath = $null
 $settingsBackup = Join-Path $env:TEMP 'beam-verify-settings.json'
 $hadSettings = $false
@@ -785,7 +791,7 @@ try {
 if ($hadSettings) { Copy-Item -LiteralPath $settingsBackup -Destination $settingsPath -Force } else { Remove-Item -LiteralPath $settingsPath -ErrorAction SilentlyContinue }
 Write-Host "PASS move (drag $bx,$by to $endX,$endY, saved, restart restored it, Reset returned to $anchorX,$anchorY)"
 
-Write-Host '[13/17] quit cleanup'
+Write-Host '[13/18] quit cleanup'
 $closed = $first.CloseMainWindow()
 if (-not $closed) {
   Get-Process electron,BeamBridge -ErrorAction SilentlyContinue | Stop-Process -Force
@@ -802,7 +808,7 @@ if (-not $appExited -or $helperLeft -ne 0) {
 }
 Write-Host 'PASS quit cleanup (app and helper exited)'
 
-Write-Host '[14/17] fullscreen'
+Write-Host '[14/18] fullscreen'
 $fsHarnessPath = Join-Path $env:TEMP 'beam-fs-harness.ps1'
 $fsStagePath = Join-Path $env:TEMP 'beam-fs-stage.txt'
 $fsProc = $null
@@ -921,7 +927,7 @@ if ($fsProc -and -not $fsProc.HasExited) {
 Remove-Item -LiteralPath $fsStagePath -ErrorAction SilentlyContinue
 Write-Host 'PASS fullscreen (grow to monitor bounds -> active:true, shrink -> active:false, same foreground window)'
 
-Write-Host '[15/17] fullscreen hide'
+Write-Host '[15/18] fullscreen hide'
 $hideOutLog = Join-Path $env:TEMP 'beam-fs-hide.out.log'
 $hideErrLog = Join-Path $env:TEMP 'beam-fs-hide.err.log'
 Remove-Item -LiteralPath $hideOutLog, $hideErrLog -ErrorAction SilentlyContinue
@@ -986,7 +992,7 @@ Remove-Item -LiteralPath $hideOutLog, $hideErrLog -ErrorAction SilentlyContinue
 Remove-Item -LiteralPath $fsHarnessPath, $fsStagePath -ErrorAction SilentlyContinue
 Write-Host 'PASS fullscreen hide (hid at fullscreen, tray click restored it, stayed shown after the exit)'
 
-Write-Host '[16/17] drop'
+Write-Host '[16/18] drop'
 $dropOutLog = Join-Path $env:TEMP 'beam-drop-verify.out.log'
 $dropErrLog = Join-Path $env:TEMP 'beam-drop-verify.err.log'
 Remove-Item -LiteralPath $dropOutLog, $dropErrLog -ErrorAction SilentlyContinue
@@ -1031,7 +1037,7 @@ Remove-Item Env:BEAM_DROP_TEST -ErrorAction SilentlyContinue
 Remove-Item -LiteralPath $dropOutLog, $dropErrLog -ErrorAction SilentlyContinue
 Write-Host 'PASS drop (3 real files read with webUtils, pill 3 files; 51 more capped at 50 with Max 50)'
 
-Write-Host '[17/17] copy'
+Write-Host '[17/18] copy'
 $copyOutLog = Join-Path $env:TEMP 'beam-copy-verify.out.log'
 $copyErrLog = Join-Path $env:TEMP 'beam-copy-verify.err.log'
 Remove-Item -LiteralPath $copyOutLog, $copyErrLog -ErrorAction SilentlyContinue
@@ -1133,5 +1139,114 @@ Remove-Item -LiteralPath $copyPasteDir -Recurse -Force -ErrorAction SilentlyCont
 Remove-Item -LiteralPath (Join-Path $env:TEMP 'beam-copytest') -Recurse -Force -ErrorAction SilentlyContinue
 Write-Host 'PASS copy (row copy put alpha.txt on the clipboard, Copy All put all 3 paths, Ctrl+V pasted them into Explorer)'
 
+Write-Host '[18/18] drag out'
+$dragOutLog = Join-Path $env:TEMP 'beam-dragout-verify.out.log'
+$dragOutErr = Join-Path $env:TEMP 'beam-dragout-verify.err.log'
+$dragMarker = Join-Path $env:TEMP 'beam-dragout-continue'
+$dragPaste = Join-Path $env:TEMP ("beam-dragout-paste-" + $PID)
+Remove-Item -LiteralPath $dragOutLog, $dragOutErr, $dragMarker -ErrorAction SilentlyContinue
+Remove-Item -LiteralPath $dragPaste -Recurse -Force -ErrorAction SilentlyContinue
+Remove-Item -LiteralPath (Join-Path $env:TEMP 'beam-dragout') -Recurse -Force -ErrorAction SilentlyContinue
+New-Item -ItemType Directory -Path $dragPaste | Out-Null
+$env:BEAM_DRAGOUT_TEST = '1'
+$dragApp = $null
+$dragHwnd = [IntPtr]::Zero
+try {
+  $pasteName = Split-Path -Leaf $dragPaste
+  Start-Process explorer.exe -ArgumentList "/n,$dragPaste" | Out-Null
+  for ($i = 0; $i -lt 60; $i++) {
+    Start-Sleep -Milliseconds 250
+    $explorerWindows = (New-Object -ComObject Shell.Application).Windows()
+    foreach ($explorerWindow in $explorerWindows) {
+      if ($explorerWindow.LocationName -eq $pasteName) { $dragHwnd = [IntPtr]$explorerWindow.HWND; break }
+    }
+    if ($dragHwnd -ne [IntPtr]::Zero) { break }
+  }
+  if ($dragHwnd -eq [IntPtr]::Zero) { throw 'the Explorer drop folder never opened' }
+  [BeamScreen]::SetWindowPos($dragHwnd, [IntPtr]::Zero, 60, 40, 600, 500, 0x0040) | Out-Null
+  Start-Sleep -Milliseconds 600
+
+  $dragApp = Start-Process -FilePath $electron -ArgumentList '.' -WorkingDirectory $PSScriptRoot -PassThru -RedirectStandardOutput $dragOutLog -RedirectStandardError $dragOutErr
+  $dragOut = ''
+  $dragStop = (Get-Date).AddSeconds(25)
+  while ((Get-Date) -lt $dragStop) {
+    Start-Sleep -Milliseconds 150
+    if ($dragApp.HasExited) { throw 'the app exited before the drag-out run' }
+    $dragOut = Get-Content -LiteralPath $dragOutLog -Raw -ErrorAction SilentlyContinue
+    if ($dragOut -match '\[dragout\] row=') { break }
+  }
+  $rowMatch = [regex]::Match($dragOut, '\[dragout\] row=(\S+) x=(-?\d+) y=(-?\d+) scale=([\d.]+)')
+  if (-not $rowMatch.Success) { throw 'the drag-out row was never reported' }
+  $rowName = $rowMatch.Groups[1].Value
+  if ($rowName -ne 'alpha.txt') { throw "the first draggable row was $rowName" }
+  $dragScale = [double]::Parse($rowMatch.Groups[4].Value, [System.Globalization.CultureInfo]::InvariantCulture)
+  $rowX = [int][math]::Round([int]$rowMatch.Groups[2].Value * $dragScale)
+  $rowY = [int][math]::Round([int]$rowMatch.Groups[3].Value * $dragScale)
+
+  [BeamScreen]::SetCursorPos($rowX, $rowY) | Out-Null
+  Start-Sleep -Milliseconds 300
+  [BeamScreen]::mouse_event(0x0002, 0, 0, 0, [UIntPtr]::Zero)
+  Start-Sleep -Milliseconds 250
+  for ($step = 1; $step -le 12; $step++) {
+    $stepX = [int]($rowX + (360 - $rowX) * $step / 12)
+    $stepY = [int]($rowY + (300 - $rowY) * $step / 12)
+    [BeamScreen]::SetCursorPos($stepX, $stepY) | Out-Null
+    Start-Sleep -Milliseconds 40
+  }
+  Start-Sleep -Milliseconds 200
+  [BeamScreen]::mouse_event(0x0004, 0, 0, 0, [UIntPtr]::Zero)
+  New-Item -ItemType File -Path $dragMarker | Out-Null
+
+  $landed = $false
+  for ($i = 0; $i -lt 60; $i++) {
+    Start-Sleep -Milliseconds 250
+    if (Test-Path -LiteralPath (Join-Path $dragPaste 'alpha.txt')) { $landed = $true; break }
+  }
+  if (-not $landed) { throw 'the dragged file never landed in Explorer' }
+  $landedLength = (Get-Item -LiteralPath (Join-Path $dragPaste 'alpha.txt')).Length
+  if ($landedLength -ne 7) { throw "the landed file is $landedLength bytes, expected 7" }
+
+  $dragOut = ''
+  $guardStop = (Get-Date).AddSeconds(20)
+  while ((Get-Date) -lt $guardStop) {
+    Start-Sleep -Milliseconds 200
+    $dragOut = Get-Content -LiteralPath $dragOutLog -Raw -ErrorAction SilentlyContinue
+    if ($dragOut -match '\[dragout\] done') { break }
+  }
+  $guardMatch = [regex]::Match($dragOut, '\[dragout\] guard draggable=(\S*) missing=(\S*) missingDraggable=(true|false)')
+  if (-not $guardMatch.Success) { throw 'the missing-file guard never ran' }
+  if ($guardMatch.Groups[2].Value -notmatch 'beta\.txt') { throw 'the deleted file was not marked missing' }
+  if ($guardMatch.Groups[1].Value -match 'beta\.txt') { throw 'the missing row could still start a drag' }
+  if ($guardMatch.Groups[3].Value -ne 'false') { throw 'a missing row kept its drag attributes' }
+  $dragErr = Get-Content -LiteralPath $dragOutErr -Raw -ErrorAction SilentlyContinue
+  if ($dragErr -notmatch '\[files\] drag rejected') { throw 'the off-shelf drag was not rejected' }
+  $dragStarted = ([regex]::Matches($dragOut, '\[files\] drag=\d+ ok=true')).Count
+  if ($dragStarted -ne 1) { throw "the app started $dragStarted native drags, expected 1" }
+  if ($dragOut -notmatch '\[dragout\] done') { throw 'the drag-out harness never finished' }
+
+  [BeamScreen]::PostMessage($dragHwnd, 0x0010, [IntPtr]::Zero, [IntPtr]::Zero) | Out-Null
+  Start-Sleep -Milliseconds 400
+  $closed = $dragApp.CloseMainWindow()
+  if (-not $closed) { throw 'the pill did not close after the drag-out run' }
+  $exited = $dragApp.WaitForExit(8000)
+  Start-Sleep -Milliseconds 500
+  $dragHelperLeft = @(Get-Process BeamBridge -ErrorAction SilentlyContinue).Count
+  if (-not $exited -or $dragHelperLeft -ne 0) { throw "the app did not exit cleanly (exited=$exited helperLeft=$dragHelperLeft)" }
+} catch {
+  if ($dragHwnd -ne [IntPtr]::Zero) { [BeamScreen]::PostMessage($dragHwnd, 0x0010, [IntPtr]::Zero, [IntPtr]::Zero) | Out-Null }
+  if ($dragApp -and -not $dragApp.HasExited) { $dragApp.Kill() }
+  Get-Process electron,BeamBridge -ErrorAction SilentlyContinue | Stop-Process -Force
+  Remove-Item Env:BEAM_DRAGOUT_TEST -ErrorAction SilentlyContinue
+  Write-Host "FAIL drag out: $($_.Exception.Message)"
+  exit 1
+}
+Remove-Item Env:BEAM_DRAGOUT_TEST -ErrorAction SilentlyContinue
+Remove-Item -LiteralPath $dragOutLog, $dragOutErr, $dragMarker -ErrorAction SilentlyContinue
+Remove-Item -LiteralPath $dragPaste -Recurse -Force -ErrorAction SilentlyContinue
+Remove-Item -LiteralPath (Join-Path $env:TEMP 'beam-dragout') -Recurse -Force -ErrorAction SilentlyContinue
+Write-Host 'PASS drag out (a real mouse drag dropped alpha.txt into Explorer; the deleted beta.txt row lost its drag; an off-shelf path was rejected)'
+
+Remove-Item Env:BEAM_SETTINGS_PATH -ErrorAction SilentlyContinue
+Remove-Item -LiteralPath (Join-Path $env:TEMP 'beam-verify-active-settings.json') -ErrorAction SilentlyContinue
 Write-Host 'ALL CHECKS PASSED'
 exit 0

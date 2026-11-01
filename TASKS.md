@@ -48,9 +48,9 @@
 - [x] **3.3 Copy one / Copy All** — *Depends on: 3.1, 1.3.*
   - Copy button per row (hover or focus, 24px) plus Copy All. Goes through the helper's proven `files.copy`. Built: the panel open event carries the live shelf stat'd in main, both buttons send `{ paths, source }` and main accepts only shelf paths; `Copied` feedback lasts 1.5s/1.8s.
   - _Verify (proved 2026-10-31): verify check 17 drops 3 real files, asserts the Files tab shows `alpha.txt,beta.txt,gamma.txt` at `7 B`, row copy leaves exactly `alpha.txt` on the clipboard, Copy All leaves all 3, and Ctrl+V into a real Explorer folder lands all 3 with matching sizes. `.\verify.ps1` exit 0, 17/17 PASS._
-- [ ] **3.4 Drag out** — *Depends on: 3.1.*
-  - Drag a row, or the pill while it holds files, to Explorer or an email client. Electron's `webContents.startDrag` with the real paths; the target decides copy vs move (Ctrl/Shift override). Replaces 0.4c.
-  - _Verify:_ manual drag into Explorer lands the files with the same names and sizes; a missing file cannot start a drag.
+- [x] **3.4 Drag out** — *Depends on: 3.1.*
+  - Drag a Files row to Explorer or an email client. Electron's `webContents.startDrag` with the real path; the target decides copy vs move (Ctrl/Shift override). Replaces 0.4c. Scope note (2026-10-31, Karan): the capsule keeps its window-move gesture, so drag-out lives on rows only.
+  - _Verify (proved 2026-10-31): verify check 18 drags alpha.txt with the real mouse from its row into a real Explorer folder, which receives the file at 7 bytes; deleting beta.txt marks its row `Missing` and removes its drag attributes; a direct drag call with an off-shelf path is rejected. `.\verify.ps1` exit 0, 18/18 PASS._
 - [ ] **3.2 Missing-file badge** — *Depends on: 3.1.*
   - Existence rechecked on panel open.
   - _Verify:_ delete a dropped file, reopen → row shows "File moved or deleted" and drag is disabled.

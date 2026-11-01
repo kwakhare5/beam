@@ -15,6 +15,8 @@ export interface BeamSettings {
 }
 
 export function getSettingsPath(): string {
+  const override = process.env.BEAM_SETTINGS_PATH;
+  if (override && override.length > 0) return override;
   return join(app.getPath('userData'), 'settings.json');
 }
 
