@@ -160,6 +160,8 @@ if (!gotLock) {
   const copyTest = process.env.BEAM_COPY_TEST === '1';
   const dragoutTest = process.env.BEAM_DRAGOUT_TEST === '1';
   const missingTest = process.env.BEAM_MISSING_TEST === '1';
+  const clearTest = process.env.BEAM_CLEAR_TEST === '1';
+  const emptyTest = process.env.BEAM_EMPTY_TEST === '1';
   let onFullscreen: (active: boolean) => void = () => {};
   const onHelperEvent = (event: HelperEvent): void => {
     if (event.evt === 'fullscreen.changed') {
@@ -483,6 +485,28 @@ if (!gotLock) {
         event.sender.startDrag({ file: first, files: dragPaths, icon });
       });
 
+      ipcMain.handle('beam:files:remove', (event, path: unknown): { ok: boolean; files: ShelfRow[] } => {
+        if (event.sender !== window.webContents) return { ok: false, files: shelfRows() };
+        const requested = typeof path === 'string' ? path.toLowerCase() : '';
+        const index = requested ? shelf.findIndex((held) => held.toLowerCase() === requested) : -1;
+        if (index === -1) {
+          console.error(`[files] remove rejected path=${typeof path === 'string' ? path : 'invalid'}`);
+          return { ok: false, files: shelfRows() };
+        }
+        const removed = shelf[index] ?? '';
+        shelf.splice(index, 1);
+        console.log(`[files] remove=${index} count=${shelf.length} path=${removed}`);
+        return { ok: true, files: shelfRows() };
+      });
+
+      ipcMain.handle('beam:files:clear', (event): { ok: boolean; files: ShelfRow[] } => {
+        if (event.sender !== window.webContents) return { ok: false, files: shelfRows() };
+        const count = shelf.length;
+        shelf = [];
+        console.log(`[files] clear=${count}`);
+        return { ok: true, files: [] };
+      });
+
       ipcMain.on('beam:panel:request-open', openPanel);
       ipcMain.on('beam:panel:collapsed', () => {
         if (window.isDestroyed()) return;
@@ -531,6 +555,16 @@ if (!gotLock) {
           void runMissingTest(window, openPanel, closePanel).catch((error: unknown) =>
             console.error('[missing] failed', error)
           );
+        }, 1200);
+      }
+      if (clearTest) {
+        setTimeout(() => {
+          void runClearTest(window, openPanel).catch((error: unknown) => console.error('[clear] failed', error));
+        }, 1200);
+      }
+      if (emptyTest) {
+        setTimeout(() => {
+          void runEmptyTest(window, openPanel).catch((error: unknown) => console.error('[empty] failed', error));
         }, 1200);
       }
     }
@@ -800,6 +834,86 @@ if (!gotLock) {
         `[missing] end badge=${end.badge} title=${end.title} copies=${end.copies} drags=${end.drags} pip=${end.pip}`
       );
       console.log('[missing] done');
+    }
+
+    type ShelfSnapshot = { rows: number; note: string; well: boolean; state: string; title: string };
+
+    const shelfSnapshot = async (target: BrowserWindow): Promise<ShelfSnapshot> =>
+      (await target.webContents.executeJavaScript(
+        `(() => {
+          const body = document.querySelector('#panel-files');
+          const pill = document.querySelector('.pill');
+          return {
+            rows: body ? body.querySelectorAll('.row').length : -1,
+            note: body?.querySelector('.shelf-note')?.textContent ?? '',
+            well: !!body?.querySelector('.drop-well'),
+            state: pill?.dataset.state ?? '',
+            title: pill?.querySelector('.title')?.textContent ?? ''
+          };
+        })()`
+      )) as ShelfSnapshot;
+
+    async function runClearTest(target: BrowserWindow, openPanel: () => void): Promise<void> {
+      const dir = join(tmpdir(), 'beam-clear');
+      mkdirSync(dir, { recursive: true });
+      const paths = ['alpha.txt', 'beta.txt', 'gamma.txt'].map((name) => join(dir, name));
+      paths.forEach((path, index) => writeFileSync(path, `beam ${index}\n`));
+
+      const point = (await target.webContents.executeJavaScript(
+        `(() => { const pill = document.querySelector('.pill'); if (!pill) return null; const rect = pill.getBoundingClientRect(); return { x: Math.round(rect.x + rect.width / 2), y: Math.round(rect.y + rect.height / 2) }; })()`
+      )) as { x: number; y: number } | null;
+      if (!point) {
+        console.error('[clear] pill missing');
+        return;
+      }
+
+      target.webContents.debugger.attach('1.3');
+      try {
+        const data = { items: [], files: paths, dragOperationsMask: 1 };
+        for (const type of ['dragEnter', 'dragOver', 'drop']) {
+          await target.webContents.debugger.sendCommand('Input.dispatchDragEvent', {
+            type,
+            x: point.x,
+            y: point.y,
+            data
+          });
+        }
+      } finally {
+        target.webContents.debugger.detach();
+      }
+      await new Promise((resolve) => setTimeout(resolve, 500));
+
+      openPanel();
+      await new Promise((resolve) => setTimeout(resolve, 500));
+      await target.webContents.executeJavaScript(`document.querySelector('#tab-files')?.click()`);
+      await new Promise((resolve) => setTimeout(resolve, 300));
+      const three = await shelfSnapshot(target);
+      console.log(`[clear] three rows=${three.rows} note=${three.note} well=${three.well} state=${three.state} title=${three.title}`);
+
+      await target.webContents.executeJavaScript(`document.querySelector('#panel-files [data-remove-path]')?.click()`);
+      await new Promise((resolve) => setTimeout(resolve, 600));
+      const removed = await shelfSnapshot(target);
+      console.log(
+        `[clear] removed rows=${removed.rows} note=${removed.note} well=${removed.well} state=${removed.state} title=${removed.title}`
+      );
+
+      await target.webContents.executeJavaScript(`document.querySelector('#panel-files .clear-all')?.click()`);
+      await new Promise((resolve) => setTimeout(resolve, 300));
+      await target.webContents.executeJavaScript(`document.querySelector('#panel-files .clear-all')?.click()`);
+      await new Promise((resolve) => setTimeout(resolve, 600));
+      const empty = await shelfSnapshot(target);
+      console.log(`[clear] empty rows=${empty.rows} note=${empty.note} well=${empty.well} state=${empty.state} title=${empty.title}`);
+      console.log('[clear] done');
+    }
+
+    async function runEmptyTest(target: BrowserWindow, openPanel: () => void): Promise<void> {
+      openPanel();
+      await new Promise((resolve) => setTimeout(resolve, 500));
+      await target.webContents.executeJavaScript(`document.querySelector('#tab-files')?.click()`);
+      await new Promise((resolve) => setTimeout(resolve, 300));
+      const state = await shelfSnapshot(target);
+      console.log(`[empty] rows=${state.rows} well=${state.well} state=${state.state} title=${state.title}`);
+      console.log('[empty] done');
     }
   });
 

@@ -35,7 +35,8 @@ export function filesPanel(rows: FileRow[], copied = false, active = true): stri
         ? ''
         : `<button type="button" class="row-action"${row.path ? ` data-copy-path="${esc(row.path)}"` : ''} aria-label="Copy ${esc(row.name)}">${icon('copy')}</button>`;
       const drag = row.path && !row.missing ? ` draggable="true" data-drag-path="${esc(row.path)}"` : '';
-      return `<div class="row${row.missing ? ' missing' : ''}" role="listitem"${drag}><div class="row-icon-box">${icon(rowIcon)}</div><span class="name" title="${esc(row.name)}">${esc(truncatedName)}</span>${meta}<div class="row-actions">${copy}<button type="button" class="row-action" aria-label="Remove ${esc(row.name)}">${icon('x')}</button></div></div>`;
+      const remove = row.path ? ` data-remove-path="${esc(row.path)}"` : '';
+      return `<div class="row${row.missing ? ' missing' : ''}" role="listitem"${drag}><div class="row-icon-box">${icon(rowIcon)}</div><span class="name" title="${esc(row.name)}">${esc(truncatedName)}</span>${meta}<div class="row-actions">${copy}<button type="button" class="row-action"${remove} aria-label="Remove ${esc(row.name)}">${icon('x')}</button></div></div>`;
     })
     .join('');
 
@@ -43,7 +44,7 @@ export function filesPanel(rows: FileRow[], copied = false, active = true): stri
   const copyIcon = copied ? icon('check') : icon('copy');
   const copyLabel = copied ? 'Copied' : 'Copy All';
 
-  const actions = `<div class="actions"><span class="sr-only" role="status">${copied ? 'Copied to clipboard' : ''}</span><button type="button" class="btn primary" data-copy-all${allMissing ? ' disabled' : ''}>${copyIcon}${copyLabel}</button><button type="button" class="btn ghost">${icon('plus')}Add files</button><button type="button" class="btn danger clear-all" data-armed="false">${icon('trash')}<span class="clear-all-label">Clear All</span></button></div>`;
+  const actions = `<div class="actions"><span class="shelf-note">Files clear on quit</span><span class="sr-only" role="status">${copied ? 'Copied to clipboard' : ''}</span><button type="button" class="btn primary" data-copy-all${allMissing ? ' disabled' : ''}>${copyIcon}${copyLabel}</button><button type="button" class="btn ghost">${icon('plus')}Add files</button><button type="button" class="btn danger clear-all" data-armed="false">${icon('trash')}<span class="clear-all-label">Clear All</span></button></div>`;
 
   return panelBody('files', `<div class="file-list" role="list">${list}</div>${actions}`, '', active);
 }
@@ -98,7 +99,8 @@ export function bindFileDrag(root: Document | Element, startDrag: (paths: string
 
 export function bindFilesActions(
   root: Document | Element,
-  copy: (paths: string[], source: 'row' | 'all') => Promise<CopyOutcome>
+  copy: (paths: string[], source: 'row' | 'all') => Promise<CopyOutcome>,
+  remove: (path: string) => void = () => {}
 ): void {
   const status = (text: string): void => {
     const node = root.querySelector<HTMLElement>('#panel-files [role="status"]');
@@ -159,6 +161,12 @@ export function bindFilesActions(
     const rowButton = target.closest<HTMLElement>('[data-copy-path]');
     if (rowButton) {
       void copyRow(rowButton);
+      return;
+    }
+    const removeButton = target.closest<HTMLElement>('[data-remove-path]');
+    if (removeButton) {
+      const path = removeButton.dataset.removePath;
+      if (path) remove(path);
       return;
     }
     const allButton = target.closest<HTMLElement>('[data-copy-all]');

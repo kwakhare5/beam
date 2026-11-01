@@ -1,5 +1,6 @@
 import {
   bindArtFallback,
+  bindClearAll,
   bindFileDrag,
   bindFilesActions,
   bindPanelTabs,
@@ -14,12 +15,15 @@ import {
 type ShelfResult = { count: number; accepted: number; truncated: boolean; limit: number };
 type ShelfFile = { path: string; name: string; sizeBytes: number; kind: 'file' | 'folder'; missing: boolean };
 type CopyResult = { ok: boolean; count: number; error?: string };
+type FileChange = { ok: boolean; files: ShelfFile[] };
 
 type BeamApi = {
   getPathForFile(file: File): string;
   addFiles(paths: string[]): Promise<ShelfResult>;
   copyFiles(paths: string[], source: 'row' | 'all'): Promise<CopyResult>;
   startFileDrag(paths: string[]): void;
+  removeFile(path: string): Promise<FileChange>;
+  clearFiles(): Promise<FileChange>;
   openPanel(): void;
   panelCollapsed(): void;
   beginWindowDrag(x: number, y: number): void;
@@ -97,6 +101,32 @@ const panelData: PanelData = {
 let panelEl: HTMLElement | null = null;
 let wrapEl: HTMLElement | null = null;
 
+function applyFiles(files: ShelfFile[]): void {
+  panelData.files = files.map((file) => ({
+    path: file.path,
+    name: file.name,
+    size: formatSize(file.sizeBytes),
+    kind: file.kind,
+    missing: file.missing
+  }));
+  shelfCount = files.length;
+  setPip(files.some((file) => file.missing));
+  showShelf();
+  renderPanel();
+}
+
+async function removeRow(path: string): Promise<void> {
+  if (!beam) return;
+  const result = await beam.removeFile(path);
+  if (result.ok) applyFiles(result.files);
+}
+
+async function clearShelf(): Promise<void> {
+  if (!beam) return;
+  const result = await beam.clearFiles();
+  if (result.ok) applyFiles(result.files);
+}
+
 function renderPanel(): void {
   if (!app) return;
   if (!wrapEl) {
@@ -104,8 +134,14 @@ function renderPanel(): void {
     wrapEl.className = 'panel-wrap';
     app.appendChild(wrapEl);
     bindPanelTabs(wrapEl);
+    bindClearAll(wrapEl);
+    wrapEl.addEventListener('beam:files:clear', () => {
+      void clearShelf();
+    });
     if (beam) {
-      bindFilesActions(wrapEl, (paths, source) => beam.copyFiles(paths, source));
+      bindFilesActions(wrapEl, (paths, source) => beam.copyFiles(paths, source), (path) => {
+        void removeRow(path);
+      });
       bindFileDrag(wrapEl, (paths) => beam.startFileDrag(paths));
     }
   }
@@ -237,15 +273,7 @@ if (app && beam) {
   }
 
   beam.onPanelOpen((files) => {
-    panelData.files = files.map((file) => ({
-      path: file.path,
-      name: file.name,
-      size: formatSize(file.sizeBytes),
-      kind: file.kind,
-      missing: file.missing
-    }));
-    setPip(files.some((file) => file.missing));
-    renderPanel();
+    applyFiles(files);
     if (!panelEl) return;
     const el = panelEl;
     void el.offsetWidth;
