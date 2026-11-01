@@ -51,9 +51,9 @@
 - [x] **3.4 Drag out** — *Depends on: 3.1.*
   - Drag a Files row to Explorer or an email client. Electron's `webContents.startDrag` with the real path; the target decides copy vs move (Ctrl/Shift override). Replaces 0.4c. Scope note (2026-10-31, Karan): the capsule keeps its window-move gesture, so drag-out lives on rows only.
   - _Verify (proved 2026-10-31): verify check 18 drags alpha.txt with the real mouse from its row into a real Explorer folder, which receives the file at 7 bytes; deleting beta.txt marks its row `Missing` and removes its drag attributes; a direct drag call with an off-shelf path is rejected. `.\verify.ps1` exit 0, 18/18 PASS._
-- [ ] **3.2 Missing-file badge** — *Depends on: 3.1.*
-  - Existence rechecked on panel open.
-  - _Verify:_ delete a dropped file, reopen → row shows "File moved or deleted" and drag is disabled.
+- [x] **3.2 Missing-file badge** — *Depends on: 3.1.*
+  - Existence rechecked on panel open. Built: a failed stat marks the row red `Missing` (tooltip `File moved or deleted`), drops its copy button and drag, and gives the pill its red danger pip; a healthy reopen removes the pip.
+  - _Verify (proved 2026-10-31): verify check 19 drops 3 files (`[missing] start pip=false rows=3`), deletes `beta.txt`, reopens the panel, and asserts `[missing] end badge=Missing title=File moved or deleted copies=0 drags=2 pip=true`. `.\verify.ps1` exit 0, 19/19 PASS._
 - [ ] **3.5 Clear All** — *Depends on: 3.1, 1.6.*
   - Wipes the shelf. Restarting the app also wipes it. While the shelf holds files, it shows a one-line warning that quitting clears it.
   - _Verify:_ Clear All empties the list; restart starts empty; warning row visible with 3 files and gone at 0.

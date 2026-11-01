@@ -56,6 +56,20 @@ function fileLabel(count: number): string {
   return count === 1 ? '1 file' : `${count} files`;
 }
 
+function setPip(danger: boolean): void {
+  const wrap = pillEl?.querySelector('.mascot-wrap');
+  if (!wrap) return;
+  const pip = wrap.querySelector<HTMLElement>('.media-pip');
+  if (danger && !pip) {
+    const dot = document.createElement('span');
+    dot.className = 'media-pip danger';
+    dot.setAttribute('aria-hidden', 'true');
+    wrap.appendChild(dot);
+  } else if (!danger && pip) {
+    pip.remove();
+  }
+}
+
 function setPill(state: string, label: string): void {
   if (!pillEl) return;
   pillEl.dataset.state = state;
@@ -230,6 +244,7 @@ if (app && beam) {
       kind: file.kind,
       missing: file.missing
     }));
+    setPip(files.some((file) => file.missing));
     renderPanel();
     if (!panelEl) return;
     const el = panelEl;
