@@ -159,6 +159,7 @@ if (!gotLock) {
   const dropTest = process.env.BEAM_DROP_TEST === '1';
   const copyTest = process.env.BEAM_COPY_TEST === '1';
   const dragoutTest = process.env.BEAM_DRAGOUT_TEST === '1';
+  const missingTest = process.env.BEAM_MISSING_TEST === '1';
   let onFullscreen: (active: boolean) => void = () => {};
   const onHelperEvent = (event: HelperEvent): void => {
     if (event.evt === 'fullscreen.changed') {
@@ -525,6 +526,13 @@ if (!gotLock) {
           );
         }, 1200);
       }
+      if (missingTest) {
+        setTimeout(() => {
+          void runMissingTest(window, openPanel, closePanel).catch((error: unknown) =>
+            console.error('[missing] failed', error)
+          );
+        }, 1200);
+      }
     }
 
     async function runDropTest(target: BrowserWindow): Promise<void> {
@@ -723,6 +731,75 @@ if (!gotLock) {
       await target.webContents.executeJavaScript(`window.beam.startFileDrag(['C:\\\\Windows\\\\not-on-the-shelf.txt'])`);
       await new Promise((resolve) => setTimeout(resolve, 300));
       console.log('[dragout] done');
+    }
+
+    async function runMissingTest(
+      target: BrowserWindow,
+      openPanel: () => void,
+      closePanel: () => void
+    ): Promise<void> {
+      const dir = join(tmpdir(), 'beam-missing');
+      mkdirSync(dir, { recursive: true });
+      const paths = ['alpha.txt', 'beta.txt', 'gamma.txt'].map((name) => join(dir, name));
+      paths.forEach((path, index) => writeFileSync(path, `beam ${index}\n`));
+
+      const point = (await target.webContents.executeJavaScript(
+        `(() => { const pill = document.querySelector('.pill'); if (!pill) return null; const rect = pill.getBoundingClientRect(); return { x: Math.round(rect.x + rect.width / 2), y: Math.round(rect.y + rect.height / 2) }; })()`
+      )) as { x: number; y: number } | null;
+      if (!point) {
+        console.error('[missing] pill missing');
+        return;
+      }
+
+      target.webContents.debugger.attach('1.3');
+      try {
+        const data = { items: [], files: paths, dragOperationsMask: 1 };
+        for (const type of ['dragEnter', 'dragOver', 'drop']) {
+          await target.webContents.debugger.sendCommand('Input.dispatchDragEvent', {
+            type,
+            x: point.x,
+            y: point.y,
+            data
+          });
+        }
+      } finally {
+        target.webContents.debugger.detach();
+      }
+      await new Promise((resolve) => setTimeout(resolve, 500));
+
+      openPanel();
+      await new Promise((resolve) => setTimeout(resolve, 500));
+      await target.webContents.executeJavaScript(`document.querySelector('#tab-files')?.click()`);
+      await new Promise((resolve) => setTimeout(resolve, 300));
+      const start = (await target.webContents.executeJavaScript(
+        `(() => ({ pip: !!document.querySelector('.pill .media-pip.danger'), rows: document.querySelectorAll('#panel-files .row').length }))()`
+      )) as { pip: boolean; rows: number };
+      console.log(`[missing] start pip=${start.pip} rows=${start.rows}`);
+
+      unlinkSync(paths[1]);
+      closePanel();
+      await new Promise((resolve) => setTimeout(resolve, 500));
+      openPanel();
+      await new Promise((resolve) => setTimeout(resolve, 500));
+      await target.webContents.executeJavaScript(`document.querySelector('#tab-files')?.click()`);
+      await new Promise((resolve) => setTimeout(resolve, 300));
+      const end = (await target.webContents.executeJavaScript(
+        `(() => {
+          const rows = [...document.querySelectorAll('#panel-files .row')];
+          const gone = rows.filter((row) => row.classList.contains('missing'));
+          return {
+            badge: gone.map((row) => row.querySelector('.row-meta')?.textContent).join(','),
+            title: gone.map((row) => row.querySelector('.row-meta')?.getAttribute('title')).join(','),
+            copies: gone.reduce((count, row) => count + row.querySelectorAll('[data-copy-path]').length, 0),
+            drags: rows.filter((row) => row.hasAttribute('data-drag-path')).length,
+            pip: !!document.querySelector('.pill .media-pip.danger')
+          };
+        })()`
+      )) as { badge: string; title: string; copies: number; drags: number; pip: boolean };
+      console.log(
+        `[missing] end badge=${end.badge} title=${end.title} copies=${end.copies} drags=${end.drags} pip=${end.pip}`
+      );
+      console.log('[missing] done');
     }
   });
 
