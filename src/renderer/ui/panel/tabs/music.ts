@@ -13,7 +13,7 @@ export interface MusicData {
   durationMs?: number;
 }
 
-function clock(ms: number): string {
+export function musicClock(ms: number): string {
   const total = Math.max(0, Math.round(ms / 1000));
   const hours = Math.floor(total / 3600);
   const minutes = Math.floor((total % 3600) / 60);
@@ -29,10 +29,10 @@ function progress(data: MusicData): string {
 
   const clamped = Math.min(Math.max(position, 0), duration);
   const percent = Math.round((clamped / duration) * 100);
-  const elapsed = clock(clamped);
-  const total = clock(duration);
+  const elapsed = musicClock(clamped);
+  const total = musicClock(duration);
 
-  return `<div class="track"><div class="track-bar" role="progressbar" aria-label="Track position" aria-valuemin="0" aria-valuemax="${Math.round(duration / 1000)}" aria-valuenow="${Math.round(clamped / 1000)}" aria-valuetext="${esc(`${elapsed} of ${total}`)}"><span class="track-fill" style="width:${percent}%"></span></div><div class="track-times"><span>${elapsed}</span><span>${total}</span></div></div>`;
+  return `<div class="track"><div class="track-bar" data-music-bar role="progressbar" aria-label="Track position" aria-valuemin="0" aria-valuemax="${Math.round(duration / 1000)}" aria-valuenow="${Math.round(clamped / 1000)}" aria-valuetext="${esc(`${elapsed} of ${total}`)}"><span class="track-fill" style="width:${percent}%"></span></div><div class="track-times"><span>${elapsed}</span><span>${total}</span></div></div>`;
 }
 
 export function musicPanel(data: MusicData, active = true): string {
@@ -65,9 +65,9 @@ export function musicPanel(data: MusicData, active = true): string {
     : `<div class="art art-fallback"><img class="mascot-large" src="${MASCOTS.master}" alt="" /></div>`;
 
   const controls = `<div class="music-controls">
-    <button type="button" class="icon-btn" aria-label="Previous">${icon('prev')}</button>
-    <button type="button" class="icon-btn primary" aria-label="${data.playing ? 'Pause' : 'Play'}">${icon(data.playing ? 'pause' : 'play')}</button>
-    <button type="button" class="icon-btn" aria-label="Next">${icon('next')}</button>
+    <button type="button" class="icon-btn" data-action="prev" aria-label="Previous">${icon('prev')}</button>
+    <button type="button" class="icon-btn primary" data-action="toggle" aria-label="${data.playing ? 'Pause' : 'Play'}">${icon(data.playing ? 'pause' : 'play')}</button>
+    <button type="button" class="icon-btn" data-action="next" aria-label="Next">${icon('next')}</button>
   </div>`;
 
   const state = data.playing ? 'Playing' : 'Paused';

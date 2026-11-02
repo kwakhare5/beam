@@ -62,6 +62,11 @@ export class Bridge {
     if (reply.ok !== true) throw new Error(reply.error ?? 'helper refused the copy');
   }
 
+  async music(cmd: 'toggle' | 'next' | 'prev'): Promise<void> {
+    const reply = await this.send(`music.${cmd}`);
+    if (reply.ok !== true) throw new Error(reply.error ?? 'helper refused the command');
+  }
+
   stop(): Promise<void> {
     const child = this.child;
     if (!child) return Promise.resolve();

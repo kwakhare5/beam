@@ -26,6 +26,31 @@ internal sealed class MusicWatcher : IDisposable
         await PublishAsync();
     }
 
+    public async Task<(bool Ok, string? Error)> CommandAsync(string cmd)
+    {
+        try
+        {
+            var current = manager?.GetCurrentSession() ?? session;
+            if (current is null)
+            {
+                return (false, "no active media session");
+            }
+
+            var ok = cmd switch
+            {
+                "music.toggle" => await current.TryTogglePlayPauseAsync(),
+                "music.next" => await current.TrySkipNextAsync(),
+                "music.prev" => await current.TrySkipPreviousAsync(),
+                _ => false
+            };
+            return ok ? (true, null) : (false, "the player refused the command");
+        }
+        catch (Exception ex)
+        {
+            return (false, ex.Message);
+        }
+    }
+
     public void Dispose()
     {
         disposed = true;

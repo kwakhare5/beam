@@ -14,17 +14,19 @@ export interface PillData {
   art?: string;
 }
 
+export function transportControls(playing: boolean): string {
+  return `<div class="pill-overlay controls">
+      <button type="button" class="icon-btn" data-action="prev" aria-label="Previous">${icon('prev')}</button>
+      <button type="button" class="icon-btn primary" data-action="toggle" aria-label="${playing ? 'Pause' : 'Play'}">${icon(playing ? 'pause' : 'play')}</button>
+      <button type="button" class="icon-btn" data-action="next" aria-label="Next">${icon('next')}</button>
+    </div>`;
+}
+
 export function pill(data: PillData): string {
   const music = data.state === 'playing' || data.state === 'paused';
   const expands = music || data.state === 'timer' || data.state === 'done';
 
-  const controls = music
-    ? `<div class="pill-overlay controls">
-      <button type="button" class="icon-btn" aria-label="Previous">${icon('prev')}</button>
-      <button type="button" class="icon-btn primary" aria-label="${data.primaryIcon === 'pause' ? 'Pause' : 'Play'}">${icon(data.primaryIcon ?? 'play')}</button>
-      <button type="button" class="icon-btn" aria-label="Next">${icon('next')}</button>
-    </div>`
-    : '';
+  const controls = music ? transportControls(data.primaryIcon === 'pause') : '';
 
   const timerAction =
     data.state === 'timer'
