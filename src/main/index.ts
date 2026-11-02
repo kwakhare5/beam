@@ -101,7 +101,14 @@ type MusicPayload = {
   durationMs: number;
 };
 
-type MusicView = { title: string; artist: string; playing: boolean; art: string | null };
+type MusicView = {
+  title: string;
+  artist: string;
+  playing: boolean;
+  art: string | null;
+  positionMs: number;
+  durationMs: number;
+};
 
 type ShelfRow = {
   path: string;
@@ -166,8 +173,11 @@ if (!gotLock) {
   const clearTest = process.env.BEAM_CLEAR_TEST === '1';
   const emptyTest = process.env.BEAM_EMPTY_TEST === '1';
   const musicTest = process.env.BEAM_MUSIC_TEST === '1';
+  const musicCmdTest = process.env.BEAM_MUSIC_CMD_TEST === '1';
+  const musicTabTest = process.env.BEAM_MUSIC_TAB_TEST === '1';
   let musicView: MusicView | null = null;
   let musicRequest = 0;
+  let musicCmdStarted = false;
 
   function probeMusic(started: number, attempt = 0): void {
     if (!win || win.isDestroyed()) return;
@@ -217,11 +227,252 @@ if (!gotLock) {
       }
     }
     if (request !== musicRequest) return;
-    musicView = { title: payload.title, artist: payload.artist, playing: payload.playing, art };
+    musicView = {
+      title: payload.title,
+      artist: payload.artist,
+      playing: payload.playing,
+      art,
+      positionMs: payload.positionMs,
+      durationMs: payload.durationMs
+    };
     if (musicTest) {
       console.log(`[music] input ${JSON.stringify({ title: payload.title, playing: payload.playing, hasArt: Boolean(art) })}`);
     }
     sendMusic();
+    if (musicCmdTest && !musicCmdStarted) {
+      musicCmdStarted = true;
+      void runMusicCommandTest().catch((error: unknown) => {
+        console.error('[music] cmd error', error);
+        console.log('[music] cmd done');
+      });
+    }
+  }
+
+  const delay = (ms: number): Promise<void> => new Promise((resolve) => setTimeout(resolve, ms));
+
+  async function waitForMusic(check: () => boolean, ms: number): Promise<boolean> {
+    const deadline = Date.now() + ms;
+    while (Date.now() < deadline) {
+      if (check()) return true;
+      await delay(40);
+    }
+    return check();
+  }
+
+  async function clickTransport(action: 'prev' | 'toggle' | 'next'): Promise<boolean> {
+    if (!win || win.isDestroyed()) return false;
+    const point = (await win.webContents.executeJavaScript(
+      `(() => {
+        const button = document.querySelector('.controls [data-action="${action}"]');
+        if (!button) return null;
+        const rect = button.getBoundingClientRect();
+        return { x: Math.round(rect.left + rect.width / 2), y: Math.round(rect.top + rect.height / 2) };
+      })()`
+    )) as { x: number; y: number } | null;
+    if (!point) return false;
+    win.webContents.sendInputEvent({ type: 'mouseMove', x: point.x, y: point.y });
+    await delay(80);
+    win.webContents.sendInputEvent({
+      type: 'mouseDown',
+      x: point.x,
+      y: point.y,
+      button: 'left',
+      clickCount: 1
+    });
+    win.webContents.sendInputEvent({
+      type: 'mouseUp',
+      x: point.x,
+      y: point.y,
+      button: 'left',
+      clickCount: 1
+    });
+    return true;
+  }
+
+  async function runMusicCommandTest(): Promise<void> {
+    if (!win || win.isDestroyed()) return;
+    await delay(400);
+    const pillPoint = (await win.webContents.executeJavaScript(
+      `(() => {
+        const rect = document.querySelector('.pill')?.getBoundingClientRect();
+        return rect ? { x: Math.round(rect.left + rect.width / 2), y: Math.round(rect.top + rect.height / 2) } : null;
+      })()`
+    )) as { x: number; y: number } | null;
+    if (!pillPoint) {
+      console.log('[music] cmd skipped=no-pill');
+      return;
+    }
+    win.webContents.sendInputEvent({ type: 'mouseMove', x: pillPoint.x, y: pillPoint.y });
+    await delay(260);
+
+    const hover = (await win.webContents.executeJavaScript(
+      `(() => {
+        const pill = document.querySelector('.pill');
+        const controls = pill?.querySelector('.controls');
+        const meta = pill?.querySelector('.meta');
+        return {
+          hasControls: pill?.classList.contains('has-controls') ?? false,
+          opacity: controls ? getComputedStyle(controls).opacity : null,
+          metaOpacity: meta ? getComputedStyle(meta).opacity : null,
+          buttons: [...(pill?.querySelectorAll('.controls [data-action]') ?? [])].map((button) => ({
+            action: button.getAttribute('data-action'),
+            label: button.getAttribute('aria-label')
+          }))
+        };
+      })()`
+    )) as {
+      hasControls: boolean;
+      opacity: string | null;
+      metaOpacity: string | null;
+      buttons: { action: string | null; label: string | null }[];
+    };
+    console.log(`[music] hover ${JSON.stringify(hover)}`);
+
+    const start = musicView;
+    if (!start) {
+      console.log('[music] cmd skipped=no-session');
+      return;
+    }
+
+    let started = Date.now();
+    const fromPlaying = start.playing;
+    const clicked = await clickTransport('toggle');
+    const flipped = clicked && (await waitForMusic(() => musicView !== null && musicView.playing !== fromPlaying, 6000));
+    console.log(
+      `[music] toggle ${JSON.stringify({
+        from: fromPlaying,
+        to: musicView?.playing ?? null,
+        ok: flipped,
+        ms: Date.now() - started
+      })}`
+    );
+
+    if (musicView && !musicView.playing) {
+      started = Date.now();
+      const back = await clickTransport('toggle');
+      const resumed = back && (await waitForMusic(() => musicView?.playing === true, 6000));
+      console.log(
+        `[music] resume ${JSON.stringify({
+          from: false,
+          to: musicView?.playing ?? null,
+          ok: resumed,
+          ms: Date.now() - started
+        })}`
+      );
+    }
+
+    const beforeTitle = musicView?.title ?? '';
+    started = Date.now();
+    const nextClicked = await clickTransport('next');
+    const nextChanged =
+      nextClicked && (await waitForMusic(() => musicView !== null && musicView.title !== beforeTitle, 8000));
+    console.log(
+      `[music] next ${JSON.stringify({
+        from: beforeTitle,
+        to: musicView?.title ?? '',
+        ok: nextChanged,
+        ms: Date.now() - started
+      })}`
+    );
+
+    const afterTitle = musicView?.title ?? '';
+    started = Date.now();
+    const prevClicked = await clickTransport('prev');
+    const prevChanged =
+      prevClicked && (await waitForMusic(() => musicView !== null && musicView.title !== afterTitle, 8000));
+    console.log(
+      `[music] prev ${JSON.stringify({
+        from: afterTitle,
+        to: musicView?.title ?? '',
+        ok: prevChanged,
+        ms: Date.now() - started
+      })}`
+    );
+    console.log('[music] cmd done');
+  }
+
+  async function runMusicTabTest(target: BrowserWindow, openPanel: () => void): Promise<void> {
+    const deadline = Date.now() + 12000;
+    while (!musicView && Date.now() < deadline) {
+      await delay(200);
+    }
+    if (!musicView) {
+      console.log('[music] tab skipped=no-session');
+      return;
+    }
+    if (target.isDestroyed()) return;
+
+    const payload = { ...musicView };
+    console.log(`[music] tabpayload ${JSON.stringify({ ...payload, art: Boolean(payload.art) })}`);
+
+    const requests: string[] = [];
+    const onMessage = (_event: Electron.Event, method: string, params: Record<string, unknown>): void => {
+      if (method !== 'Network.requestWillBeSent') return;
+      const request = params.request as { url?: string } | undefined;
+      const url = request?.url ?? '';
+      if (/^https?:/i.test(url)) requests.push(url);
+    };
+
+    const probe = `(() => {
+      const panel = document.querySelector('#panel-music');
+      const art = panel?.querySelector('.art');
+      const bar = panel?.querySelector('[data-music-bar]');
+      const fill = panel?.querySelector('.track-fill');
+      const rect = art?.getBoundingClientRect();
+      return {
+        hidden: panel?.hidden ?? null,
+        selected: document.querySelector('#tab-music')?.getAttribute('aria-selected') ?? null,
+        title: panel?.querySelector('.panel-title')?.textContent ?? null,
+        subtitle: panel?.querySelector('.panel-sub')?.textContent ?? null,
+        art: (art?.getAttribute('src') ?? '').startsWith('data:image/png'),
+        artW: rect ? Math.round(rect.width) : 0,
+        artH: rect ? Math.round(rect.height) : 0,
+        bar: bar
+          ? {
+              tag: bar.tagName,
+              role: bar.getAttribute('role'),
+              now: Number(bar.getAttribute('aria-valuenow')),
+              max: Number(bar.getAttribute('aria-valuemax')),
+              tabIndex: bar.tabIndex,
+              fill: fill?.style.width ?? null
+            }
+          : null,
+        slider: Boolean(panel?.querySelector('input[type="range"], [role="slider"]')),
+        times: [...(panel?.querySelectorAll('.track-times span') ?? [])].map((span) => span.textContent),
+        controls: [...(panel?.querySelectorAll('.music-controls [data-action]') ?? [])].map((button) => ({
+          action: button.getAttribute('data-action'),
+          label: button.getAttribute('aria-label')
+        }))
+      };
+    })()`;
+
+    target.webContents.debugger.attach('1.3');
+    target.webContents.debugger.on('message', onMessage);
+    try {
+      await target.webContents.debugger.sendCommand('Network.enable');
+      openPanel();
+      await delay(400);
+      await target.webContents.executeJavaScript(`document.querySelector('#tab-music')?.click()`);
+      await delay(300);
+      const first = await target.webContents.executeJavaScript(probe);
+      console.log(`[music] tab ${JSON.stringify(first)}`);
+      await delay(3000);
+      const second = await target.webContents.executeJavaScript(probe);
+      console.log(`[music] tabtick ${JSON.stringify(second)}`);
+
+      const beforeToggle = musicView?.playing ?? false;
+      await target.webContents.executeJavaScript(`document.querySelector('#panel-music [data-action="toggle"]')?.click()`);
+      const flipped = await waitForMusic(() => musicView !== null && musicView.playing !== beforeToggle, 8000);
+      await target.webContents.executeJavaScript(`document.querySelector('#panel-music [data-action="toggle"]')?.click()`);
+      const restored = await waitForMusic(() => musicView !== null && musicView.playing === beforeToggle, 8000);
+      console.log(`[music] tabtoggle ${JSON.stringify({ from: beforeToggle, flipped, restored })}`);
+
+      console.log(`[music] net ${JSON.stringify({ requests })}`);
+    } finally {
+      target.webContents.debugger.removeListener('message', onMessage);
+      target.webContents.debugger.detach();
+      console.log('[music] tab done');
+    }
   }
 
   let onFullscreen: (active: boolean) => void = () => {};
@@ -572,6 +823,24 @@ if (!gotLock) {
         return { ok: true, files: [] };
       });
 
+      ipcMain.handle('beam:music:command', async (event, cmd: unknown): Promise<{ ok: boolean; error?: string }> => {
+        if (event.sender !== window.webContents) return { ok: false, error: 'untrusted sender' };
+        const action = cmd === 'toggle' || cmd === 'next' || cmd === 'prev' ? cmd : null;
+        if (!action) {
+          console.error(`[music] cmd rejected ${String(cmd)}`);
+          return { ok: false, error: 'unknown command' };
+        }
+        try {
+          await bridge.music(action);
+          console.log(`[music] cmd ${action} ok=true`);
+          return { ok: true };
+        } catch (error) {
+          const message = error instanceof Error ? error.message : String(error);
+          console.error(`[music] cmd ${action} ok=false ${message}`);
+          return { ok: false, error: message };
+        }
+      });
+
       ipcMain.on('beam:panel:request-open', openPanel);
       ipcMain.on('beam:panel:collapsed', () => {
         if (window.isDestroyed()) return;
@@ -630,6 +899,15 @@ if (!gotLock) {
       if (emptyTest) {
         setTimeout(() => {
           void runEmptyTest(window, openPanel).catch((error: unknown) => console.error('[empty] failed', error));
+        }, 1200);
+      }
+      if (musicTabTest) {
+        setTimeout(() => {
+          if (!window.isDestroyed()) {
+            void runMusicTabTest(window, openPanel).catch((error: unknown) =>
+              console.error('[music] tab failed', error)
+            );
+          }
         }, 1200);
       }
     }

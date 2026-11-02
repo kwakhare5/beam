@@ -29,7 +29,7 @@ No network. No database. No server. Four parts, three seams.
 
 ### Current vs target (2026-10-29)
 
-Implemented: Electron shell with single-instance lock, the 136×42 window anchored above the taskbar with the 94×30 idle capsule, tray, panel open/collapse at 452×316 with a ~150ms transform, pointer-captured window drag with a saved position (`settings.ts`), the idle star dim asserted from computed style, hide-on-fullscreen with tray restore, a file drop shelf (paths only, deduped, 50 cap, pill count), live Files rows with copy and drag-out, split UI modules/styles, the canonical preview, eighteen `verify.ps1` checks (including a real-mouse window drag → restart → reset, a real copy paste and a real row drag-out into Explorer, and a real borderless fullscreen window), and `measure.ps1`.
+Implemented: Electron shell with single-instance lock, the 136×42 window anchored above the taskbar with the 94×30 idle capsule, tray, panel open/collapse at 452×316 with a ~150ms transform, pointer-captured window drag with a saved position (`settings.ts`), the idle star dim asserted from computed style, hide-on-fullscreen with tray restore, a file drop shelf (paths only, deduped, 50 cap, pill count), live Files rows with copy and drag-out, the live music pill with prev / play-pause / next transports, a live Music tab with 148px art and a read-only position bar, split UI modules/styles, the canonical preview, twenty-three `verify.ps1` checks (including a real-mouse window drag → restart → reset, a real copy paste and a real row drag-out into Explorer, and a real borderless fullscreen window), and `measure.ps1`.
 
 Built in the helper: stdio client, SMTC read with PNG artwork, CF_HDROP clipboard, fullscreen detection, ping.
 
@@ -44,7 +44,7 @@ Still target: `window.ts` (geometry refactor), `hotkey.ts`, `src/shared/`, the t
 | Electron main | Node process | Window geometry, tray, global hotkey, settings file, helper lifecycle, the shelf | Draw UI, touch Win32 directly |
 | Renderer | Chromium window | Pill, 5 tabs, all visuals | Read files from disk, call Win32, keep the shelf |
 | Shelf (main memory) | Array in the main process | Dropped paths, deduped case-insensitively, capped at 50 | Copy or move files, touch disk, survive a restart |
-| BeamBridge.exe | Windowless C# child | SMTC read, clipboard, fullscreen detection | Draw anything, own state long-term, run drag-out (app-owned) |
+| BeamBridge.exe | Windowless C# child | SMTC read + commands, clipboard, fullscreen detection | Draw anything, own state long-term, run drag-out (app-owned) |
 | settings.json | File in `%APPDATA%\Beam\` | Position, hotkey, startup flag, chime volume, theme, schema `version` | Store temp data |
 
 Renderer is untrusted by design: `contextIsolation: true`, `nodeIntegration: false`, `sandbox: true`. It gets one narrow preload API and nothing else.
@@ -127,8 +127,8 @@ Requests (main → helper), each with an `id`:
 | cmd | payload | returns |
 |---|---|---|
 | `music.get` | — | current session or `null` |
-| `music.toggle` | — | ok |
-| `music.next` / `music.prev` | — | ok |
+| `music.toggle` | — | ok / error |
+| `music.next` / `music.prev` | — | ok / error |
 | `files.copy` | `paths: string[]` | ok / error |
 | `fullscreen.get` | — | `{ active, rect }` |
 | `ping` | — | `{ pong, version }` |
@@ -140,7 +140,7 @@ Events (helper → main), unsolicited, no `id`:
 | `music.changed` | `{ app, title, artist, album, artPath, playing, positionMs, durationMs }` or `null`; players that publish no timeline may omit the last two |
 | `fullscreen.changed` | `{ active }` |
 
-Rules: helper never prints anything else to stdout (stderr is for logs). Any malformed line is dropped and logged. Main restarts the helper on exit, max 3 times in 60s, then shows a tray warning (not built yet). The helper exits on stdin EOF, so a killed main cannot orphan it; on quit, main closes stdin and waits up to 1.5s for that exit before killing, so the art folder is wiped.
+Rules: helper never prints anything else to stdout (stderr is for logs). Any malformed line is dropped and logged. Main restarts the helper on exit, max 3 times in 60s, then shows a tray warning (not built yet). The helper exits on stdin EOF, so a killed main cannot orphan it; on quit, main closes stdin and waits up to 1.5s for that exit before killing, so the art folder is wiped. Music commands (built 2026-11-02) ask the manager for the live session, call `TryTogglePlayPauseAsync` / `TrySkipNextAsync` / `TrySkipPreviousAsync`, and reply `{ ok, error }`; a missing session or a refusal is an error, never a crash.
 
 **Drag-out never goes through the helper.** 0.4c tried `DoDragDrop` on a dedicated STA thread: Windows kept the mouse capture with Chromium's window, so the drag loop spun at 100% CPU and never dropped. The code was deleted 2026-10-29. The renderer starts the drag from its own `dragstart` gesture and main calls `webContents.startDrag({ file, files, icon })`, which uses Chromium's native drag source and accepts multiple paths. Built 2026-10-31 for Files rows only: a row is draggable when its path is on the shelf and still exists; `beam:files:drag` re-checks both in main and ignores anything else. The capsule keeps moving the window (DESIGN Pointer Drag) — one pointer gesture cannot do both. The old `BEAM_DRAG_TEST` hook was removed.
 
@@ -164,7 +164,7 @@ All channels prefixed `beam:`. Renderer can call, main can push. Built channels 
 | renderer → main | `beam:window:drag-start` / `drag-move` / `drag-end` | pointer-captured window drag; main moves the window with `setBounds`, clamps it to the display work area, and saves the position | built |
 | main → renderer | `beam:panel:open` | start the open animation, carrying the shelf rows stat'd from disk | built |
 | main → renderer | `beam:panel:dismiss` | close on blur or tray toggle | built |
-| renderer → main | `beam:music:command` | toggle / next / prev | planned |
+| renderer → main | `beam:music:command` | toggle / next / prev; main validates the sender and command, calls the helper, and replies `{ ok, error }` | built |
 | renderer → main | `beam:files:add` | paths from a drop; main dedupes, caps at 50, replies `{ count, accepted, truncated, limit }` | built |
 | renderer → main | `beam:files:copy` | copy one or all; payload `{ paths, source }`, main accepts only paths already on the shelf and calls `files.copy` | built |
 | renderer → main | `beam:files:drag` | start drag-out; payload `string[]`, main accepts only existing shelf paths and calls `startDrag` | built |
@@ -172,7 +172,7 @@ All channels prefixed `beam:`. Renderer can call, main can push. Built channels 
 | renderer → main | `beam:files:clear` | wipe the shelf; replies `{ ok, files: [] }` | built |
 | renderer → main | `beam:timer:start/stop` | presets or custom | planned |
 | renderer → main | `beam:settings:get/set` | settings screen | planned |
-| main → renderer | `beam:music:state` | pushed on `music.changed` and again on `did-finish-load`; `{ title, artist, playing, art }` with `art` a PNG data URL or null | built |
+| main → renderer | `beam:music:state` | pushed on `music.changed` and again on `did-finish-load`; `{ title, artist, playing, positionMs, durationMs, art }` with `art` a PNG data URL or null | built |
 | main → renderer | `beam:timer:tick` | seconds left, pushed by main (the timer owner) | planned |
 
 Fullscreen hide is main-only: main calls `win.hide()` / `win.showInactive()` itself and never messages the renderer for it.
@@ -190,11 +190,13 @@ Fullscreen hide is main-only: main calls `win.hide()` / `win.showInactive()` its
 Spotify changes track
 → Windows raises SMTC event
 → helper fires music.changed {title, artist, artPath}
-→ main reads the PNG once and sends beam:music:state { title, artist, playing, art: data URL }
-→ renderer swaps pill title + 24px art + green/amber dot
+→ main reads the PNG once and sends beam:music:state { title, artist, playing, positionMs, durationMs, art: data URL }
+→ renderer swaps pill title + 24px art + green/amber dot, and feeds the panel's Music tab
 ```
 
 The sandboxed renderer cannot read `%TEMP%\Beam\art\`, so main converts the helper's PNG to a `data:image/png;base64` URL per change; a changed track drops any in-flight read. A null session is held for 500ms before the pill leaves the track, because Spotify publishes a null gap between songs. A missing shelf file's danger dot outranks the music dot.
+
+The Music tab (built 2026-11-02) renders 148×148 art on the left, title and artist with a status dot, a read-only position bar with elapsed/total, and the same three transports. The bar starts at the last SMTC `positionMs`, then advances on a local 1s tick from `performance.now()`; there is no seek and no helper poll. The tab makes no network requests because the art is already a data URL. Verify check 23 proves the 148px art, a non-interactive DIV progressbar, all three controls changing and restoring real playback, and zero http(s) requests under CDP `Network.enable`.
 
 **Copy 3 files**
 ```
@@ -286,6 +288,7 @@ helper's WinEventHook sees a foreground change or the foreground window resize/m
 | 2026-10-29 | Music states show the 24px album thumbnail (star fallback) and a green/amber dot; paused drops the play glyph. The music track and transport span the panel width, selected content tabs get a 2px gold underline, missing rows drop copy, the timer says Set, and done shows a check + Time’s up | The paused glyph stole 20px from the title, the gold pip read as brand, and the narrow music column squeezed the transport (ADR-0010) |
 | 2026-10-28 | Capsule precedence is drag > timer > music > files > idle | Direct manipulation feedback wins for the moment it lasts; timer still beats music |
 | 2026-10-28 | Music panel shows a read-only position bar, no seeking | Square art plus a position readout fills the panel; SMTC seeking stays out of scope |
+| 2026-11-02 | The Music tab advances its read-only bar from the last SMTC position plus a local 1s tick; no helper poll, no network | SMTC publishes position only on session events, so a helper poll would add wakeups; local ticking matches the no-seek scope. Verified at check 23 (bar 1s/228s, +3s in 3s, 0 http(s) requests) |
 | 2026-10-28 | Files rows expose copy and remove on hover; the empty state is a dashed drop well | Task 3.3 already promised per-row copy, and the core action needs a visible target |
 | 2026-10-28 | Settings has five rows including Reset position, with real controls and dividers instead of a row gap | Read-only badges looked interactive; five 44px rows only fit 242px without the gap |
 | 2026-10-28 | Type scale 11/12/13/15/40 and spacing 4/8/12/16 | Five label sizes and three body rhythms made the panel look assembled from different screens |
@@ -294,12 +297,13 @@ helper's WinEventHook sees a foreground change or the foreground window resize/m
 | 2026-10-31 | Drag-out starts from Files rows only; the capsule keeps its window-move gesture | The capsule's pointer drag was locked to moving the window (ADR-0005), and one gesture cannot also hand files to Explorer; rows give drag-out a clear surface |
 | 2026-10-31 | Pointer-down is ignored for 200ms after a panel starts closing | In the 160ms before the window shrinks, the capsule sits centered in the panel-sized window, so a click there could drag the window instead of landing on the panel |
 | 2026-11-01 | Music art crosses the IPC seam as a base64 PNG data URL; a null session is held 500ms; a missing-file danger dot outranks the music dot | The sandbox cannot read the helper's temp PNG, Spotify emits a null gap between tracks that would blink the pill, and a deleted shelf file needs its warning even while music plays. Verified at check 21 (9–29ms) and by a real track change (15ms) |
+| 2026-11-02 | Pill transports call `music.toggle` / `next` / `prev` through the helper; the renderer only sends the action; a refusal is logged, not shown | WinRT stays behind the helper seam like every other Win32 call, and a 94px pill has no room for an error surface. The helper asks the manager for the live session on every command so a stale handle cannot wedge playback |
 
 UI decisions: ADR-0001 (component boundaries), ADR-0002 (original mascot), ADR-0003 (window, capsule, and panel sizes), ADR-0004 (vanilla shadcn-style), ADR-0005 (capsule interaction), ADR-0006 (landscape panel), ADR-0007 (capsule-to-panel interaction), ADR-0008 (content dynamics), ADR-0009 (state identity, panel completeness, and scale), ADR-0010 (capsule artwork, dot language, and panel clarity).
 
 ## 8. Status
 
-Phase 0: 0.1 built, 0.2 measured and passed, 0.3 built (ping/pong), 0.4a built (live SMTC events, PNG art), 0.4b built (CF_HDROP clipboard), 0.5 built (fullscreen detection; verify drives a real borderless window). 0.4c replaced by 3.4. 1.1 built (`placeWindow` anchors above the taskbar), 1.2 built (verify guards the foreground), 1.6 built (tray), 1.3 built (panel open/collapse; timing measured from `transitionrun`), 1.4 built (drag + `settings.ts`; verify drags with a real mouse, restarts, and resets), 1.5 built (idle star 0.7 asserted from computed style), 1.9 built (hide on fullscreen, tray restores; verify check 15), 3.1 built (drop shelf, paths in main memory, 50 cap, pill count; verify check 16), 3.3 built (live Files rows on open, row copy and Copy All with `Copied` feedback, Explorer paste; verify check 17), 3.4 built (Files rows drag out through `startDrag`; missing and off-shelf paths rejected; verify drags a real file into Explorer), 3.2 built (open-time stat marks missing rows, strips copy/drag, raises the pill's danger pip; verify check 19), 3.5 built (row remove, armed Clear All, the `Files clear on quit` note, empty state and pill after a restart; verify check 20). Block C is complete. Next: 2.1, the first task in block D.
+Phase 0: 0.1 built, 0.2 measured and passed, 0.3 built (ping/pong), 0.4a built (live SMTC events, PNG art), 0.4b built (CF_HDROP clipboard), 0.5 built (fullscreen detection; verify drives a real borderless window). 0.4c replaced by 3.4. 1.1 built (`placeWindow` anchors above the taskbar), 1.2 built (verify guards the foreground), 1.6 built (tray), 1.3 built (panel open/collapse; timing measured from `transitionrun`), 1.4 built (drag + `settings.ts`; verify drags with a real mouse, restarts, and resets), 1.5 built (idle star 0.7 asserted from computed style), 1.9 built (hide on fullscreen, tray restores; verify check 15), 3.1 built (drop shelf, paths in main memory, 50 cap, pill count; verify check 16), 3.3 built (live Files rows on open, row copy and Copy All with `Copied` feedback, Explorer paste; verify check 17), 3.4 built (Files rows drag out through `startDrag`; missing and off-shelf paths rejected; verify drags a real file into Explorer), 3.2 built (open-time stat marks missing rows, strips copy/drag, raises the pill's danger pip; verify check 19), 3.5 built (row remove, armed Clear All, the `Files clear on quit` note, empty state and pill after a restart; verify check 20), 2.1 built (live title, art, and dot; verify check 21), 2.2 built (hover transports call SMTC through the helper; verify check 22), 2.3 built (Music tab with 148px art, title/artist, a locally ticking read-only bar, and the same transports; verify check 23 proves art, bar, controls, and 0 network requests). Block C is complete and 2.1–2.3 are built; next is 2.4, session picking.
 
 Open: the transparent rest margins still swallow clicks (no task owns it); multi-monitor restore and 100/150% scaling are unproven; the helper restart policy, hotkey, timer, and the four placeholder tabs are unbuilt; Add files is still a button with no picker. verify now writes its settings to `BEAM_SETTINGS_PATH` and never touches the user's saved position.
 

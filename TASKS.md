@@ -63,12 +63,12 @@
 - [x] **2.1 Live state on the pill** — *Depends on: 0.4a.*
   - Title and artwork thumbnail. Empty state when nothing plays. Artist stays panel-only: DESIGN's pill has one 46px title slot.
   - _Verify (proved 2026-11-01): check 21 matches the live SMTC title, playing/paused state, dot, and art in 9–29ms; a real Spotify track change moved the pill in 15ms. While a track is active, verify prints SKIP for the idle, drop-count, and clear pill labels and asserts their data elsewhere._
-- [ ] **2.2 Hover controls** — *Depends on: 2.1.*
+- [x] **2.2 Hover controls** — *Depends on: 2.1.*
   - Play/Pause, Prev, Next fade in on hover. Fixed window size.
-  - _Verify:_ all three buttons change Spotify's real playback state.
-- [ ] **2.3 Music tab** — *Depends on: 1.3, 2.1.*
+  - _Verify (proved 2026-11-02): check 22 hovers the live pill, asserts the transport overlay at opacity 1 with the title at 0, and clicks each button with injected mouse input; play/pause flipped playing true→false, Next moved `Allah Maaf Kare`→`Naah`, and Previous moved it back. Check 12 now presses the pill's left padding because the hover transports cover the center._
+- [x] **2.3 Music tab** — *Depends on: 1.3, 2.1.*
   - 148px square art, full metadata, read-only position bar with elapsed/total, same controls. No seek control (out of scope).
-  - _Verify:_ art renders with no network requests in DevTools; the position bar matches SMTC and cannot be dragged.
+  - _Verify (proved 2026-11-02): check 23 opens the Music tab on the live Chrome track 'Pyar Ki' and asserts 148×148 art from a data URL, title and artist, a read-only DIV progressbar with no slider or tab stop, elapsed/total labels, and all three transports; the bar read 1s/228s and advanced 3s in 3s, and the tab play/pause flipped and restored real playback. CDP `Network.enable` saw 0 http(s) requests._
 - [ ] **2.4 Session picking** — *Depends on: 2.1.*
   - Two players at once → last-touched wins; switching apps in the media popup switches Beam.
   - _Verify:_ Spotify + browser tab, toggle foreground, pill follows.

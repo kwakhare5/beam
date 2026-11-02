@@ -28,19 +28,19 @@ public static class BeamScreen {
 [BeamScreen]::SetCursorPos(8, 8) | Out-Null
 
 
-Write-Host '[1/21] typecheck'
+Write-Host '[1/23] typecheck'
 & $tsc -p tsconfig.json --noEmit
 if ($LASTEXITCODE -ne 0) { Write-Host 'FAIL typecheck'; exit 1 }
 & $tsc -p tsconfig.renderer.json --noEmit
 if ($LASTEXITCODE -ne 0) { Write-Host 'FAIL typecheck (renderer)'; exit 1 }
 Write-Host 'PASS typecheck'
 
-Write-Host '[2/21] build'
+Write-Host '[2/23] build'
 & npm run build
 if ($LASTEXITCODE -ne 0) { Write-Host 'FAIL build'; exit 1 }
 Write-Host 'PASS build'
 
-Write-Host '[3/21] helper build'
+Write-Host '[3/23] helper build'
 $helperDir = Join-Path $PSScriptRoot 'native\BeamBridge\dist'
 if (Test-Path -LiteralPath $helperDir) { Remove-Item -LiteralPath $helperDir -Recurse -Force }
 & dotnet publish (Join-Path $PSScriptRoot 'native\BeamBridge\BeamBridge.csproj') -c Release -o $helperDir --nologo
@@ -51,7 +51,7 @@ $helperFiles = @(Get-ChildItem -LiteralPath $helperDir -File)
 if ($helperFiles.Count -ne 1) { Write-Host "FAIL helper build: expected one file, found $($helperFiles.Count)"; exit 1 }
 Write-Host 'PASS helper build (single exe)'
 
-Write-Host '[4/21] clipboard'
+Write-Host '[4/23] clipboard'
 $clipDir = Join-Path $env:TEMP 'beam-clip'
 if (Test-Path -LiteralPath $clipDir) { Remove-Item -LiteralPath $clipDir -Recurse -Force }
 New-Item -ItemType Directory -Path $clipDir | Out-Null
@@ -101,7 +101,7 @@ if ($clipAfter.Count -ne 3) {
 Remove-Item -LiteralPath $clipDir -Recurse -Force
 Write-Host 'PASS clipboard (3 real paths, survive helper exit)'
 
-Write-Host '[5/21] launch + focus'
+Write-Host '[5/23] launch + focus'
 $outLog = Join-Path $env:TEMP 'beam-verify.out.log'
 $errLog = Join-Path $env:TEMP 'beam-verify.err.log'
 Remove-Item -LiteralPath $outLog -ErrorAction SilentlyContinue
@@ -178,7 +178,7 @@ if ($pillLine -notmatch '\[window\] pill=') {
 }
 Start-Sleep -Milliseconds 300
 
-Write-Host '[6/21] anchor'
+Write-Host '[6/23] anchor'
 $appOut = Get-Content -LiteralPath $outLog -Raw -ErrorAction SilentlyContinue
 $anchorMatches = [regex]::Matches($appOut, '\[window\] bounds=(-?\d+),(-?\d+),(\d+),(\d+) content=(-?\d+),(-?\d+),(\d+),(\d+) work=(-?\d+),(-?\d+),(\d+),(\d+)')
 if ($anchorMatches.Count -eq 0) {
@@ -250,7 +250,7 @@ if ([math]::Abs($waX - $wx) -gt 2 -or [math]::Abs($waY - $wy) -gt 2 -or [math]::
 }
 Write-Host "PASS anchor (pill 12px above the taskbar, centered; native rect matches; scale $scale)"
 
-Write-Host '[7/21] idle dim'
+Write-Host '[7/23] idle dim'
 $idleOut = Get-Content -LiteralPath $outLog -Raw -ErrorAction SilentlyContinue
 $idleMatch = [regex]::Match($idleOut, '\[idle\] (\{.+\})')
 if (-not $idleMatch.Success) {
@@ -273,7 +273,7 @@ if ($idle.state -eq 'playing' -or $idle.state -eq 'paused') {
   Write-Host "PASS idle dim (star $($idle.markOpacity), shell $($idle.shellOpacity), master mark, label Beam)"
 }
 
-Write-Host '[8/21] panel'
+Write-Host '[8/23] panel'
 $panelOut = $appOut
 for ($i = 0; $i -lt 50; $i++) {
   Start-Sleep -Milliseconds 300
@@ -322,7 +322,7 @@ if ($restoredW -gt 200 -or $restoredH -gt 100) {
 Remove-Item Env:BEAM_PANEL_TEST -ErrorAction SilentlyContinue
 Write-Host "PASS panel (open ${panelMs}ms reduced=$reduced, 452x316, dismissed back to the pill)"
 
-Write-Host '[9/21] helper memory'
+Write-Host '[9/23] helper memory'
 $helper = Get-Process BeamBridge -ErrorAction SilentlyContinue
 if (-not $helper) {
   Stop-Process -Id $first.Id -Force -ErrorAction SilentlyContinue
@@ -339,7 +339,7 @@ if ($helperMb -ge 60) {
 }
 Write-Host "PASS helper memory ($helperMb MB idle, cap 60 MB)"
 
-Write-Host '[10/21] single instance'
+Write-Host '[10/23] single instance'
 $second = Start-Process -FilePath $electron -ArgumentList '.' -WorkingDirectory $PSScriptRoot -PassThru
 Start-Sleep -Seconds 4
 if (-not $second.HasExited) {
@@ -356,7 +356,7 @@ if ($first.HasExited) {
 }
 Write-Host 'PASS single instance'
 
-Write-Host '[11/21] UI spec'
+Write-Host '[11/23] UI spec'
 $main = Get-Content (Join-Path $PSScriptRoot 'src\main\index.ts') -Raw
 $base = Get-Content (Join-Path $PSScriptRoot 'src\renderer\styles\base.css') -Raw
 $pill = Get-Content (Join-Path $PSScriptRoot 'src\renderer\styles\capsule.css') -Raw
@@ -654,7 +654,7 @@ if ($uiFail) {
 }
 Write-Host 'PASS UI spec'
 
-Write-Host '[12/21] move + persist'
+Write-Host '[12/23] move + persist'
 $settingsPath = $null
 $settingsBackup = Join-Path $env:TEMP 'beam-verify-settings.json'
 $hadSettings = $false
@@ -680,8 +680,17 @@ try {
   if (-not $moveShell) { throw 'no window to drag' }
   $moveRect = New-Object BeamScreen+RECT
   [BeamScreen]::GetWindowRect($moveShell.MainWindowHandle, [ref]$moveRect) | Out-Null
-  $dragX = [int](($moveRect.Left + $moveRect.Right) / 2)
+  $moveScale = [BeamScreen]::GetDpiForWindow($moveShell.MainWindowHandle) / 96
+  $centerX = [int](($moveRect.Left + $moveRect.Right) / 2)
   $dragY = [int](($moveRect.Top + $moveRect.Bottom) / 2)
+  if ($idle.state -eq 'playing' -or $idle.state -eq 'paused') {
+    # hover first so the pill grows, then press its left padding outside the transports
+    [BeamScreen]::SetCursorPos($centerX, $dragY) | Out-Null
+    Start-Sleep -Milliseconds 300
+    $dragX = $moveRect.Left + [int][math]::Round(10 * $moveScale)
+  } else {
+    $dragX = $centerX
+  }
   $cursorBefore = New-Object BeamScreen+POINT
   [BeamScreen]::GetCursorPos([ref]$cursorBefore) | Out-Null
   [BeamScreen]::SetCursorPos($dragX, $dragY) | Out-Null
@@ -812,7 +821,7 @@ try {
 if ($hadSettings) { Copy-Item -LiteralPath $settingsBackup -Destination $settingsPath -Force } else { Remove-Item -LiteralPath $settingsPath -ErrorAction SilentlyContinue }
 Write-Host "PASS move (drag $bx,$by to $endX,$endY, saved, restart restored it, Reset returned to $anchorX,$anchorY)"
 
-Write-Host '[13/21] quit cleanup'
+Write-Host '[13/23] quit cleanup'
 $closed = $first.CloseMainWindow()
 if (-not $closed) {
   Get-Process electron,BeamBridge -ErrorAction SilentlyContinue | Stop-Process -Force
@@ -829,7 +838,7 @@ if (-not $appExited -or $helperLeft -ne 0) {
 }
 Write-Host 'PASS quit cleanup (app and helper exited)'
 
-Write-Host '[14/21] fullscreen'
+Write-Host '[14/23] fullscreen'
 $fsHarnessPath = Join-Path $env:TEMP 'beam-fs-harness.ps1'
 $fsStagePath = Join-Path $env:TEMP 'beam-fs-stage.txt'
 $fsProc = $null
@@ -949,7 +958,7 @@ if ($fsProc -and -not $fsProc.HasExited) {
 Remove-Item -LiteralPath $fsStagePath -ErrorAction SilentlyContinue
 Write-Host 'PASS fullscreen (grow to monitor bounds -> active:true, shrink -> active:false, same foreground window)'
 
-Write-Host '[15/21] fullscreen hide'
+Write-Host '[15/23] fullscreen hide'
 $hideOutLog = Join-Path $env:TEMP 'beam-fs-hide.out.log'
 $hideErrLog = Join-Path $env:TEMP 'beam-fs-hide.err.log'
 Remove-Item -LiteralPath $hideOutLog, $hideErrLog -ErrorAction SilentlyContinue
@@ -1014,7 +1023,7 @@ Remove-Item -LiteralPath $hideOutLog, $hideErrLog -ErrorAction SilentlyContinue
 Remove-Item -LiteralPath $fsHarnessPath, $fsStagePath -ErrorAction SilentlyContinue
 Write-Host 'PASS fullscreen hide (hid at fullscreen, tray click restored it, stayed shown after the exit)'
 
-Write-Host '[16/21] drop'
+Write-Host '[16/23] drop'
 $dropOutLog = Join-Path $env:TEMP 'beam-drop-verify.out.log'
 $dropErrLog = Join-Path $env:TEMP 'beam-drop-verify.err.log'
 Remove-Item -LiteralPath $dropOutLog, $dropErrLog -ErrorAction SilentlyContinue
@@ -1064,7 +1073,7 @@ Remove-Item Env:BEAM_DROP_TEST -ErrorAction SilentlyContinue
 Remove-Item -LiteralPath $dropOutLog, $dropErrLog -ErrorAction SilentlyContinue
 Write-Host 'PASS drop (3 real files read with webUtils; 51 more capped at 50 with a Max 50 notice)'
 
-Write-Host '[17/21] copy'
+Write-Host '[17/23] copy'
 $copyOutLog = Join-Path $env:TEMP 'beam-copy-verify.out.log'
 $copyErrLog = Join-Path $env:TEMP 'beam-copy-verify.err.log'
 Remove-Item -LiteralPath $copyOutLog, $copyErrLog -ErrorAction SilentlyContinue
@@ -1166,7 +1175,7 @@ Remove-Item -LiteralPath $copyPasteDir -Recurse -Force -ErrorAction SilentlyCont
 Remove-Item -LiteralPath (Join-Path $env:TEMP 'beam-copytest') -Recurse -Force -ErrorAction SilentlyContinue
 Write-Host 'PASS copy (row copy put alpha.txt on the clipboard, Copy All put all 3 paths, Ctrl+V pasted them into Explorer)'
 
-Write-Host '[18/21] drag out'
+Write-Host '[18/23] drag out'
 $dragOutLog = Join-Path $env:TEMP 'beam-dragout-verify.out.log'
 $dragOutErr = Join-Path $env:TEMP 'beam-dragout-verify.err.log'
 $dragMarker = Join-Path $env:TEMP 'beam-dragout-continue'
@@ -1273,7 +1282,7 @@ Remove-Item -LiteralPath $dragPaste -Recurse -Force -ErrorAction SilentlyContinu
 Remove-Item -LiteralPath (Join-Path $env:TEMP 'beam-dragout') -Recurse -Force -ErrorAction SilentlyContinue
 Write-Host 'PASS drag out (a real mouse drag dropped alpha.txt into Explorer; the deleted beta.txt row lost its drag; an off-shelf path was rejected)'
 
-Write-Host '[19/21] missing badge'
+Write-Host '[19/23] missing badge'
 $missingOut = Join-Path $env:TEMP 'beam-missing-verify.out.log'
 $missingErr = Join-Path $env:TEMP 'beam-missing-verify.err.log'
 Remove-Item -LiteralPath $missingOut, $missingErr -ErrorAction SilentlyContinue
@@ -1314,7 +1323,7 @@ Remove-Item -LiteralPath $missingOut, $missingErr -ErrorAction SilentlyContinue
 Remove-Item -LiteralPath (Join-Path $env:TEMP 'beam-missing') -Recurse -Force -ErrorAction SilentlyContinue
 Write-Host 'PASS missing badge (deleted file shows Missing with the File moved or deleted tooltip, no copy or drag, and the pill gains a red pip)'
 
-Write-Host '[20/21] clear all'
+Write-Host '[20/23] clear all'
 $clearOut = Join-Path $env:TEMP 'beam-clear-verify.out.log'
 $clearErr = Join-Path $env:TEMP 'beam-clear-verify.err.log'
 Remove-Item -LiteralPath $clearOut, $clearErr -ErrorAction SilentlyContinue
@@ -1399,7 +1408,7 @@ Remove-Item -LiteralPath $clearOut, $clearErr -ErrorAction SilentlyContinue
 Remove-Item -LiteralPath (Join-Path $env:TEMP 'beam-clear') -Recurse -Force -ErrorAction SilentlyContinue
 Write-Host 'PASS clear all (row remove left 2 files with the warning, Clear All emptied the list, and a restart started empty)'
 
-Write-Host '[21/21] music pill'
+Write-Host '[21/23] music pill'
 $musicOut = Join-Path $env:TEMP 'beam-music-verify.out.log'
 $musicErr = Join-Path $env:TEMP 'beam-music-verify.err.log'
 Remove-Item -LiteralPath $musicOut, $musicErr -ErrorAction SilentlyContinue
@@ -1448,6 +1457,185 @@ try {
 Remove-Item Env:BEAM_MUSIC_TEST -ErrorAction SilentlyContinue
 Remove-Item -LiteralPath $musicOut, $musicErr -ErrorAction SilentlyContinue
 Write-Host "PASS music pill ('$($musicInput.title)' $musicWant, art=$($musicProbe.art), shown in $($musicProbe.ms)ms)"
+
+Write-Host '[22/23] music controls'
+$cmdOut = Join-Path $env:TEMP 'beam-music-commands.out.log'
+$cmdErr = Join-Path $env:TEMP 'beam-music-commands.err.log'
+Remove-Item -LiteralPath $cmdOut, $cmdErr -ErrorAction SilentlyContinue
+$env:BEAM_MUSIC_TEST = '1'
+$env:BEAM_MUSIC_CMD_TEST = '1'
+$cmdApp = $null
+try {
+  $cmdApp = Start-Process -FilePath $electron -ArgumentList '.' -WorkingDirectory $PSScriptRoot -PassThru -RedirectStandardOutput $cmdOut -RedirectStandardError $cmdErr
+  $cmdLog = ''
+  $cmdStop = (Get-Date).AddSeconds(45)
+  while ((Get-Date) -lt $cmdStop) {
+    Start-Sleep -Milliseconds 200
+    if ($cmdApp.HasExited) { throw 'the app exited before the transport test finished' }
+    $cmdLog = Get-Content -LiteralPath $cmdOut -Raw -ErrorAction SilentlyContinue
+    if ($cmdLog -match '\[music\] cmd done') { break }
+  }
+  if ($cmdLog -notmatch '\[music\] cmd done') {
+    if ($cmdLog -match '\[music\] cmd skipped=no-session') { throw 'no active SMTC session; start a track in Spotify and rerun verify' }
+    throw 'the transport test never finished'
+  }
+
+  $hoverMatch = [regex]::Match($cmdLog, '\[music\] hover (\{.+\})')
+  $toggleMatch = [regex]::Match($cmdLog, '\[music\] toggle (\{.+\})')
+  $resumeMatch = [regex]::Match($cmdLog, '\[music\] resume (\{.+\})')
+  $nextMatch = [regex]::Match($cmdLog, '\[music\] next (\{.+\})')
+  $prevMatch = [regex]::Match($cmdLog, '\[music\] prev (\{.+\})')
+  if (-not $hoverMatch.Success) { throw 'the pill never reported its transports' }
+  if (-not $toggleMatch.Success) { throw 'the play/pause button never reported' }
+  if (-not $nextMatch.Success) { throw 'the next button never reported' }
+  if (-not $prevMatch.Success) { throw 'the previous button never reported' }
+
+  $hover = $hoverMatch.Groups[1].Value | ConvertFrom-Json
+  $toggle = $toggleMatch.Groups[1].Value | ConvertFrom-Json
+  $next = $nextMatch.Groups[1].Value | ConvertFrom-Json
+  $prev = $prevMatch.Groups[1].Value | ConvertFrom-Json
+
+  if (-not $hover.hasControls) { throw 'the pill has no transport overlay while music plays' }
+  if ($hover.opacity -ne '1') { throw "the transports did not fade in on hover (opacity $($hover.opacity))" }
+  if ($hover.metaOpacity -ne '0') { throw "the title did not fade out on hover (opacity $($hover.metaOpacity))" }
+  $actions = @($hover.buttons | ForEach-Object { $_.action })
+  if ($actions.Count -ne 3 -or $actions -notcontains 'prev' -or $actions -notcontains 'toggle' -or $actions -notcontains 'next') {
+    throw "expected prev/toggle/next, found $($actions -join ',')"
+  }
+  $toggleLabel = ($hover.buttons | Where-Object { $_.action -eq 'toggle' }).label
+  $wantLabel = if ($toggle.from) { 'Pause' } else { 'Play' }
+  if ($toggleLabel -ne $wantLabel) { throw "the play button reads '$toggleLabel', expected '$wantLabel'" }
+  if (-not $toggle.ok -or $toggle.from -eq $toggle.to) { throw "play/pause did not change playback (from=$($toggle.from) to=$($toggle.to))" }
+  if ($resumeMatch.Success) {
+    $resume = $resumeMatch.Groups[1].Value | ConvertFrom-Json
+    if (-not $resume.ok -or -not $resume.to) { throw 'playback did not resume after the play/pause test' }
+  }
+  if (-not $next.ok -or $next.from -eq $next.to) { throw "Next did not change the track ('$($next.from)')" }
+  if (-not $prev.ok -or $prev.from -eq $prev.to) { throw "Previous did not change the track ('$($prev.from)')" }
+
+  $closed = $cmdApp.CloseMainWindow()
+  if (-not $closed) { throw 'the pill did not close after the transport check' }
+  $cmdExited = $cmdApp.WaitForExit(8000)
+  Start-Sleep -Milliseconds 500
+  $cmdHelperLeft = @(Get-Process BeamBridge -ErrorAction SilentlyContinue).Count
+  if (-not $cmdExited -or $cmdHelperLeft -ne 0) { throw "the app did not exit cleanly (exited=$cmdExited helperLeft=$cmdHelperLeft)" }
+} catch {
+  if ($cmdApp -and -not $cmdApp.HasExited) { $cmdApp.Kill() }
+  Get-Process electron,BeamBridge -ErrorAction SilentlyContinue | Stop-Process -Force
+  Remove-Item Env:BEAM_MUSIC_TEST, Env:BEAM_MUSIC_CMD_TEST -ErrorAction SilentlyContinue
+  Write-Host "FAIL music controls: $($_.Exception.Message)"
+  exit 1
+}
+Remove-Item Env:BEAM_MUSIC_TEST, Env:BEAM_MUSIC_CMD_TEST -ErrorAction SilentlyContinue
+Remove-Item -LiteralPath $cmdOut, $cmdErr -ErrorAction SilentlyContinue
+Write-Host "PASS music controls (play/pause $($toggle.from)->$($toggle.to), next '$($next.from)'->'$($next.to)', prev '$($prev.from)'->'$($prev.to)', transports at opacity $($hover.opacity))"
+
+function Format-BeamClock([int]$seconds) {
+  $hours = [int][math]::Floor($seconds / 3600)
+  $minutes = [int][math]::Floor(($seconds % 3600) / 60)
+  $secs = $seconds % 60
+  if ($hours -gt 0) { return '{0}:{1:D2}:{2:D2}' -f $hours, $minutes, $secs }
+  return '{0}:{1:D2}' -f $minutes, $secs
+}
+
+Write-Host '[23/23] music tab'
+$tabOut = Join-Path $env:TEMP 'beam-music-tab.out.log'
+$tabErr = Join-Path $env:TEMP 'beam-music-tab.err.log'
+Remove-Item -LiteralPath $tabOut, $tabErr -ErrorAction SilentlyContinue
+$env:BEAM_MUSIC_TAB_TEST = '1'
+$tabApp = $null
+try {
+  $tabApp = Start-Process -FilePath $electron -ArgumentList '.' -WorkingDirectory $PSScriptRoot -PassThru -RedirectStandardOutput $tabOut -RedirectStandardError $tabErr
+  $tabLog = ''
+  $tabStop = (Get-Date).AddSeconds(30)
+  while ((Get-Date) -lt $tabStop) {
+    Start-Sleep -Milliseconds 200
+    if ($tabApp.HasExited) { throw 'the app exited before the music tab probe' }
+    $tabLog = Get-Content -LiteralPath $tabOut -Raw -ErrorAction SilentlyContinue
+    if ($tabLog -match '\[music\] tab done') { break }
+  }
+  if ($tabLog -notmatch '\[music\] tab done') {
+    if ($tabLog -match '\[music\] tab skipped=no-session') { throw 'no active SMTC session; start a track and rerun verify' }
+    throw 'the music tab probe never finished'
+  }
+
+  $payloadMatch = [regex]::Match($tabLog, '\[music\] tabpayload (\{.+\})')
+  $firstMatch = [regex]::Match($tabLog, '\[music\] tab (\{.+\})')
+  $secondMatch = [regex]::Match($tabLog, '\[music\] tabtick (\{.+\})')
+  $tabToggleMatch = [regex]::Match($tabLog, '\[music\] tabtoggle (\{.+\})')
+  $netMatch = [regex]::Match($tabLog, '\[music\] net (\{.+\})')
+  if (-not $payloadMatch.Success) { throw 'the music tab probe never reported its payload' }
+  if (-not $firstMatch.Success) { throw 'the music tab never reported its first state' }
+  if (-not $secondMatch.Success) { throw 'the music tab never reported its second state' }
+  if (-not $tabToggleMatch.Success) { throw 'the music tab toggle never reported' }
+  if (-not $netMatch.Success) { throw 'the music tab probe never reported its network requests' }
+
+  $payload = $payloadMatch.Groups[1].Value | ConvertFrom-Json
+  $first = $firstMatch.Groups[1].Value | ConvertFrom-Json
+  $second = $secondMatch.Groups[1].Value | ConvertFrom-Json
+  $tabToggleResult = $tabToggleMatch.Groups[1].Value | ConvertFrom-Json
+  $net = $netMatch.Groups[1].Value | ConvertFrom-Json
+  if ([string]::IsNullOrWhiteSpace($payload.title)) { throw 'the SMTC session has no title' }
+  if ($payload.durationMs -le 0) { throw 'the SMTC session has no duration' }
+  if (-not $payload.art) { throw 'the live session has no artwork; the 2.3 art check needs a track with art' }
+  if ($first.hidden -ne $false) { throw 'the Music tab panel is still hidden after its tab was clicked' }
+  if ($first.selected -ne 'true') { throw 'the Music tab is not selected' }
+  if ($first.title -ne $payload.title) { throw "the Music tab title reads '$($first.title)', expected '$($payload.title)'" }
+  if ($first.subtitle -ne $payload.artist) { throw "the Music tab artist reads '$($first.subtitle)', expected '$($payload.artist)'" }
+  if (-not $first.art) { throw 'the Music tab did not render the art as a data URL' }
+  if ([int]$first.artW -ne 148 -or [int]$first.artH -ne 148) { throw "the Music tab art is $($first.artW)x$($first.artH), expected 148x148" }
+  if (-not $first.bar) { throw 'the Music tab has no position bar' }
+  if ($first.bar.tag -ne 'DIV' -or $first.bar.role -ne 'progressbar') { throw "the position bar is a $($first.bar.tag) with role '$($first.bar.role)', expected a DIV progressbar" }
+  if ([int]$first.bar.tabIndex -ne -1 -or $first.slider) { throw 'the position bar is interactive (slider or focusable)' }
+
+  $wantMax = [int][math]::Round($payload.durationMs / 1000)
+  if ([int]$first.bar.max -ne $wantMax) { throw "the bar max is $($first.bar.max)s, expected $wantMax" }
+  $base = [int][math]::Round($payload.positionMs / 1000)
+  $now = [int]$first.bar.now
+  if ($now -lt $base -or $now -gt ($base + 3)) { throw "the bar reads $($now)s, expected about $($base)s from SMTC" }
+
+  $times = @($first.times)
+  if ($times.Count -ne 2) { throw "the bar shows $($times.Count) time labels, expected 2" }
+  $wantElapsed = Format-BeamClock $now
+  $wantTotal = Format-BeamClock $wantMax
+  if ($times[0] -ne $wantElapsed -or $times[1] -ne $wantTotal) { throw "the bar times read $($times[0]) / $($times[1]), expected $wantElapsed / $wantTotal" }
+
+  $actions = @($first.controls | ForEach-Object { $_.action })
+  if ($actions.Count -ne 3 -or $actions -notcontains 'prev' -or $actions -notcontains 'toggle' -or $actions -notcontains 'next') {
+    throw "expected prev/toggle/next in the Music tab, found $($actions -join ',')"
+  }
+  $wantToggle = if ($payload.playing) { 'Pause' } else { 'Play' }
+  $tabToggleLabel = ($first.controls | Where-Object { $_.action -eq 'toggle' }).label
+  if ($tabToggleLabel -ne $wantToggle) { throw "the Music tab play button reads '$tabToggleLabel', expected '$wantToggle'" }
+  if (-not $tabToggleResult.flipped -or -not $tabToggleResult.restored) { throw 'the Music tab play/pause button did not change and restore the live session' }
+
+  $advance = 'paused'
+  if ($payload.playing) {
+    $delta = [int]$second.bar.now - [int]$first.bar.now
+    if ($delta -lt 2 -or $delta -gt 4) { throw "the bar did not advance with playback (from $($first.bar.now)s to $($second.bar.now)s after 3s)" }
+    $advance = "$delta s"
+  } elseif ([int]$second.bar.now -ne [int]$first.bar.now) {
+    throw 'the bar advanced while the track was paused'
+  }
+  if (@($net.requests).Count -ne 0) { throw "the Music tab made network requests: $($net.requests -join ', ')" }
+
+  $closed = $tabApp.CloseMainWindow()
+  if (-not $closed) { throw 'the pill did not close after the music tab check' }
+  $tabExited = $tabApp.WaitForExit(8000)
+  Start-Sleep -Milliseconds 500
+  $tabHelperLeft = @(Get-Process BeamBridge -ErrorAction SilentlyContinue).Count
+  if (-not $tabExited -or $tabHelperLeft -ne 0) { throw "the app did not exit cleanly (exited=$tabExited helperLeft=$tabHelperLeft)" }
+  $tabResult = "'$($payload.title)' art $($first.artW)x$($first.artH), bar $($first.bar.now)/$($first.bar.max)s advancing $advance in 3s, controls prev/toggle/next, tab play/pause changed and restored, 0 network requests"
+} catch {
+  if ($tabApp -and -not $tabApp.HasExited) { $tabApp.Kill() }
+  Get-Process electron,BeamBridge -ErrorAction SilentlyContinue | Stop-Process -Force
+  Remove-Item Env:BEAM_MUSIC_TAB_TEST -ErrorAction SilentlyContinue
+  Write-Host "FAIL music tab: $($_.Exception.Message)"
+  exit 1
+}
+Remove-Item Env:BEAM_MUSIC_TAB_TEST -ErrorAction SilentlyContinue
+Remove-Item -LiteralPath $tabOut, $tabErr -ErrorAction SilentlyContinue
+Write-Host "PASS music tab ($tabResult)"
 
 Remove-Item Env:BEAM_SETTINGS_PATH -ErrorAction SilentlyContinue
 Remove-Item -LiteralPath (Join-Path $env:TEMP 'beam-verify-active-settings.json') -ErrorAction SilentlyContinue

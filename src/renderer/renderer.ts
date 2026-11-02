@@ -6,8 +6,10 @@ import {
   bindPanelTabs,
   formatSize,
   iconSprite,
+  musicClock,
   panel,
   pill,
+  transportControls,
   type PanelData,
   type Tab
 } from './ui';
@@ -17,7 +19,14 @@ type ShelfResult = { count: number; accepted: number; truncated: boolean; limit:
 type ShelfFile = { path: string; name: string; sizeBytes: number; kind: 'file' | 'folder'; missing: boolean };
 type CopyResult = { ok: boolean; count: number; error?: string };
 type FileChange = { ok: boolean; files: ShelfFile[] };
-type MusicState = { title: string; artist: string; playing: boolean; art: string | null };
+type MusicState = {
+  title: string;
+  artist: string;
+  playing: boolean;
+  art: string | null;
+  positionMs: number;
+  durationMs: number;
+};
 
 type BeamApi = {
   getPathForFile(file: File): string;
@@ -34,6 +43,7 @@ type BeamApi = {
   onPanelOpen(callback: (files: ShelfFile[]) => void): void;
   onPanelDismiss(callback: () => void): void;
   onMusicState(callback: (state: MusicState | null) => void): void;
+  musicCommand(cmd: 'toggle' | 'next' | 'prev'): Promise<{ ok: boolean; error?: string }>;
   reportPanelTiming(ms: number, reduced: boolean): void;
 };
 
@@ -59,6 +69,7 @@ const pillEl = app?.querySelector<HTMLElement>('.pill') ?? null;
 let shelfCount = 0;
 let shelfMissing = false;
 let music: MusicState | null = null;
+let musicBase = 0;
 let override: { state: string; label: string } | null = null;
 let noticeTimer: number | undefined;
 let musicClearTimer: number | undefined;
@@ -92,6 +103,23 @@ function setMark(art: string | null): void {
   mark.src = art ?? MASCOTS.master;
 }
 
+function renderControls(state: string): void {
+  if (!pillEl) return;
+  const show = Boolean(music) && (state === 'playing' || state === 'paused');
+  const existing = pillEl.querySelector<HTMLElement>('.controls');
+  if (!show) {
+    pillEl.classList.remove('has-controls');
+    existing?.remove();
+    return;
+  }
+  pillEl.classList.add('has-controls');
+  const toggle = existing?.querySelector<HTMLButtonElement>('[data-action="toggle"]');
+  if (toggle && (toggle.getAttribute('aria-label') === 'Pause') === music!.playing) return;
+  const markup = transportControls(music!.playing);
+  if (existing) existing.outerHTML = markup;
+  else pillEl.insertAdjacentHTML('beforeend', markup);
+}
+
 function renderPill(): void {
   if (!pillEl) return;
   const state = override?.state ?? (music ? (music.playing ? 'playing' : 'paused') : shelfCount > 0 ? 'files' : 'idle');
@@ -100,6 +128,7 @@ function renderPill(): void {
   pillEl.classList.toggle('expands', Boolean(music));
   setMark(music ? music.art : null);
   setPip(shelfMissing ? 'danger' : music ? (music.playing ? 'playing' : 'paused') : null);
+  renderControls(state);
   const title = pillEl.querySelector<HTMLElement>('.title');
   if (title) {
     title.textContent = label;
@@ -120,7 +149,7 @@ function showShelf(): void {
 const beam = window.beam;
 
 const panelData: PanelData = {
-  music: { title: '', subtitle: '' },
+  music: { title: '', subtitle: '', playing: false, positionMs: 0, durationMs: 0 },
   files: [],
   timer: { mode: 'idle', digits: '25:00', note: 'Pick a length', preset: '25' },
   calendar: new Date(),
@@ -172,6 +201,15 @@ function renderPanel(): void {
         void removeRow(path);
       });
       bindFileDrag(wrapEl, (paths) => beam.startFileDrag(paths));
+      wrapEl.addEventListener('click', (event) => {
+        const target = event.target;
+        if (!(target instanceof Element)) return;
+        const action = target.closest<HTMLElement>('.music-controls [data-action]')?.dataset.action;
+        if (action === 'prev' || action === 'toggle' || action === 'next') {
+          event.stopPropagation();
+          void beam.musicCommand(action).catch((error: unknown) => console.error('[music] command failed', error));
+        }
+      });
     }
   }
   const selected = wrapEl.querySelector<HTMLElement>('[role="tab"][aria-selected="true"]');
@@ -179,6 +217,28 @@ function renderPanel(): void {
   wrapEl.innerHTML = panel(active, panelData);
   panelEl = wrapEl.querySelector<HTMLElement>('.panel');
 }
+
+function tickMusicProgress(): void {
+  if (!music || !music.playing || music.durationMs <= 0) return;
+  const elapsed = Math.min(music.durationMs, music.positionMs + (performance.now() - musicBase));
+  panelData.music.positionMs = elapsed;
+  if (!document.body.classList.contains('is-open')) return;
+  const bar = wrapEl?.querySelector<HTMLElement>('.panel-music [data-music-bar]');
+  if (!bar) return;
+  const duration = music.durationMs;
+  bar.setAttribute('aria-valuenow', String(Math.round(elapsed / 1000)));
+  bar.setAttribute('aria-valuetext', `${musicClock(elapsed)} of ${musicClock(duration)}`);
+  const fill = bar.querySelector<HTMLElement>('.track-fill');
+  if (fill) fill.style.width = `${Math.round((elapsed / duration) * 100)}%`;
+  const times = bar.parentElement?.querySelectorAll<HTMLElement>('.track-times span');
+  if (times && times.length === 2) {
+    const [elapsedEl, totalEl] = times;
+    if (elapsedEl) elapsedEl.textContent = musicClock(elapsed);
+    if (totalEl) totalEl.textContent = musicClock(duration);
+  }
+}
+
+window.setInterval(tickMusicProgress, 1000);
 
 let closingTimer: number | undefined;
 
@@ -200,6 +260,11 @@ if (app && beam) {
   app.addEventListener('click', (event) => {
     if (suppressClick) {
       suppressClick = false;
+      return;
+    }
+    const action = (event.target as Element).closest<HTMLElement>('.pill [data-action]')?.dataset.action;
+    if (action === 'prev' || action === 'toggle' || action === 'next') {
+      void beam.musicCommand(action).catch((error: unknown) => console.error('[music] command failed', error));
       return;
     }
     if (!document.body.classList.contains('is-open') && !(event.target as Element).closest('button')) {
@@ -340,7 +405,17 @@ if (app && beam) {
         musicClearTimer = undefined;
       }
       music = state;
+      musicBase = performance.now();
+      panelData.music = {
+        title: state.title,
+        subtitle: state.artist,
+        art: state.art ?? undefined,
+        playing: state.playing,
+        positionMs: state.positionMs,
+        durationMs: state.durationMs
+      };
       renderPill();
+      if (wrapEl && document.body.classList.contains('is-open')) renderPanel();
       return;
     }
     if (!music) return;
@@ -348,7 +423,9 @@ if (app && beam) {
     musicClearTimer = window.setTimeout(() => {
       musicClearTimer = undefined;
       music = null;
+      panelData.music = { title: '', subtitle: '', playing: false, positionMs: 0, durationMs: 0 };
       renderPill();
+      if (wrapEl && document.body.classList.contains('is-open')) renderPanel();
     }, 500);
   });
 

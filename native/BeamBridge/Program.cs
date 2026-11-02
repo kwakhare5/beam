@@ -81,6 +81,11 @@ internal static class Program
                     case "files.copy":
                         CopyFiles(request);
                         break;
+                    case "music.toggle":
+                    case "music.next":
+                    case "music.prev":
+                        CommandMusic(request, cmd, watcher);
+                        break;
                     case "fullscreen.get":
                         ReplyFullscreen(request, fullscreen);
                         break;
@@ -122,6 +127,22 @@ internal static class Program
         {
             Protocol.Emit(new JsonObject { ["id"] = id, ["ok"] = false, ["error"] = error });
         }
+    }
+
+    private static void CommandMusic(JsonObject request, string cmd, MusicWatcher watcher)
+    {
+        var id = request["id"]?.DeepClone();
+        var (ok, error) = watcher.CommandAsync(cmd).GetAwaiter().GetResult();
+        if (!ok)
+        {
+            Protocol.Log($"{cmd} failed: {error}");
+        }
+        var reply = new JsonObject { ["id"] = id, ["ok"] = ok };
+        if (!ok && error is not null)
+        {
+            reply["error"] = error;
+        }
+        Protocol.Emit(reply);
     }
 
     private static void ReplyFullscreen(JsonObject request, FullscreenWatcher fullscreen)
