@@ -12,13 +12,13 @@ export interface FileRow {
   path?: string;
 }
 
-export type CopyOutcome = { ok: boolean; count: number; error?: string };
+type CopyOutcome = { ok: boolean; count: number; error?: string };
 
 export function filesPanel(rows: FileRow[], copied = false, active = true): string {
   if (!rows.length) {
     return panelBody(
       'files',
-      `<div class="drop-well"><img class="mascot-large" src="${MASCOTS.master}" alt="" /><div class="panel-title">Drop files here</div><div class="panel-sub">They stay until Beam closes</div><button type="button" class="btn">${icon('plus')}Add files</button></div>`,
+      `<div class="drop-well"><img class="mascot-large" src="${MASCOTS.master}" alt="" /><div class="panel-title">Drop files here</div><div class="panel-sub">They stay until Beam closes</div><button type="button" class="btn" data-add-files>${icon('plus')}Add files</button></div><div class="shelf-status shelf-status-empty"><span class="shelf-note" data-files-status role="status" aria-live="polite"></span><button type="button" class="shelf-undo" data-files-undo hidden>Undo</button></div>`,
       'panel-empty',
       active
     );
@@ -44,9 +44,9 @@ export function filesPanel(rows: FileRow[], copied = false, active = true): stri
   const copyIcon = copied ? icon('check') : icon('copy');
   const copyLabel = copied ? 'Copied' : 'Copy All';
 
-  const actions = `<div class="actions"><span class="shelf-note">Files clear on quit</span><span class="sr-only" role="status">${copied ? 'Copied to clipboard' : ''}</span><button type="button" class="btn primary" data-copy-all${allMissing ? ' disabled' : ''}>${copyIcon}${copyLabel}</button><button type="button" class="btn ghost">${icon('plus')}Add files</button><button type="button" class="btn danger clear-all" data-armed="false">${icon('trash')}<span class="clear-all-label">Clear All</span></button></div>`;
+  const actions = `<div class="actions"><div class="shelf-status"><span class="shelf-note" data-files-status role="status" aria-live="polite">${copied ? 'Copied to clipboard' : 'Files clear on quit'}</span><button type="button" class="shelf-undo" data-files-undo hidden>Undo</button></div><button type="button" class="btn primary" data-copy-all${allMissing ? ' disabled' : ''}>${copyIcon}${copyLabel}</button><button type="button" class="btn ghost" data-add-files>${icon('plus')}Add files</button><button type="button" class="btn danger clear-all" data-armed="false">${icon('trash')}<span class="clear-all-label">Clear All</span></button></div>`;
 
-  return panelBody('files', `<div class="file-list" role="list">${list}</div>${actions}`, '', active);
+  return panelBody('files', `<div class="file-list" role="list">${list}</div>${actions}`, 'panel-files-list', active);
 }
 
 export function bindClearAll(root: Document | Element): void {
@@ -102,9 +102,17 @@ export function bindFilesActions(
   copy: (paths: string[], source: 'row' | 'all') => Promise<CopyOutcome>,
   remove: (path: string) => void = () => {}
 ): void {
+  let statusTimer: number | undefined;
   const status = (text: string): void => {
-    const node = root.querySelector<HTMLElement>('#panel-files [role="status"]');
-    if (node) node.textContent = text;
+    const node = root.querySelector<HTMLElement>('[data-files-status]');
+    if (!node) return;
+    node.textContent = text;
+    if (statusTimer !== undefined) window.clearTimeout(statusTimer);
+    statusTimer = window.setTimeout(() => {
+      statusTimer = undefined;
+      const current = root.querySelector<HTMLElement>('[data-files-status]');
+      if (current) current.textContent = 'Files clear on quit';
+    }, 2500);
   };
 
   const restore = (button: HTMLElement, inner: string, delay: number): void => {

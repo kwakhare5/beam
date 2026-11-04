@@ -1,6 +1,15 @@
 import { spawn, type ChildProcess } from 'node:child_process';
 
-type HelperReply = { id: number; pong?: boolean; version?: string; ok?: boolean; error?: string };
+type HelperReply = {
+  id: number;
+  pong?: boolean;
+  version?: string;
+  ok?: boolean;
+  error?: string;
+  sessions?: MusicSessionRow[];
+};
+
+export type MusicSessionRow = { app: string; title: string; playing: boolean; current: boolean };
 
 export type HelperEvent = { evt: string; payload?: unknown };
 
@@ -17,7 +26,8 @@ export class Bridge {
 
   constructor(
     private readonly exePath: string,
-    private readonly onEvent: (event: HelperEvent) => void = () => {}
+    private readonly onEvent: (event: HelperEvent) => void = () => {},
+    private readonly onExit: () => void = () => {}
   ) {}
 
   start(): void {
@@ -37,6 +47,7 @@ export class Bridge {
 
     child.on('error', (error) => {
       console.error(`[bridge] spawn failed: ${error.message}`);
+      this.onExit();
     });
 
     child.on('exit', (code) => {
@@ -46,6 +57,7 @@ export class Bridge {
       }
       this.pending.clear();
       console.error(`[bridge] helper exited (${code})`);
+      this.onExit();
     });
 
     this.child = child;
@@ -65,6 +77,16 @@ export class Bridge {
   async music(cmd: 'toggle' | 'next' | 'prev'): Promise<void> {
     const reply = await this.send(`music.${cmd}`);
     if (reply.ok !== true) throw new Error(reply.error ?? 'helper refused the command');
+  }
+
+  async musicSessions(): Promise<MusicSessionRow[]> {
+    const reply = await this.send('music.sessions');
+    return Array.isArray(reply.sessions) ? reply.sessions : [];
+  }
+
+  async musicPick(app: string): Promise<void> {
+    const reply = await this.send('music.pick', { app });
+    if (reply.ok !== true) throw new Error(reply.error ?? 'helper refused to pick that session');
   }
 
   stop(): Promise<void> {

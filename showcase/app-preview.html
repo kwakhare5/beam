@@ -59,6 +59,7 @@
   .g-label code { font-size: 11px; color: #6f6f6f; }
 
   .f-pill { width: 94px; height: 30px; }
+  .f-pill.is-quiet { width: 30px; }
   .f-pill.is-expanded { width: 128px; }
   .f-open { width: 452px; height: 316px; padding: 16px; box-sizing: border-box; }
 
@@ -321,11 +322,15 @@
       <div class="g-head">
         <h2>2 · Capsule</h2>
         <p class="g-help">
-          One <code>136×42</code> window. Every state rests at <code>94×30</code>; music, timer, and done grow to <code>128×30</code> on hover or focus and reveal their actions. Idle and files stay <code>94×30</code> and only brighten. Music swaps the star for the album thumbnail; paused adds an amber dot. Long names ellipsize, nothing spills.
+          One <code>136×42</code> window. Idle starts at <code>94×30</code> and quiets to a <code>30×30</code> star after 20s; hovering the nub brings the label back. Music, timer, and done grow to <code>128×30</code> on hover or focus and reveal their actions; files stay <code>94×30</code> and only brighten. Music swaps the star for the album thumbnail; paused adds an amber dot. Long names ellipsize, nothing spills.
         </p>
       </div>
 
       <div class="g-grid">
+        <div class="g-row">
+          <div class="g-label"><b>Quiet · after 20s</b><span>star only; no label, no growth</span><code>30×30 · star 60%</code></div>
+          <div class="f-pill is-quiet"><div data-pill="quiet"></div></div>
+        </div>
         <div class="g-row">
           <div class="g-label"><b>Idle · rest</b><span>no music, no timer; star at 70%</span><code>94 · muted label</code></div>
           <div class="f-pill"><div data-pill="idle"></div></div>
@@ -390,6 +395,10 @@
           <div class="g-label"><b>Empty shelf</b><span>falls back to idle, no “0 files” state</span><code>94 · Beam</code></div>
           <div class="f-pill"><div data-pill="idle"></div></div>
         </div>
+        <div class="g-row">
+          <div class="g-label"><b>Helper lost</b><span>copy, drag, and media stop; restart Beam</span><code>128 · red border + dot</code></div>
+          <div class="f-pill is-expanded"><div data-pill="error"></div></div>
+        </div>
       </div>
     </section>
 
@@ -410,6 +419,7 @@
         <button type="button" data-panel-key="filesMany" aria-pressed="false">Files many</button>
         <button type="button" data-panel-key="filesEmpty" aria-pressed="false">Files empty</button>
         <button type="button" data-panel-key="filesCopied" aria-pressed="false">Files copied</button>
+        <button type="button" data-panel-key="filesUndo" aria-pressed="false">Files undo</button>
         <button type="button" data-panel-key="timer" aria-pressed="false">Timer</button>
         <button type="button" data-panel-key="timerCustom" aria-pressed="false">Timer custom</button>
         <button type="button" data-panel-key="timerRunning" aria-pressed="false">Timer running</button>
@@ -434,7 +444,7 @@
         <div class="g-card">
           <h3>Sizes</h3>
           <ul>
-            <li>Capsule <code>94×30 rest</code> · <code>128×30 hover</code> for music, timer, done · drag <code>128</code></li>
+            <li>Capsule <code>30×30 quiet</code> · <code>94×30 rest</code> · <code>128×30 hover</code> for music, timer, done · drag <code>128</code> · error <code>128</code></li>
             <li>Window <code>136×42</code> for every state</li>
             <li>Panel <code>420×284</code></li>
             <li>Open window <code>452×316</code> · 16px shadow margin</li>
@@ -472,8 +482,8 @@
             <li>Hover <code>120ms</code></li>
             <li>Art/title ⇄ actions <code>120ms</code></li>
             <li>Press <code>100ms</code></li>
-            <li>No layout animation</li>
-            <li>Reduced motion honored</li>
+            <li>Width growth <code>120ms</code></li>
+            <li>Beam always animates (Windows animations off)</li>
             <li>No done glow</li>
           </ul>
         </div>
@@ -519,6 +529,7 @@
   ];
 
   const states = {
+    quiet: { state: 'quiet', title: '' },
     idle: { state: 'idle', title: 'Beam' },
     idleHover: { state: 'idle', hover: true, title: 'Beam' },
     playingRest: { state: 'playing', title: track.title, art: track.art },
@@ -533,7 +544,8 @@
     filesFull: { state: 'files', title: `${files.length} files` },
     filesCap: { state: 'files', title: 'Max 50' },
     filesMissing: { state: 'files', title: `${files.length} files`, pip: 'danger' },
-    drag: { state: 'drag', title: '+3 files' }
+    drag: { state: 'drag', title: '+3 files' },
+    error: { state: 'error', title: 'Connection lost', pip: 'danger' }
   };
 
   for (const el of document.querySelectorAll('[data-pill]')) {
@@ -569,6 +581,7 @@
       case 'filesEmpty': return { tab: 'files', data: { ...base, files: [] } };
       case 'filesMany': return { tab: 'files', data: { ...base, files: extraFiles } };
       case 'filesCopied': return { tab: 'files', data: { ...base, filesCopied: true } };
+      case 'filesUndo': return { tab: 'files', data: base };
       case 'timer': return { tab: 'timer', data: { ...base, timer: timerDemo } };
       case 'timerCustom': return { tab: 'timer', data: { ...base, timer: { mode: 'custom', digits: '25:00', note: 'Set a length', preset: 'custom', customMinutes: '25' } } };
       case 'timerRunning': return { tab: 'timer', data: { ...base, timer: { mode: 'running', digits: '07:42', note: 'Focus', preset: '10' } } };
@@ -588,6 +601,12 @@
     currentKey = key;
     currentTab = tab;
     stage.innerHTML = panel(tab, data);
+    if (key === 'filesUndo') {
+      const note = stage.querySelector('[data-files-status]');
+      const undo = stage.querySelector('[data-files-undo]');
+      if (note) note.textContent = 'Removed';
+      if (undo) undo.hidden = false;
+    }
     for (const btn of document.querySelectorAll('[data-panel-key]')) {
       btn.setAttribute('aria-pressed', String(btn.dataset.panelKey === key));
     }

@@ -9,3 +9,4 @@ native/**/obj/
 .agents/
 *.log
 *.tsbuildinfo
+.freebuff/

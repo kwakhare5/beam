@@ -4,9 +4,9 @@ Beam is an offline Windows 11 floating capsule for media controls, a file shelf,
 
 ## Current state
 
-- **App:** one 136×42 transparent window holding a 94×30 idle capsule, a tray icon, and a panel that opens to 452×316 (420×284 body) with a ~150ms transform. It uses `showInactive()` and never takes focus. The capsule drags anywhere on its body; the position persists in `%APPDATA%\Beam\settings.json`, survives restarts, and Reset Position returns it to the taskbar anchor.
-- **Built:** the shared UI system (7 capsule states, 5 panels) in `showcase/app-preview.html`, the panel shell with five tabs rendering placeholder data, window drag with saved position and a real-mouse check in `verify.ps1`, and the `BeamBridge` helper — `ping`, the live media session with artwork PNG, and the `CF_HDROP` clipboard at ~11 MB private idle.
-- **Not built:** the shelf, the live music/timer/calendar wiring, hover actions, hotkey, settings screen, startup toggle, fullscreen hide, and the chime. Next task is 0.5; see `TASKS.md`.
+- **App:** one 136×42 transparent window holding a 94×30 capsule (a 30×30 quiet star after 20s idle), clipped with `setShape` to the pill plus a 6px halo so margin clicks reach the desktop. It uses `showInactive()` and never takes focus on show. The capsule drags anywhere on its body; the position persists in `%APPDATA%\Beam\settings.json`, survives restarts, and Reset Position returns it to the taskbar anchor.
+- **Live:** SMTC music (title, art, green/amber dot, hover Prev / play-pause / Next plus a chevron that opens the panel), the file shelf (drop or Add files, per-row copy, drag-out to Explorer, missing badge, 5s Undo, Clear All, quit guard), and the panel's Music and Files tabs at 452×316 (420×284 body) with auto-pick and Esc / margin / tray dismissal. Timer, Calendar, and Settings stay in the canonical preview until they work.
+- **Not built:** the timer, the hotkey, a settings screen, the startup toggle, the chime, the helper restart policy, the trust-pass verify checks (9.9), and packaging (`electron-builder.yml` ships neither the helper exe nor the tray icon). Next task is 9.8; see `TASKS.md`.
 
 ## Commands
 

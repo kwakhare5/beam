@@ -16,11 +16,11 @@ export type IconName =
   | 'trash'
   | 'file'
   | 'folder'
-  | 'monitor'
   | 'check'
   | 'plus'
   | 'chevronLeft'
-  | 'chevronRight';
+  | 'chevronRight'
+  | 'chevronUp';
 
 type MediaName = 'play' | 'pause' | 'prev' | 'next';
 

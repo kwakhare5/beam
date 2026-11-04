@@ -22,25 +22,50 @@ public static class BeamScreen {
   [DllImport("user32.dll")] public static extern bool SetWindowPos(IntPtr hWnd, IntPtr insertAfter, int x, int y, int cx, int cy, uint flags);
   [DllImport("user32.dll")] public static extern bool SetForegroundWindow(IntPtr hWnd);
   [DllImport("user32.dll")] public static extern bool PostMessage(IntPtr hWnd, uint msg, IntPtr wParam, IntPtr lParam);
+  [DllImport("user32.dll")] public static extern uint GetWindowThreadProcessId(IntPtr hWnd, out uint pid);
+  [DllImport("user32.dll")] public static extern bool AttachThreadInput(uint attach, uint attachTo, bool on);
+  [DllImport("user32.dll")] public static extern bool BringWindowToTop(IntPtr hWnd);
+  [DllImport("user32.dll")] public static extern bool ShowWindow(IntPtr hWnd, int cmd);
+  [DllImport("user32.dll")] public static extern IntPtr WindowFromPoint(POINT point);
+  [DllImport("user32.dll")] public static extern IntPtr GetAncestor(IntPtr hWnd, uint flags);
+  [DllImport("kernel32.dll")] public static extern uint GetCurrentThreadId();
+
+  // Windows only lets the foreground process hand the foreground away, so a script cannot
+  // just call SetForegroundWindow. Attaching to the foreground thread first lifts that lock;
+  // without it the call reports success and leaves the old window in front, which silently
+  // sends the next SendKeys to the wrong app.
+  public static bool ForceForeground(IntPtr hWnd) {
+    if (hWnd == IntPtr.Zero) return false;
+    if (GetForegroundWindow() == hWnd) return true;
+    uint ignored;
+    ShowWindow(hWnd, 9);
+    uint fgThread = GetWindowThreadProcessId(GetForegroundWindow(), out ignored);
+    uint myThread = GetCurrentThreadId();
+    AttachThreadInput(fgThread, myThread, true);
+    BringWindowToTop(hWnd);
+    SetForegroundWindow(hWnd);
+    AttachThreadInput(fgThread, myThread, false);
+    return GetForegroundWindow() == hWnd;
+  }
 }
 '@
 [BeamScreen]::SetProcessDpiAwarenessContext([IntPtr](-4)) | Out-Null
 [BeamScreen]::SetCursorPos(8, 8) | Out-Null
 
 
-Write-Host '[1/23] typecheck'
+Write-Host '[1/24] typecheck'
 & $tsc -p tsconfig.json --noEmit
 if ($LASTEXITCODE -ne 0) { Write-Host 'FAIL typecheck'; exit 1 }
 & $tsc -p tsconfig.renderer.json --noEmit
 if ($LASTEXITCODE -ne 0) { Write-Host 'FAIL typecheck (renderer)'; exit 1 }
 Write-Host 'PASS typecheck'
 
-Write-Host '[2/23] build'
+Write-Host '[2/24] build'
 & npm run build
 if ($LASTEXITCODE -ne 0) { Write-Host 'FAIL build'; exit 1 }
 Write-Host 'PASS build'
 
-Write-Host '[3/23] helper build'
+Write-Host '[3/24] helper build'
 $helperDir = Join-Path $PSScriptRoot 'native\BeamBridge\dist'
 if (Test-Path -LiteralPath $helperDir) { Remove-Item -LiteralPath $helperDir -Recurse -Force }
 & dotnet publish (Join-Path $PSScriptRoot 'native\BeamBridge\BeamBridge.csproj') -c Release -o $helperDir --nologo
@@ -51,7 +76,7 @@ $helperFiles = @(Get-ChildItem -LiteralPath $helperDir -File)
 if ($helperFiles.Count -ne 1) { Write-Host "FAIL helper build: expected one file, found $($helperFiles.Count)"; exit 1 }
 Write-Host 'PASS helper build (single exe)'
 
-Write-Host '[4/23] clipboard'
+Write-Host '[4/24] clipboard'
 $clipDir = Join-Path $env:TEMP 'beam-clip'
 if (Test-Path -LiteralPath $clipDir) { Remove-Item -LiteralPath $clipDir -Recurse -Force }
 New-Item -ItemType Directory -Path $clipDir | Out-Null
@@ -101,7 +126,7 @@ if ($clipAfter.Count -ne 3) {
 Remove-Item -LiteralPath $clipDir -Recurse -Force
 Write-Host 'PASS clipboard (3 real paths, survive helper exit)'
 
-Write-Host '[5/23] launch + focus'
+Write-Host '[5/24] launch + focus'
 $outLog = Join-Path $env:TEMP 'beam-verify.out.log'
 $errLog = Join-Path $env:TEMP 'beam-verify.err.log'
 Remove-Item -LiteralPath $outLog -ErrorAction SilentlyContinue
@@ -178,7 +203,7 @@ if ($pillLine -notmatch '\[window\] pill=') {
 }
 Start-Sleep -Milliseconds 300
 
-Write-Host '[6/23] anchor'
+Write-Host '[6/24] anchor'
 $appOut = Get-Content -LiteralPath $outLog -Raw -ErrorAction SilentlyContinue
 $anchorMatches = [regex]::Matches($appOut, '\[window\] bounds=(-?\d+),(-?\d+),(\d+),(\d+) content=(-?\d+),(-?\d+),(\d+),(\d+) work=(-?\d+),(-?\d+),(\d+),(\d+)')
 if ($anchorMatches.Count -eq 0) {
@@ -250,7 +275,7 @@ if ([math]::Abs($waX - $wx) -gt 2 -or [math]::Abs($waY - $wy) -gt 2 -or [math]::
 }
 Write-Host "PASS anchor (pill 12px above the taskbar, centered; native rect matches; scale $scale)"
 
-Write-Host '[7/23] idle dim'
+Write-Host '[7/24] idle dim'
 $idleOut = Get-Content -LiteralPath $outLog -Raw -ErrorAction SilentlyContinue
 $idleMatch = [regex]::Match($idleOut, '\[idle\] (\{.+\})')
 if (-not $idleMatch.Success) {
@@ -273,7 +298,7 @@ if ($idle.state -eq 'playing' -or $idle.state -eq 'paused') {
   Write-Host "PASS idle dim (star $($idle.markOpacity), shell $($idle.shellOpacity), master mark, label Beam)"
 }
 
-Write-Host '[8/23] panel'
+Write-Host '[8/24] panel'
 $panelOut = $appOut
 for ($i = 0; $i -lt 50; $i++) {
   Start-Sleep -Milliseconds 300
@@ -322,7 +347,7 @@ if ($restoredW -gt 200 -or $restoredH -gt 100) {
 Remove-Item Env:BEAM_PANEL_TEST -ErrorAction SilentlyContinue
 Write-Host "PASS panel (open ${panelMs}ms reduced=$reduced, 452x316, dismissed back to the pill)"
 
-Write-Host '[9/23] helper memory'
+Write-Host '[9/24] helper memory'
 $helper = Get-Process BeamBridge -ErrorAction SilentlyContinue
 if (-not $helper) {
   Stop-Process -Id $first.Id -Force -ErrorAction SilentlyContinue
@@ -339,7 +364,7 @@ if ($helperMb -ge 60) {
 }
 Write-Host "PASS helper memory ($helperMb MB idle, cap 60 MB)"
 
-Write-Host '[10/23] single instance'
+Write-Host '[10/24] single instance'
 $second = Start-Process -FilePath $electron -ArgumentList '.' -WorkingDirectory $PSScriptRoot -PassThru
 Start-Sleep -Seconds 4
 if (-not $second.HasExited) {
@@ -356,7 +381,7 @@ if ($first.HasExited) {
 }
 Write-Host 'PASS single instance'
 
-Write-Host '[11/23] UI spec'
+Write-Host '[11/24] UI spec'
 $main = Get-Content (Join-Path $PSScriptRoot 'src\main\index.ts') -Raw
 $base = Get-Content (Join-Path $PSScriptRoot 'src\renderer\styles\base.css') -Raw
 $pill = Get-Content (Join-Path $PSScriptRoot 'src\renderer\styles\capsule.css') -Raw
@@ -654,7 +679,7 @@ if ($uiFail) {
 }
 Write-Host 'PASS UI spec'
 
-Write-Host '[12/23] move + persist'
+Write-Host '[12/24] move + persist'
 $settingsPath = $null
 $settingsBackup = Join-Path $env:TEMP 'beam-verify-settings.json'
 $hadSettings = $false
@@ -821,7 +846,7 @@ try {
 if ($hadSettings) { Copy-Item -LiteralPath $settingsBackup -Destination $settingsPath -Force } else { Remove-Item -LiteralPath $settingsPath -ErrorAction SilentlyContinue }
 Write-Host "PASS move (drag $bx,$by to $endX,$endY, saved, restart restored it, Reset returned to $anchorX,$anchorY)"
 
-Write-Host '[13/23] quit cleanup'
+Write-Host '[13/24] quit cleanup'
 $closed = $first.CloseMainWindow()
 if (-not $closed) {
   Get-Process electron,BeamBridge -ErrorAction SilentlyContinue | Stop-Process -Force
@@ -838,7 +863,7 @@ if (-not $appExited -or $helperLeft -ne 0) {
 }
 Write-Host 'PASS quit cleanup (app and helper exited)'
 
-Write-Host '[14/23] fullscreen'
+Write-Host '[14/24] fullscreen'
 $fsHarnessPath = Join-Path $env:TEMP 'beam-fs-harness.ps1'
 $fsStagePath = Join-Path $env:TEMP 'beam-fs-stage.txt'
 $fsProc = $null
@@ -958,7 +983,7 @@ if ($fsProc -and -not $fsProc.HasExited) {
 Remove-Item -LiteralPath $fsStagePath -ErrorAction SilentlyContinue
 Write-Host 'PASS fullscreen (grow to monitor bounds -> active:true, shrink -> active:false, same foreground window)'
 
-Write-Host '[15/23] fullscreen hide'
+Write-Host '[15/24] fullscreen hide'
 $hideOutLog = Join-Path $env:TEMP 'beam-fs-hide.out.log'
 $hideErrLog = Join-Path $env:TEMP 'beam-fs-hide.err.log'
 Remove-Item -LiteralPath $hideOutLog, $hideErrLog -ErrorAction SilentlyContinue
@@ -1023,7 +1048,7 @@ Remove-Item -LiteralPath $hideOutLog, $hideErrLog -ErrorAction SilentlyContinue
 Remove-Item -LiteralPath $fsHarnessPath, $fsStagePath -ErrorAction SilentlyContinue
 Write-Host 'PASS fullscreen hide (hid at fullscreen, tray click restored it, stayed shown after the exit)'
 
-Write-Host '[16/23] drop'
+Write-Host '[16/24] drop'
 $dropOutLog = Join-Path $env:TEMP 'beam-drop-verify.out.log'
 $dropErrLog = Join-Path $env:TEMP 'beam-drop-verify.err.log'
 Remove-Item -LiteralPath $dropOutLog, $dropErrLog -ErrorAction SilentlyContinue
@@ -1073,7 +1098,7 @@ Remove-Item Env:BEAM_DROP_TEST -ErrorAction SilentlyContinue
 Remove-Item -LiteralPath $dropOutLog, $dropErrLog -ErrorAction SilentlyContinue
 Write-Host 'PASS drop (3 real files read with webUtils; 51 more capped at 50 with a Max 50 notice)'
 
-Write-Host '[17/23] copy'
+Write-Host '[17/24] copy'
 $copyOutLog = Join-Path $env:TEMP 'beam-copy-verify.out.log'
 $copyErrLog = Join-Path $env:TEMP 'beam-copy-verify.err.log'
 Remove-Item -LiteralPath $copyOutLog, $copyErrLog -ErrorAction SilentlyContinue
@@ -1117,13 +1142,20 @@ try {
   $copyShell = New-Object -ComObject WScript.Shell
   Start-Process explorer.exe -ArgumentList $copyPasteDir | Out-Null
   $pasteName = Split-Path -Leaf $copyPasteDir
-  $pasteFocused = $false
+  # AppActivate reports success while Windows keeps the old window in front, so the handle
+  # comes from the shell's window list and is forced forward before the keystroke.
+  $pasteHwnd = [IntPtr]::Zero
   for ($i = 0; $i -lt 60; $i++) {
     Start-Sleep -Milliseconds 200
-    if ($copyShell.AppActivate($pasteName)) { $pasteFocused = $true; break }
+    foreach ($explorerWindow in (New-Object -ComObject Shell.Application).Windows()) {
+      if ($explorerWindow.LocationName -eq $pasteName) { $pasteHwnd = [IntPtr]$explorerWindow.HWND; break }
+    }
+    if ($pasteHwnd -ne [IntPtr]::Zero) { break }
   }
-  if (-not $pasteFocused) { throw 'the paste folder never took the foreground' }
-  Start-Sleep -Milliseconds 500
+  if ($pasteHwnd -eq [IntPtr]::Zero) { throw 'the paste folder never opened' }
+  if (-not [BeamScreen]::ForceForeground($pasteHwnd)) { throw 'the paste folder never took the foreground' }
+  Start-Sleep -Milliseconds 400
+  if ([BeamScreen]::GetForegroundWindow() -ne $pasteHwnd) { throw 'the paste folder lost the foreground before the paste' }
   $copyShell.SendKeys('^v')
   $pasted = $false
   for ($i = 0; $i -lt 60; $i++) {
@@ -1141,7 +1173,7 @@ try {
       throw "the pasted file $target has a different size"
     }
   }
-  if ($copyShell.AppActivate($pasteName)) {
+  if ([BeamScreen]::ForceForeground($pasteHwnd)) {
     Start-Sleep -Milliseconds 300
     $copyShell.SendKeys('%{F4}')
   }
@@ -1175,7 +1207,7 @@ Remove-Item -LiteralPath $copyPasteDir -Recurse -Force -ErrorAction SilentlyCont
 Remove-Item -LiteralPath (Join-Path $env:TEMP 'beam-copytest') -Recurse -Force -ErrorAction SilentlyContinue
 Write-Host 'PASS copy (row copy put alpha.txt on the clipboard, Copy All put all 3 paths, Ctrl+V pasted them into Explorer)'
 
-Write-Host '[18/23] drag out'
+Write-Host '[18/24] drag out'
 $dragOutLog = Join-Path $env:TEMP 'beam-dragout-verify.out.log'
 $dragOutErr = Join-Path $env:TEMP 'beam-dragout-verify.err.log'
 $dragMarker = Join-Path $env:TEMP 'beam-dragout-continue'
@@ -1200,7 +1232,16 @@ try {
   }
   if ($dragHwnd -eq [IntPtr]::Zero) { throw 'the Explorer drop folder never opened' }
   [BeamScreen]::SetWindowPos($dragHwnd, [IntPtr]::Zero, 60, 40, 600, 500, 0x0040) | Out-Null
+  # A real drag drops on whatever window owns the point, so the folder is put in front and the
+  # drop point is checked first; otherwise the drop lands somewhere else and the failure looks
+  # like a broken drag instead of a covered window.
+  if (-not [BeamScreen]::ForceForeground($dragHwnd)) { throw 'the Explorer drop folder never took the foreground' }
   Start-Sleep -Milliseconds 600
+  $dropPoint = New-Object 'BeamScreen+POINT'
+  $dropPoint.X = 360
+  $dropPoint.Y = 300
+  $dropUnder = [BeamScreen]::GetAncestor([BeamScreen]::WindowFromPoint($dropPoint), 2)
+  if ($dropUnder -ne $dragHwnd) { throw 'another window covers the Explorer drop point' }
 
   $dragApp = Start-Process -FilePath $electron -ArgumentList '.' -WorkingDirectory $PSScriptRoot -PassThru -RedirectStandardOutput $dragOutLog -RedirectStandardError $dragOutErr
   $dragOut = ''
@@ -1282,7 +1323,7 @@ Remove-Item -LiteralPath $dragPaste -Recurse -Force -ErrorAction SilentlyContinu
 Remove-Item -LiteralPath (Join-Path $env:TEMP 'beam-dragout') -Recurse -Force -ErrorAction SilentlyContinue
 Write-Host 'PASS drag out (a real mouse drag dropped alpha.txt into Explorer; the deleted beta.txt row lost its drag; an off-shelf path was rejected)'
 
-Write-Host '[19/23] missing badge'
+Write-Host '[19/24] missing badge'
 $missingOut = Join-Path $env:TEMP 'beam-missing-verify.out.log'
 $missingErr = Join-Path $env:TEMP 'beam-missing-verify.err.log'
 Remove-Item -LiteralPath $missingOut, $missingErr -ErrorAction SilentlyContinue
@@ -1323,7 +1364,7 @@ Remove-Item -LiteralPath $missingOut, $missingErr -ErrorAction SilentlyContinue
 Remove-Item -LiteralPath (Join-Path $env:TEMP 'beam-missing') -Recurse -Force -ErrorAction SilentlyContinue
 Write-Host 'PASS missing badge (deleted file shows Missing with the File moved or deleted tooltip, no copy or drag, and the pill gains a red pip)'
 
-Write-Host '[20/23] clear all'
+Write-Host '[20/24] clear all'
 $clearOut = Join-Path $env:TEMP 'beam-clear-verify.out.log'
 $clearErr = Join-Path $env:TEMP 'beam-clear-verify.err.log'
 Remove-Item -LiteralPath $clearOut, $clearErr -ErrorAction SilentlyContinue
@@ -1408,7 +1449,190 @@ Remove-Item -LiteralPath $clearOut, $clearErr -ErrorAction SilentlyContinue
 Remove-Item -LiteralPath (Join-Path $env:TEMP 'beam-clear') -Recurse -Force -ErrorAction SilentlyContinue
 Write-Host 'PASS clear all (row remove left 2 files with the warning, Clear All emptied the list, and a restart started empty)'
 
-Write-Host '[21/23] music pill'
+# Checks 21-24 need real SMTC players. Beam provides them: a local page in Chromium publishes
+# a real media session (title, artist, album, artwork, position, next/prev), so the suite never
+# depends on a network player, an ad, or whatever happens to be open. Chrome is player one and
+# Edge joins with the same page for check 24; both are closed when the run ends.
+$playerRoot = Join-Path $env:TEMP 'beam-players'
+$playerPage = Join-Path $playerRoot 'player.html'
+$playerChromeExe = @(
+  "${env:ProgramFiles}\Google\Chrome\Application\chrome.exe",
+  "${env:LOCALAPPDATA}\Google\Chrome\Application\chrome.exe",
+  "${env:ProgramFiles(x86)}\Google\Chrome\Application\chrome.exe"
+) | Where-Object { Test-Path -LiteralPath $_ } | Select-Object -First 1
+$playerEdgeExe = @(
+  "${env:ProgramFiles(x86)}\Microsoft\Edge\Application\msedge.exe",
+  "${env:ProgramFiles}\Microsoft\Edge\Application\msedge.exe"
+) | Where-Object { Test-Path -LiteralPath $_ } | Select-Object -First 1
+$playerHelper = $null
+$script:playerRead = $null
+
+function Read-PlayerLine([int]$timeoutMs) {
+  if (-not $script:playerRead) { $script:playerRead = $playerHelper.StandardOutput.ReadLineAsync() }
+  if (-not $script:playerRead.Wait($timeoutMs)) { return '<timeout>' }
+  $line = $script:playerRead.Result
+  $script:playerRead = $null
+  return $line
+}
+
+function Get-BeamSessions {
+  $playerHelper.StandardInput.WriteLine('{"id":1,"cmd":"music.sessions"}')
+  $playerHelper.StandardInput.Flush()
+  $stop = (Get-Date).AddSeconds(8)
+  while ((Get-Date) -lt $stop) {
+    $line = Read-PlayerLine 1000
+    if ($line -eq '<timeout>') { continue }
+    if ($null -eq $line) { return @() }
+    if ($line -match '"id":1') { return @(($line | ConvertFrom-Json).sessions) }
+  }
+  return @()
+}
+
+function Set-BeamSessionPaused([string]$app) {
+  $playerHelper.StandardInput.WriteLine('{"id":2,"cmd":"music.pick","app":"' + $app + '"}')
+  $playerHelper.StandardInput.Flush()
+  $stop = (Get-Date).AddSeconds(8)
+  while ((Get-Date) -lt $stop) {
+    $line = Read-PlayerLine 1000
+    if ($line -eq '<timeout>') { continue }
+    if ($null -eq $line) { return $false }
+    if ($line -match '"id":2') { return ($line -match '"ok":true') }
+  }
+  return $false
+}
+
+function Clear-BeamPlayers {
+  if ($playerHelper) {
+    if (-not $playerHelper.HasExited) {
+      $playerHelper.StandardInput.Close()
+      $playerHelper.WaitForExit(2000) | Out-Null
+    }
+    if (-not $playerHelper.HasExited) { $playerHelper.Kill() }
+    $playerHelper = $null
+  }
+  Get-CimInstance Win32_Process -Filter "Name='chrome.exe' OR Name='msedge.exe'" -ErrorAction SilentlyContinue |
+    Where-Object { $_.CommandLine -match 'beam-players' } |
+    ForEach-Object { Stop-Process -Id $_.ProcessId -Force -ErrorAction SilentlyContinue }
+  Remove-Item -LiteralPath $playerRoot -Recurse -Force -ErrorAction SilentlyContinue
+}
+
+try {
+  if (-not $playerChromeExe) { throw 'the music checks need Chromium to publish a local SMTC player and Chrome was not found' }
+  Remove-Item -LiteralPath $playerRoot -Recurse -Force -ErrorAction SilentlyContinue
+  New-Item -ItemType Directory -Force -Path $playerRoot | Out-Null
+
+  # Silent 600s tones keep the position bar moving without making noise. Silence still
+  # publishes a session that answers play/pause/next/prev; a muted app does not.
+  $playerRate = 8000
+  foreach ($playerTone in @('beam-a.wav', 'beam-b.wav')) {
+    $playerSilence = New-Object byte[] ($playerRate * 2)
+    $playerStream = [System.IO.File]::Create((Join-Path $playerRoot $playerTone))
+    $playerWriter = New-Object System.IO.BinaryWriter($playerStream)
+    $playerWriter.Write([Text.Encoding]::ASCII.GetBytes('RIFF'))
+    $playerWriter.Write([int](36 + ($playerSilence.Length * 600)))
+    $playerWriter.Write([Text.Encoding]::ASCII.GetBytes('WAVEfmt '))
+    $playerWriter.Write([int]16)
+    $playerWriter.Write([int16]1)
+    $playerWriter.Write([int16]1)
+    $playerWriter.Write([int]$playerRate)
+    $playerWriter.Write([int]($playerRate * 2))
+    $playerWriter.Write([int16]2)
+    $playerWriter.Write([int16]16)
+    $playerWriter.Write([Text.Encoding]::ASCII.GetBytes('data'))
+    $playerWriter.Write([int]($playerSilence.Length * 600))
+    for ($i = 0; $i -lt 600; $i++) { $playerWriter.Write($playerSilence) }
+    $playerWriter.Close()
+    $playerStream.Close()
+  }
+
+  Add-Type -AssemblyName System.Drawing
+  $playerCover = New-Object System.Drawing.Bitmap 256, 256
+  $playerInk = [System.Drawing.Graphics]::FromImage($playerCover)
+  $playerInk.Clear([System.Drawing.Color]::FromArgb(255, 20, 20, 24))
+  $playerBrush = New-Object System.Drawing.SolidBrush ([System.Drawing.Color]::FromArgb(255, 240, 180, 41))
+  $playerInk.FillEllipse($playerBrush, 48, 48, 160, 160)
+  $playerInk.Dispose()
+  $playerCover.Save((Join-Path $playerRoot 'cover.png'), [System.Drawing.Imaging.ImageFormat]::Png)
+  $playerCover.Dispose()
+
+  $playerHtml = @'
+<!doctype html>
+<meta charset="utf-8">
+<title>Beam verify player</title>
+<audio id="track" autoplay loop src="beam-a.wav"></audio>
+<script>
+const tracks = ['beam-a.wav', 'beam-b.wav'];
+const audio = document.getElementById('track');
+let index = 0;
+function publish() {
+  navigator.mediaSession.metadata = new MediaMetadata({
+    title: 'Beam verify ' + tracks[index],
+    artist: 'Beam',
+    album: 'Verify',
+    artwork: [{ src: 'cover.png', sizes: '256x256', type: 'image/png' }]
+  });
+}
+function load(next) {
+  index = (next + tracks.length) % tracks.length;
+  // The track is switched through the metadata only. Reassigning audio.src makes Chrome
+  // republish the session without its artwork, which breaks the 2.3 art assertion that runs
+  // after the transport check. One long silent file keeps the session and its art stable
+  // while next/prev still change the title exactly like a real skip.
+  audio.play();
+  publish();
+}
+navigator.mediaSession.setActionHandler('nexttrack', () => load(index + 1));
+navigator.mediaSession.setActionHandler('previoustrack', () => load(index - 1));
+navigator.mediaSession.setActionHandler('play', () => audio.play());
+navigator.mediaSession.setActionHandler('pause', () => audio.pause());
+audio.addEventListener('play', () => { navigator.mediaSession.playbackState = 'playing'; publish(); });
+audio.addEventListener('pause', () => { navigator.mediaSession.playbackState = 'paused'; });
+load(0);
+</script>
+'@
+  Set-Content -LiteralPath $playerPage -Value $playerHtml -Encoding UTF8
+
+  $env:BEAM_MUSIC_SESSIONS_TEST = '1'
+  $playerPsi = New-Object System.Diagnostics.ProcessStartInfo
+  $playerPsi.FileName = $helperExe
+  $playerPsi.RedirectStandardInput = $true
+  $playerPsi.RedirectStandardOutput = $true
+  $playerPsi.RedirectStandardError = $true
+  $playerPsi.UseShellExecute = $false
+  $playerPsi.CreateNoWindow = $true
+  $playerHelper = [System.Diagnostics.Process]::Start($playerPsi)
+
+  # Verify runs its own BeamBridge to read and steer the local players, and that process is
+  # alive for checks 21-24, so an exit check has to ignore it. Every other surviving helper
+  # is still a real leak.
+  $script:playerHelperId = $playerHelper.Id
+  function Get-LeftoverHelper {
+    @(Get-Process BeamBridge -ErrorAction SilentlyContinue | Where-Object { $_.Id -ne $script:playerHelperId }).Count
+  }
+
+  Start-Process -FilePath $playerChromeExe -ArgumentList @(
+    '--user-data-dir=' + (Join-Path $playerRoot 'chrome'),
+    '--autoplay-policy=no-user-gesture-required',
+    '--no-first-run',
+    '--new-window',
+    ('file:///' + ($playerPage -replace '\\', '/'))
+  ) | Out-Null
+
+  $playerReady = $false
+  for ($i = 0; $i -lt 40; $i++) {
+    Start-Sleep -Milliseconds 500
+    $playerLive = Get-BeamSessions
+    if ($playerLive | Where-Object { $_.app -match 'Chrome' -and $_.playing }) { $playerReady = $true; break }
+  }
+  if (-not $playerReady) { throw 'the local SMTC player never started playing' }
+} catch {
+  Clear-BeamPlayers
+  Remove-Item Env:BEAM_MUSIC_SESSIONS_TEST -ErrorAction SilentlyContinue
+  Write-Host "FAIL local player: $($_.Exception.Message)"
+  exit 1
+}
+
+Write-Host '[21/24] music pill'
 $musicOut = Join-Path $env:TEMP 'beam-music-verify.out.log'
 $musicErr = Join-Path $env:TEMP 'beam-music-verify.err.log'
 Remove-Item -LiteralPath $musicOut, $musicErr -ErrorAction SilentlyContinue
@@ -1445,10 +1669,11 @@ try {
   if (-not $closed) { throw 'the pill did not close after the music check' }
   $musicExited = $musicApp.WaitForExit(8000)
   Start-Sleep -Milliseconds 500
-  $musicHelperLeft = @(Get-Process BeamBridge -ErrorAction SilentlyContinue).Count
+  $musicHelperLeft = Get-LeftoverHelper
   if (-not $musicExited -or $musicHelperLeft -ne 0) { throw "the app did not exit cleanly (exited=$musicExited helperLeft=$musicHelperLeft)" }
 } catch {
   if ($musicApp -and -not $musicApp.HasExited) { $musicApp.Kill() }
+  Clear-BeamPlayers
   Get-Process electron,BeamBridge -ErrorAction SilentlyContinue | Stop-Process -Force
   Remove-Item Env:BEAM_MUSIC_TEST -ErrorAction SilentlyContinue
   Write-Host "FAIL music pill: $($_.Exception.Message)"
@@ -1458,7 +1683,7 @@ Remove-Item Env:BEAM_MUSIC_TEST -ErrorAction SilentlyContinue
 Remove-Item -LiteralPath $musicOut, $musicErr -ErrorAction SilentlyContinue
 Write-Host "PASS music pill ('$($musicInput.title)' $musicWant, art=$($musicProbe.art), shown in $($musicProbe.ms)ms)"
 
-Write-Host '[22/23] music controls'
+Write-Host '[22/24] music controls'
 $cmdOut = Join-Path $env:TEMP 'beam-music-commands.out.log'
 $cmdErr = Join-Path $env:TEMP 'beam-music-commands.err.log'
 Remove-Item -LiteralPath $cmdOut, $cmdErr -ErrorAction SilentlyContinue
@@ -1499,8 +1724,8 @@ try {
   if ($hover.opacity -ne '1') { throw "the transports did not fade in on hover (opacity $($hover.opacity))" }
   if ($hover.metaOpacity -ne '0') { throw "the title did not fade out on hover (opacity $($hover.metaOpacity))" }
   $actions = @($hover.buttons | ForEach-Object { $_.action })
-  if ($actions.Count -ne 3 -or $actions -notcontains 'prev' -or $actions -notcontains 'toggle' -or $actions -notcontains 'next') {
-    throw "expected prev/toggle/next, found $($actions -join ',')"
+  if ($actions.Count -ne 4 -or $actions -notcontains 'prev' -or $actions -notcontains 'toggle' -or $actions -notcontains 'next' -or $actions -notcontains 'panel') {
+    throw "expected prev/toggle/next/panel, found $($actions -join ',')"
   }
   $toggleLabel = ($hover.buttons | Where-Object { $_.action -eq 'toggle' }).label
   $wantLabel = if ($toggle.from) { 'Pause' } else { 'Play' }
@@ -1517,10 +1742,11 @@ try {
   if (-not $closed) { throw 'the pill did not close after the transport check' }
   $cmdExited = $cmdApp.WaitForExit(8000)
   Start-Sleep -Milliseconds 500
-  $cmdHelperLeft = @(Get-Process BeamBridge -ErrorAction SilentlyContinue).Count
+  $cmdHelperLeft = Get-LeftoverHelper
   if (-not $cmdExited -or $cmdHelperLeft -ne 0) { throw "the app did not exit cleanly (exited=$cmdExited helperLeft=$cmdHelperLeft)" }
 } catch {
   if ($cmdApp -and -not $cmdApp.HasExited) { $cmdApp.Kill() }
+  Clear-BeamPlayers
   Get-Process electron,BeamBridge -ErrorAction SilentlyContinue | Stop-Process -Force
   Remove-Item Env:BEAM_MUSIC_TEST, Env:BEAM_MUSIC_CMD_TEST -ErrorAction SilentlyContinue
   Write-Host "FAIL music controls: $($_.Exception.Message)"
@@ -1528,7 +1754,7 @@ try {
 }
 Remove-Item Env:BEAM_MUSIC_TEST, Env:BEAM_MUSIC_CMD_TEST -ErrorAction SilentlyContinue
 Remove-Item -LiteralPath $cmdOut, $cmdErr -ErrorAction SilentlyContinue
-Write-Host "PASS music controls (play/pause $($toggle.from)->$($toggle.to), next '$($next.from)'->'$($next.to)', prev '$($prev.from)'->'$($prev.to)', transports at opacity $($hover.opacity))"
+Write-Host "PASS music controls (play/pause $($toggle.from)->$($toggle.to), next '$($next.from)'->'$($next.to)', prev '$($prev.from)'->'$($prev.to)', 4 controls including panel, transports at opacity $($hover.opacity))"
 
 function Format-BeamClock([int]$seconds) {
   $hours = [int][math]::Floor($seconds / 3600)
@@ -1538,7 +1764,7 @@ function Format-BeamClock([int]$seconds) {
   return '{0}:{1:D2}' -f $minutes, $secs
 }
 
-Write-Host '[23/23] music tab'
+Write-Host '[23/24] music tab'
 $tabOut = Join-Path $env:TEMP 'beam-music-tab.out.log'
 $tabErr = Join-Path $env:TEMP 'beam-music-tab.err.log'
 Remove-Item -LiteralPath $tabOut, $tabErr -ErrorAction SilentlyContinue
@@ -1623,11 +1849,12 @@ try {
   if (-not $closed) { throw 'the pill did not close after the music tab check' }
   $tabExited = $tabApp.WaitForExit(8000)
   Start-Sleep -Milliseconds 500
-  $tabHelperLeft = @(Get-Process BeamBridge -ErrorAction SilentlyContinue).Count
+  $tabHelperLeft = Get-LeftoverHelper
   if (-not $tabExited -or $tabHelperLeft -ne 0) { throw "the app did not exit cleanly (exited=$tabExited helperLeft=$tabHelperLeft)" }
   $tabResult = "'$($payload.title)' art $($first.artW)x$($first.artH), bar $($first.bar.now)/$($first.bar.max)s advancing $advance in 3s, controls prev/toggle/next, tab play/pause changed and restored, 0 network requests"
 } catch {
   if ($tabApp -and -not $tabApp.HasExited) { $tabApp.Kill() }
+  Clear-BeamPlayers
   Get-Process electron,BeamBridge -ErrorAction SilentlyContinue | Stop-Process -Force
   Remove-Item Env:BEAM_MUSIC_TAB_TEST -ErrorAction SilentlyContinue
   Write-Host "FAIL music tab: $($_.Exception.Message)"
@@ -1636,6 +1863,105 @@ try {
 Remove-Item Env:BEAM_MUSIC_TAB_TEST -ErrorAction SilentlyContinue
 Remove-Item -LiteralPath $tabOut, $tabErr -ErrorAction SilentlyContinue
 Write-Host "PASS music tab ($tabResult)"
+
+Write-Host '[24/24] session picking'
+# Player one is still running from check 21. A second real player with a different app id
+# joins here so Beam has two live sessions to follow. Windows hands the current session over
+# only when a player starts or stops playing, so the test toggles the same player twice.
+$pickOut = Join-Path $env:TEMP 'beam-music-sessions.out.log'
+$pickErr = Join-Path $env:TEMP 'beam-music-sessions.err.log'
+Remove-Item -LiteralPath $pickOut, $pickErr -ErrorAction SilentlyContinue
+$pickApp = $null
+try {
+  if (-not $playerEdgeExe) { throw 'session picking needs a second SMTC player and Microsoft Edge was not found' }
+  Start-Process -FilePath $playerEdgeExe -ArgumentList @(
+    '--user-data-dir=' + (Join-Path $playerRoot 'edge'),
+    '--autoplay-policy=no-user-gesture-required',
+    '--no-first-run',
+    '--new-window',
+    ('file:///' + ($playerPage -replace '\\', '/'))
+  ) | Out-Null
+
+  $pickSecondPlayer = $null
+  $pickFirstPlayer = $null
+  for ($i = 0; $i -lt 40; $i++) {
+    Start-Sleep -Milliseconds 500
+    $pickLive = Get-BeamSessions
+    $pickSecondPlayer = $pickLive | Where-Object { $_.app -match 'Edge' } | Select-Object -First 1
+    $pickFirstPlayer = $pickLive | Where-Object { $_.app -notmatch 'Edge' -and $_.playing } | Select-Object -First 1
+    if ($pickSecondPlayer -and $pickFirstPlayer) { break }
+  }
+  if (-not $pickSecondPlayer -or -not $pickFirstPlayer) {
+    throw 'the second player never published a live SMTC session next to the first one'
+  }
+
+  if ($pickSecondPlayer.playing) {
+    if (-not (Set-BeamSessionPaused $pickSecondPlayer.app)) { throw 'the second player refused the pause' }
+    $pickPaused = $false
+    for ($i = 0; $i -lt 20; $i++) {
+      Start-Sleep -Milliseconds 500
+      $pickNow = Get-BeamSessions | Where-Object { $_.app -eq $pickSecondPlayer.app } | Select-Object -First 1
+      if ($pickNow -and -not $pickNow.playing) { $pickPaused = $true; break }
+    }
+    if (-not $pickPaused) { throw 'the second player stayed playing, so the pill had nothing to switch away from' }
+  }
+  $pickCurrent = Get-BeamSessions | Where-Object { $_.current } | Select-Object -First 1
+  if ($pickCurrent -and $pickCurrent.app -eq $pickSecondPlayer.app) {
+    throw 'the second player still owned the current session after pausing'
+  }
+
+  $pickApp = Start-Process -FilePath $electron -ArgumentList '.' -WorkingDirectory $PSScriptRoot -PassThru -RedirectStandardOutput $pickOut -RedirectStandardError $pickErr
+  $pickLog = ''
+  $pickStop = (Get-Date).AddSeconds(60)
+  while ((Get-Date) -lt $pickStop) {
+    Start-Sleep -Milliseconds 200
+    if ($pickApp.HasExited) { throw 'the app exited before the session picking test finished' }
+    $pickLog = Get-Content -LiteralPath $pickOut -Raw -ErrorAction SilentlyContinue
+    if ($pickLog -match '\[sessions\] done') { break }
+  }
+  if ($pickLog -notmatch '\[sessions\] done') { throw 'the session picking test never finished' }
+  if ($pickLog -match '\[sessions\] error') { throw 'the session picking test logged an error' }
+
+  $closed = $pickApp.CloseMainWindow()
+  if (-not $closed) { throw 'the pill did not close after the session picking check' }
+  $pickExited = $pickApp.WaitForExit(8000)
+  Start-Sleep -Milliseconds 500
+  $pickHelperLeft = Get-LeftoverHelper
+  if (-not $pickExited -or $pickHelperLeft -ne 0) { throw "the app did not exit cleanly (exited=$pickExited helperLeft=$pickHelperLeft)" }
+
+  if ($pickLog -match '\[sessions\] skip=one') {
+    $skipMatch = [regex]::Match($pickLog, '\[sessions\] skip=one ([^\r\n]+)')
+    Write-Host "SKIP session picking (only one media session was live: $($skipMatch.Groups[1].Value.Trim()); open two players that publish SMTC and rerun)"
+  } else {
+    $listMatch = [regex]::Match($pickLog, '\[sessions\] list (\[[^\r\n]+\])')
+    $switchMatch = [regex]::Match($pickLog, '\[sessions\] switched (\{[^\r\n]+\})')
+    $backMatch = [regex]::Match($pickLog, '\[sessions\] back (\{[^\r\n]+\})')
+    if (-not $listMatch.Success) { throw 'the session test never listed the media sessions' }
+    if (-not $switchMatch.Success) { throw 'the switch to the second player never reported' }
+    if (-not $backMatch.Success) { throw 'the switch back never reported' }
+
+    $sessionList = $listMatch.Groups[1].Value | ConvertFrom-Json
+    $switch = $switchMatch.Groups[1].Value | ConvertFrom-Json
+    $back = $backMatch.Groups[1].Value | ConvertFrom-Json
+    if (@($sessionList).Count -lt 2) { throw "expected two media sessions, found $(@($sessionList).Count)" }
+    if (-not $switch.matched) { throw "the pill did not follow the second player ('$($switch.title)')" }
+    if (-not $back.matched) { throw "the pill did not follow the session back ('$($back.title)')" }
+    if ($switch.app -eq $back.app) { throw 'the test picked the same app twice' }
+    if ([int]$switch.blank -ne 0 -or [int]$back.blank -ne 0) { throw "the pill went blank during a switch (switch=$($switch.blank) back=$($back.blank))" }
+    if ([int]$switch.ms -ge 10000 -or [int]$back.ms -ge 10000) { throw "a switch took over 10s (switch=$($switch.ms)ms back=$($back.ms)ms)" }
+    Write-Host "PASS session picking (followed '$($switch.app)' in $($switch.ms)ms and back to '$($back.app)' in $($back.ms)ms with no blank pill across $(@($sessionList).Count) live sessions)"
+  }
+} catch {
+  if ($pickApp -and -not $pickApp.HasExited) { $pickApp.Kill() }
+  Clear-BeamPlayers
+  Get-Process electron,BeamBridge -ErrorAction SilentlyContinue | Stop-Process -Force
+  Remove-Item Env:BEAM_MUSIC_SESSIONS_TEST -ErrorAction SilentlyContinue
+  Write-Host "FAIL session picking: $($_.Exception.Message)"
+  exit 1
+}
+Clear-BeamPlayers
+Remove-Item Env:BEAM_MUSIC_SESSIONS_TEST -ErrorAction SilentlyContinue
+Remove-Item -LiteralPath $pickOut, $pickErr -ErrorAction SilentlyContinue
 
 Remove-Item Env:BEAM_SETTINGS_PATH -ErrorAction SilentlyContinue
 Remove-Item -LiteralPath (Join-Path $env:TEMP 'beam-verify-active-settings.json') -ErrorAction SilentlyContinue

@@ -15,6 +15,7 @@ internal static class Program
         Console.SetError(new StreamWriter(Console.OpenStandardError(), new UTF8Encoding(false)) { AutoFlush = true });
 
         FullscreenWatcher.EnableDpiAwareness();
+        var sessionsTest = Environment.GetEnvironmentVariable("BEAM_MUSIC_SESSIONS_TEST") == "1";
 
         var watcher = new MusicWatcher();
         try
@@ -85,6 +86,12 @@ internal static class Program
                     case "music.next":
                     case "music.prev":
                         CommandMusic(request, cmd, watcher);
+                        break;
+                    case "music.sessions" when sessionsTest:
+                        ReplySessions(request, watcher);
+                        break;
+                    case "music.pick" when sessionsTest:
+                        PickMusic(request, watcher);
                         break;
                     case "fullscreen.get":
                         ReplyFullscreen(request, fullscreen);
@@ -162,6 +169,43 @@ internal static class Program
                 }
                 : null
         });
+    }
+
+    private static void ReplySessions(JsonObject request, MusicWatcher watcher)
+    {
+        var sessions = watcher.SessionsAsync().GetAwaiter().GetResult();
+        Protocol.Emit(new JsonObject
+        {
+            ["id"] = request["id"]?.DeepClone(),
+            ["sessions"] = sessions
+        });
+    }
+
+    private static void PickMusic(JsonObject request, MusicWatcher watcher)
+    {
+        var id = request["id"]?.DeepClone();
+        if (request["app"] is not JsonValue value || !value.TryGetValue<string>(out var app) || string.IsNullOrWhiteSpace(app))
+        {
+            Protocol.Emit(new JsonObject
+            {
+                ["id"] = id,
+                ["ok"] = false,
+                ["error"] = "app must be a non-empty string"
+            });
+            return;
+        }
+
+        var (ok, error) = watcher.PickAsync(app).GetAwaiter().GetResult();
+        if (!ok)
+        {
+            Protocol.Log($"music.pick failed: {error}");
+        }
+        var reply = new JsonObject { ["id"] = id, ["ok"] = ok };
+        if (!ok && error is not null)
+        {
+            reply["error"] = error;
+        }
+        Protocol.Emit(reply);
     }
 
     private static List<string>? ReadPaths(JsonObject request)

@@ -1,9 +1,10 @@
-import { app, BrowserWindow, ipcMain, nativeImage, screen } from 'electron';
+import { app, BrowserWindow, dialog, ipcMain, nativeImage, screen } from 'electron';
 import { existsSync, mkdirSync, statSync, unlinkSync, writeFileSync } from 'node:fs';
 import { readFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { basename, join } from 'node:path';
 import { Bridge, type HelperEvent } from './bridge';
+import { IPC, type AddResult, type CopyResult, type MusicState, type ShelfFile } from '../shared/ipc';
 import { getSettingsPath, loadSettings, saveSettings, type BeamSettings, type SavedPosition } from './settings';
 import { createTray } from './tray';
 
@@ -101,25 +102,6 @@ type MusicPayload = {
   durationMs: number;
 };
 
-type MusicView = {
-  title: string;
-  artist: string;
-  playing: boolean;
-  art: string | null;
-  positionMs: number;
-  durationMs: number;
-};
-
-type ShelfRow = {
-  path: string;
-  name: string;
-  sizeBytes: number;
-  kind: 'file' | 'folder';
-  missing: boolean;
-};
-
-type CopyResult = { ok: boolean; count: number; error?: string };
-
 function readPoint(x: unknown, y: unknown): { x: number; y: number } | null {
   if (typeof x !== 'number' || !Number.isFinite(x)) return null;
   if (typeof y !== 'number' || !Number.isFinite(y)) return null;
@@ -136,10 +118,40 @@ if (!gotLock) {
   let win: BrowserWindow | null = null;
   let tray: ReturnType<typeof createTray> | null = null;
   let panelOpen = false;
+  let pickingFiles = false;
   let hiddenByFullscreen = false;
+  let hiddenByUser = false;
+  let pillSize = { width: 94, height: 30 };
+  let shapeFailed = false;
+
+  function applyWindowShape(target: BrowserWindow): void {
+    if (target.isDestroyed()) return;
+    try {
+      if (panelOpen) {
+        target.setShape([{ x: 0, y: 0, width: PANEL_WIDTH, height: PANEL_HEIGHT }]);
+        return;
+      }
+      const halo = 6;
+      const width = Math.min(WINDOW_WIDTH, Math.max(1, Math.round(pillSize.width + halo * 2)));
+      const height = Math.min(WINDOW_HEIGHT, Math.max(1, Math.round(pillSize.height + halo * 2)));
+      target.setShape([
+        {
+          x: Math.round((WINDOW_WIDTH - width) / 2),
+          y: Math.round((WINDOW_HEIGHT - height) / 2),
+          width,
+          height
+        }
+      ]);
+    } catch (error) {
+      if (!shapeFailed) {
+        shapeFailed = true;
+        console.error('[window] setShape failed', error);
+      }
+    }
+  }
   let fullscreenActive = false;
   let shelf: string[] = [];
-  const shelfRows = (): ShelfRow[] =>
+  const shelfRows = (): ShelfFile[] =>
     shelf.map((path) => {
       try {
         const stats = statSync(path);
@@ -154,6 +166,20 @@ if (!gotLock) {
         return { path, name: basename(path), sizeBytes: 0, kind: 'file' as const, missing: true };
       }
     });
+  const addPaths = (paths: string[]): AddResult => {
+    let accepted = 0;
+    let truncated = false;
+    for (const path of paths) {
+      if (shelf.some((held) => held.toLowerCase() === path.toLowerCase())) continue;
+      if (shelf.length >= MAX_SHELF) {
+        truncated = true;
+        break;
+      }
+      shelf.push(path);
+      accepted++;
+    }
+    return { count: shelf.length, accepted, truncated, limit: MAX_SHELF, files: shelfRows() };
+  };
   let settings: BeamSettings = { version: 1, position: null };
   let pillPosition: Electron.Rectangle = {
     x: 0,
@@ -175,9 +201,13 @@ if (!gotLock) {
   const musicTest = process.env.BEAM_MUSIC_TEST === '1';
   const musicCmdTest = process.env.BEAM_MUSIC_CMD_TEST === '1';
   const musicTabTest = process.env.BEAM_MUSIC_TAB_TEST === '1';
-  let musicView: MusicView | null = null;
+  const musicSessionsTest = process.env.BEAM_MUSIC_SESSIONS_TEST === '1';
+  let musicView: MusicState | null = null;
+  let helperOk = true;
+  let liveMusicApp = '';
   let musicRequest = 0;
   let musicCmdStarted = false;
+  let musicSessionsStarted = false;
 
   function probeMusic(started: number, attempt = 0): void {
     if (!win || win.isDestroyed()) return;
@@ -206,8 +236,13 @@ if (!gotLock) {
 
   function sendMusic(): void {
     if (!win || win.isDestroyed()) return;
-    win.webContents.send('beam:music:state', musicView);
+    win.webContents.send(IPC.musicState, musicView);
     if (musicTest && musicView) probeMusic(Date.now());
+  }
+
+  function sendHelperState(): void {
+    if (!win || win.isDestroyed()) return;
+    win.webContents.send(IPC.helperState, { ok: helperOk });
   }
 
   async function applyMusic(payload: MusicPayload | null): Promise<void> {
@@ -475,6 +510,100 @@ if (!gotLock) {
     }
   }
 
+  async function pillSnapshot(): Promise<{ state: string | null; label: string | null }> {
+    if (!win || win.isDestroyed()) return { state: null, label: null };
+    try {
+      return (await win.webContents.executeJavaScript(
+        `(() => {
+          const pill = document.querySelector('.pill');
+          return {
+            state: pill?.dataset.state ?? null,
+            label: pill?.querySelector('.title')?.textContent ?? null
+          };
+        })()`
+      )) as { state: string | null; label: string | null };
+    } catch {
+      return { state: null, label: null };
+    }
+  }
+
+  async function pokeSession(
+    picked: string,
+    expect: { app: string; title: string | null },
+    tag: string
+  ): Promise<boolean> {
+    const started = Date.now();
+    await bridge.musicPick(picked);
+    const seen: string[] = [];
+    let matched = false;
+    // Windows takes ~6s to hand the current session over, so the budget is 12s.
+    while (Date.now() - started < 12000) {
+      const snap = await pillSnapshot();
+      if (snap.state) seen.push(snap.state);
+      if (liveMusicApp === expect.app && (expect.title === null || snap.label === expect.title)) {
+        matched = true;
+        break;
+      }
+      await new Promise((resolve) => setTimeout(resolve, 100));
+    }
+    const blank = seen.filter((state) => state === 'idle').length;
+    console.log(
+      `[sessions] ${tag} ${JSON.stringify({
+        app: expect.app,
+        title: expect.title ?? '',
+        picked,
+        matched,
+        blank,
+        ms: Date.now() - started
+      })}`
+    );
+    return matched;
+  }
+
+  async function waitForPlaying(app: string, want: boolean, ms: number): Promise<boolean> {
+    const deadline = Date.now() + ms;
+    while (Date.now() < deadline) {
+      const rows = await bridge.musicSessions();
+      const row = rows.find((entry) => entry.app === app);
+      if (row && row.playing === want) return true;
+      await new Promise((resolve) => setTimeout(resolve, 150));
+    }
+    return false;
+  }
+
+  async function ensurePlaying(app: string): Promise<void> {
+    const rows = await bridge.musicSessions();
+    if (rows.find((entry) => entry.app === app)?.playing) return;
+    await bridge.musicPick(app);
+    await waitForPlaying(app, true, 8000);
+  }
+
+  async function runMusicSessionsTest(): Promise<void> {
+    try {
+      const sessions = await bridge.musicSessions();
+      console.log(`[sessions] list ${JSON.stringify(sessions)}`);
+      const current = sessions.find((row) => row.current) ?? null;
+      const other = sessions.find((row) => !row.current) ?? null;
+      if (sessions.length < 2 || !current || !other) {
+        console.log(`[sessions] skip=one count=${sessions.length} other=${Boolean(other)}`);
+        return;
+      }
+      // Windows never promotes a player that is only paused; it hands the current session over
+      // when the player in front stops and another one is playing. So each leg starts the other
+      // player and then stops the one in front, and the pill must land on the other app.
+      await ensurePlaying(other.app);
+      await pokeSession(current.app, { app: other.app, title: other.title }, 'switched');
+      const fresh = await bridge.musicSessions();
+      const back = fresh.find((row) => row.app === current.app) ?? current;
+      await ensurePlaying(back.app);
+      await pokeSession(other.app, { app: back.app, title: back.title }, 'back');
+    } catch (error) {
+      console.error('[sessions] error', error);
+    } finally {
+      console.log('[sessions] done');
+    }
+  }
+
   let onFullscreen: (active: boolean) => void = () => {};
   const onHelperEvent = (event: HelperEvent): void => {
     if (event.evt === 'fullscreen.changed') {
@@ -485,6 +614,13 @@ if (!gotLock) {
     }
     if (event.evt !== 'music.changed') return;
     const music = event.payload as MusicPayload | null;
+    liveMusicApp = music?.app ?? '';
+    if (musicSessionsTest && !musicSessionsStarted) {
+      musicSessionsStarted = true;
+      void runMusicSessionsTest().catch((error: unknown) => {
+        console.error('[sessions] error', error);
+      });
+    }
     if (!music) {
       console.log('[music] none');
     } else {
@@ -495,7 +631,11 @@ if (!gotLock) {
   };
   const bridge = new Bridge(
     join(app.getAppPath(), 'native', 'BeamBridge', 'dist', 'BeamBridge.exe'),
-    onHelperEvent
+    onHelperEvent,
+    () => {
+      helperOk = false;
+      sendHelperState();
+    }
   );
 
   function createWindow(restored: boolean): void {
@@ -519,7 +659,8 @@ if (!gotLock) {
     win.once('ready-to-show', () => {
       if (!win) return;
       const target = win;
-      if (!hiddenByFullscreen) target.showInactive();
+      if (!hiddenByFullscreen && !hiddenByUser) target.showInactive();
+      applyWindowShape(target);
       if (restored) {
         target.setBounds(pillPosition);
         console.log(
@@ -563,9 +704,9 @@ if (!gotLock) {
     });
 
     win.on('blur', () => {
-      if (panelOpen && win && !win.isDestroyed()) {
+      if (panelOpen && !pickingFiles && win && !win.isDestroyed()) {
         panelOpen = false;
-        win.webContents.send('beam:panel:dismiss');
+        win.webContents.send(IPC.panelDismiss);
       }
     });
 
@@ -577,7 +718,10 @@ if (!gotLock) {
       event.preventDefault();
     });
 
-    win.webContents.on('did-finish-load', () => sendMusic());
+    win.webContents.on('did-finish-load', () => {
+      sendMusic();
+      sendHelperState();
+    });
 
     void win.loadFile(join(__dirname, '../renderer/index.html'));
   }
@@ -586,6 +730,7 @@ if (!gotLock) {
     if (!win) return;
     if (win.isMinimized()) win.restore();
     hiddenByFullscreen = false;
+    hiddenByUser = false;
     win.showInactive();
   });
 
@@ -598,8 +743,16 @@ if (!gotLock) {
     bridge.start();
     void bridge
       .ping()
-      .then((version) => console.log(`[bridge] pong ${version}`))
-      .catch((error: unknown) => console.error('[bridge] ping failed', error));
+      .then((version) => {
+        helperOk = true;
+        console.log(`[bridge] pong ${version}`);
+        sendHelperState();
+      })
+      .catch((error: unknown) => {
+        helperOk = false;
+        sendHelperState();
+        console.error('[bridge] ping failed', error);
+      });
 
     createWindow(restoredBounds !== null);
     if (win) {
@@ -609,28 +762,64 @@ if (!gotLock) {
         panelOpen = true;
         const bounds = panelBounds(window);
         window.setBounds(bounds);
+        applyWindowShape(window);
         console.log(`[panel] bounds=${bounds.x},${bounds.y},${bounds.width},${bounds.height}`);
         window.focus();
-        window.webContents.send('beam:panel:open', shelfRows());
+        window.webContents.send(IPC.panelOpen, shelfRows());
       };
       const closePanel = (): void => {
         if (!panelOpen || window.isDestroyed()) return;
         panelOpen = false;
-        window.webContents.send('beam:panel:dismiss');
+        window.webContents.send(IPC.panelDismiss);
       };
       const showPill = (source: string): void => {
         if (window.isDestroyed()) return;
         hiddenByFullscreen = false;
+        hiddenByUser = false;
         panelOpen = false;
         window.showInactive();
         console.log(`[fullscreen] shown (${source})`);
+      };
+      const hideFromTray = (): void => {
+        if (window.isDestroyed()) return;
+        hiddenByUser = true;
+        hiddenByFullscreen = false;
+        if (panelOpen) closePanel();
+        window.setBounds(pillPosition);
+        window.hide();
+        console.log('[window] hidden (tray)');
+      };
+      const quitWithConfirm = (): void => {
+        if (window.isDestroyed()) {
+          app.quit();
+          return;
+        }
+        const count = shelf.length;
+        if (count === 0) {
+          app.quit();
+          return;
+        }
+        const options = {
+          type: 'warning' as const,
+          title: 'Quit Beam?',
+          message: `${count} ${count === 1 ? 'file' : 'files'} will be cleared`,
+          detail: 'Beam keeps only file paths while it runs.',
+          buttons: ['Keep Beam open', 'Quit and clear'],
+          defaultId: 0,
+          cancelId: 0,
+          noLink: true
+        };
+        const choice = window.isVisible()
+          ? dialog.showMessageBoxSync(window, options)
+          : dialog.showMessageBoxSync(options);
+        if (choice === 1) app.quit();
       };
       const hidePill = (): void => {
         if (window.isDestroyed()) return;
         windowDrag = null;
         if (panelOpen) {
           panelOpen = false;
-          window.webContents.send('beam:panel:dismiss');
+          window.webContents.send(IPC.panelDismiss);
         }
         window.setBounds(pillPosition);
         hiddenByFullscreen = true;
@@ -649,7 +838,7 @@ if (!gotLock) {
       onFullscreen = (active: boolean): void => {
         if (window.isDestroyed()) return;
         if (active) {
-          if (!window.isVisible()) return;
+          if (!window.isVisible() || hiddenByUser) return;
           hidePill();
           if (fullscreenTest) setTimeout(() => trayToggle(), 1500);
           return;
@@ -698,55 +887,72 @@ if (!gotLock) {
           `[move] reset=${pillPosition.x},${pillPosition.y},${pillPosition.width},${pillPosition.height}`
         );
         if (panelOpen) closePanel();
-        else if (!window.isDestroyed()) window.setBounds(pillPosition);
+        else if (!window.isDestroyed()) {
+          window.setBounds(pillPosition);
+          applyWindowShape(window);
+        }
       };
 
       tray = createTray(
         () => {},
         () => resetPosition(),
-        () => trayToggle()
+        () => trayToggle(),
+        () => hideFromTray(),
+        () => quitWithConfirm()
       );
       console.log('[tray] ready');
 
-      ipcMain.on('beam:window:drag-start', (event, x: unknown, y: unknown) => {
+      ipcMain.on(IPC.windowDragStart, (event, x: unknown, y: unknown) => {
         const point = readPoint(x, y);
         if (event.sender !== window.webContents || !point) return;
         startDrag(point.x, point.y);
       });
-      ipcMain.on('beam:window:drag-move', (event, x: unknown, y: unknown) => {
+      ipcMain.on(IPC.windowDragMove, (event, x: unknown, y: unknown) => {
         const point = readPoint(x, y);
         if (event.sender !== window.webContents || !point) return;
         moveDrag(point.x, point.y);
       });
-      ipcMain.on('beam:window:drag-end', (event, x: unknown, y: unknown) => {
+      ipcMain.on(IPC.windowDragEnd, (event, x: unknown, y: unknown) => {
         const point = readPoint(x, y);
         if (event.sender !== window.webContents || !point) return;
         endDrag(point.x, point.y);
       });
 
-      ipcMain.handle('beam:files:add', (event, paths: unknown) => {
+      ipcMain.handle(IPC.filesAdd, (event, paths: unknown): AddResult => {
         if (event.sender !== window.webContents) {
-          return { count: shelf.length, accepted: 0, truncated: false, limit: MAX_SHELF };
+          return { count: shelf.length, accepted: 0, truncated: false, limit: MAX_SHELF, files: shelfRows() };
         }
         const list = Array.isArray(paths)
           ? paths.filter((path): path is string => typeof path === 'string' && path.length > 0 && !path.includes('\0'))
           : [];
-        let accepted = 0;
-        let truncated = false;
-        for (const path of list) {
-          if (shelf.some((held) => held.toLowerCase() === path.toLowerCase())) continue;
-          if (shelf.length >= MAX_SHELF) {
-            truncated = true;
-            break;
-          }
-          shelf.push(path);
-          accepted++;
-        }
-        console.log(`[files] add=${list.length} accepted=${accepted} count=${shelf.length} truncated=${truncated}`);
-        return { count: shelf.length, accepted, truncated, limit: MAX_SHELF };
+        const result = addPaths(list);
+        console.log(
+          `[files] add=${list.length} accepted=${result.accepted} count=${result.count} truncated=${result.truncated}`
+        );
+        return result;
       });
 
-      ipcMain.handle('beam:files:copy', async (event, payload: unknown): Promise<CopyResult> => {
+      ipcMain.handle(IPC.filesPick, async (event): Promise<AddResult | null> => {
+        if (event.sender !== window.webContents) return null;
+        pickingFiles = true;
+        try {
+          const selection = await dialog.showOpenDialog(window, {
+            title: 'Add files to Beam',
+            buttonLabel: 'Add',
+            properties: ['openFile', 'multiSelections']
+          });
+          if (selection.canceled || selection.filePaths.length === 0) return null;
+          const result = addPaths(selection.filePaths);
+          console.log(
+            `[files] pick=${selection.filePaths.length} accepted=${result.accepted} count=${result.count} truncated=${result.truncated}`
+          );
+          return result;
+        } finally {
+          pickingFiles = false;
+        }
+      });
+
+      ipcMain.handle(IPC.filesCopy, async (event, payload: unknown): Promise<CopyResult> => {
         if (event.sender !== window.webContents) return { ok: false, count: 0, error: 'untrusted sender' };
         const data = payload as { paths?: unknown; source?: unknown } | null;
         const source = data?.source === 'row' || data?.source === 'all' ? data.source : null;
@@ -771,7 +977,7 @@ if (!gotLock) {
         }
       });
 
-      ipcMain.on('beam:files:drag', (event, paths: unknown) => {
+      ipcMain.on(IPC.filesDrag, (event, paths: unknown) => {
         if (event.sender !== window.webContents) return;
         const requested = Array.isArray(paths)
           ? paths.filter((path): path is string => typeof path === 'string' && path.length > 0)
@@ -801,7 +1007,7 @@ if (!gotLock) {
         event.sender.startDrag({ file: first, files: dragPaths, icon });
       });
 
-      ipcMain.handle('beam:files:remove', (event, path: unknown): { ok: boolean; files: ShelfRow[] } => {
+      ipcMain.handle(IPC.filesRemove, (event, path: unknown): { ok: boolean; files: ShelfFile[] } => {
         if (event.sender !== window.webContents) return { ok: false, files: shelfRows() };
         const requested = typeof path === 'string' ? path.toLowerCase() : '';
         const index = requested ? shelf.findIndex((held) => held.toLowerCase() === requested) : -1;
@@ -815,7 +1021,7 @@ if (!gotLock) {
         return { ok: true, files: shelfRows() };
       });
 
-      ipcMain.handle('beam:files:clear', (event): { ok: boolean; files: ShelfRow[] } => {
+      ipcMain.handle(IPC.filesClear, (event): { ok: boolean; files: ShelfFile[] } => {
         if (event.sender !== window.webContents) return { ok: false, files: shelfRows() };
         const count = shelf.length;
         shelf = [];
@@ -823,7 +1029,7 @@ if (!gotLock) {
         return { ok: true, files: [] };
       });
 
-      ipcMain.handle('beam:music:command', async (event, cmd: unknown): Promise<{ ok: boolean; error?: string }> => {
+      ipcMain.handle(IPC.musicCommand, async (event, cmd: unknown): Promise<{ ok: boolean; error?: string }> => {
         if (event.sender !== window.webContents) return { ok: false, error: 'untrusted sender' };
         const action = cmd === 'toggle' || cmd === 'next' || cmd === 'prev' ? cmd : null;
         if (!action) {
@@ -841,15 +1047,28 @@ if (!gotLock) {
         }
       });
 
-      ipcMain.on('beam:panel:request-open', openPanel);
-      ipcMain.on('beam:panel:collapsed', () => {
+      ipcMain.on(IPC.pillSize, (event, width: unknown, height: unknown) => {
+        if (event.sender !== window.webContents) return;
+        if (typeof width !== 'number' || !Number.isFinite(width)) return;
+        if (typeof height !== 'number' || !Number.isFinite(height)) return;
+        pillSize = {
+          width: Math.max(1, Math.min(WINDOW_WIDTH, Math.round(width))),
+          height: Math.max(1, Math.min(WINDOW_HEIGHT, Math.round(height)))
+        };
+        if (!panelOpen) applyWindowShape(window);
+      });
+
+      ipcMain.on(IPC.panelRequestOpen, openPanel);
+      ipcMain.on(IPC.panelCollapsed, () => {
         if (window.isDestroyed()) return;
+        panelOpen = false;
         window.setBounds(pillPosition);
+        applyWindowShape(window);
         console.log(
           `[window] pill=${pillPosition.x},${pillPosition.y},${pillPosition.width},${pillPosition.height}`
         );
       });
-      ipcMain.on('beam:panel:timing', (_event, ms: number, reduced: boolean) => {
+      ipcMain.on(IPC.panelTiming, (_event, ms: number, reduced: boolean) => {
         console.log(`[panel] open ${ms}ms reduced=${reduced}`);
       });
       if (panelTest) {
