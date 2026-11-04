@@ -1,5 +1,9 @@
+.panel-files-list {
+  justify-content: flex-start;
+}
+
 .file-list {
-  flex: 0 1 auto;
+  flex: 1 1 auto;
   display: flex;
   flex-direction: column;
   min-height: 0;
@@ -134,10 +138,47 @@
   color: var(--destructive);
 }
 
-.shelf-note {
+.shelf-status {
+  display: flex;
+  align-items: center;
+  gap: var(--space-1);
   margin-right: auto;
+  min-width: 0;
+}
+
+.shelf-status-empty {
+  margin-right: 0;
+  justify-content: center;
+  min-height: 16px;
+}
+
+.shelf-note {
+  min-width: 0;
   align-self: center;
+  overflow: hidden;
+  text-overflow: ellipsis;
   font-size: 11px;
   color: var(--muted-foreground);
   white-space: nowrap;
+}
+
+.shelf-undo {
+  flex: none;
+  padding: 0;
+  border: 0;
+  background: none;
+  color: var(--primary-text);
+  font: inherit;
+  font-size: 11px;
+  cursor: pointer;
+}
+
+.shelf-undo:hover {
+  text-decoration: underline;
+}
+
+.shelf-undo:focus-visible {
+  outline: 2px solid var(--ring);
+  outline-offset: 1px;
+  border-radius: var(--r-micro);
 }

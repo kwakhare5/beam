@@ -2,7 +2,7 @@ import { icon } from '../shared/icons';
 import { esc } from '../shared/html';
 import { MASCOTS } from '../shared/mascots';
 
-export type PillState = 'idle' | 'playing' | 'paused' | 'timer' | 'done' | 'files' | 'drag';
+export type PillState = 'quiet' | 'idle' | 'playing' | 'paused' | 'timer' | 'done' | 'files' | 'drag' | 'error';
 
 export interface PillData {
   state: PillState;
@@ -19,12 +19,13 @@ export function transportControls(playing: boolean): string {
       <button type="button" class="icon-btn" data-action="prev" aria-label="Previous">${icon('prev')}</button>
       <button type="button" class="icon-btn primary" data-action="toggle" aria-label="${playing ? 'Pause' : 'Play'}">${icon(playing ? 'pause' : 'play')}</button>
       <button type="button" class="icon-btn" data-action="next" aria-label="Next">${icon('next')}</button>
+      <button type="button" class="icon-btn panel-open" data-action="panel" aria-label="Open panel">${icon('chevronUp')}</button>
     </div>`;
 }
 
 export function pill(data: PillData): string {
   const music = data.state === 'playing' || data.state === 'paused';
-  const expands = music || data.state === 'timer' || data.state === 'done';
+  const expands = music || data.state === 'timer' || data.state === 'done' || data.state === 'error';
 
   const controls = music ? transportControls(data.primaryIcon === 'pause') : '';
 
@@ -39,11 +40,13 @@ export function pill(data: PillData): string {
       : '';
 
   const rest =
-    data.state === 'timer'
-      ? `<div class="digits">${esc(data.digits ?? '')}</div>`
-      : data.state === 'done'
-        ? `<span class="state-icon" aria-hidden="true">${icon('check')}</span>`
-        : `<div class="title" title="${esc(data.title)}">${esc(data.title)}</div>`;
+    data.state === 'quiet'
+      ? ''
+      : data.state === 'timer'
+        ? `<div class="digits">${esc(data.digits ?? '')}</div>`
+        : data.state === 'done'
+          ? `<span class="state-icon" aria-hidden="true">${icon('check')}</span>`
+          : `<div class="title" title="${esc(data.title)}">${esc(data.title)}</div>`;
 
   const pipState = music ? (data.state === 'playing' ? 'playing' : 'paused') : data.pip;
   const pip = pipState ? `<span class="media-pip ${pipState}" aria-hidden="true"></span>` : '';

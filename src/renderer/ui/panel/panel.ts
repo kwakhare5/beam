@@ -14,31 +14,41 @@ export interface PanelData {
   timer: TimerData;
   calendar: Date | { view: Date; today?: Date };
   settings: SettingsData;
+  enabledTabs?: ReadonlyArray<Tab>;
 }
 
-function tabs(active: Tab): string {
-  const buttons = CONTENT_TABS.map((tab) => {
-    const selected = tab.id === active;
-    return `<button type="button" class="tab" role="tab" id="tab-${tab.id}" aria-controls="panel-${tab.id}" aria-selected="${selected}" tabindex="${selected ? 0 : -1}">${icon(tab.icon)}<span class="tab-label">${tab.label}</span></button>`;
-  }).join('');
+const ALL_TABS: ReadonlyArray<Tab> = ['music', 'files', 'timer', 'calendar', 'settings'];
 
-  const settings = `<button type="button" class="tab settings" role="tab" id="tab-settings" aria-controls="panel-settings" aria-label="Settings" aria-selected="${active === 'settings'}" tabindex="${active === 'settings' ? 0 : -1}">${icon('sliders')}</button>`;
+function tabs(active: Tab, enabled: ReadonlyArray<Tab>): string {
+  const buttons = CONTENT_TABS.filter((tab) => enabled.includes(tab.id))
+    .map((tab) => {
+      const selected = tab.id === active;
+      return `<button type="button" class="tab" role="tab" id="tab-${tab.id}" aria-controls="panel-${tab.id}" aria-selected="${selected}" tabindex="${selected ? 0 : -1}">${icon(tab.icon)}<span class="tab-label">${tab.label}</span></button>`;
+    })
+    .join('');
+
+  const settings = enabled.includes('settings')
+    ? `<button type="button" class="tab settings" role="tab" id="tab-settings" aria-controls="panel-settings" aria-label="Settings" aria-selected="${active === 'settings'}" tabindex="${active === 'settings' ? 0 : -1}">${icon('sliders')}</button>`
+    : '';
 
   return `<div class="tabs" role="tablist" aria-label="Beam panels"><div class="tab-track" role="presentation">${buttons}</div>${settings}</div>`;
 }
 
 export function panel(tab: Tab, data: PanelData): string {
+  const enabled = data.enabledTabs ?? ALL_TABS;
+  const active = enabled.includes(tab) ? tab : enabled[0] ?? 'music';
   const today = data.calendar instanceof Date ? data.calendar : data.calendar.today ?? new Date();
   const view = data.calendar instanceof Date ? data.calendar : data.calendar.view;
 
-  const bodies =
-    musicPanel(data.music, tab === 'music') +
-    filesPanel(data.files, data.filesCopied, tab === 'files') +
-    timerPanel(data.timer, tab === 'timer') +
-    calendarPanel(today, tab === 'calendar', view) +
-    settingsPanel(data.settings, tab === 'settings');
+  const bodies = [
+    enabled.includes('music') ? musicPanel(data.music, active === 'music') : '',
+    enabled.includes('files') ? filesPanel(data.files, data.filesCopied, active === 'files') : '',
+    enabled.includes('timer') ? timerPanel(data.timer, active === 'timer') : '',
+    enabled.includes('calendar') ? calendarPanel(today, active === 'calendar', view) : '',
+    enabled.includes('settings') ? settingsPanel(data.settings, active === 'settings') : ''
+  ].join('');
 
-  return `<div class="panel">${tabs(tab)}${bodies}</div>`;
+  return `<div class="panel">${tabs(active, enabled)}${bodies}</div>`;
 }
 
 export { bindPanelTabs } from './tab-nav';

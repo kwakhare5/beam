@@ -13,11 +13,11 @@ const map = {
   trash: 'trash-2',
   file: 'file',
   folder: 'folder',
-  monitor: 'monitor',
   check: 'check',
   plus: 'plus',
   chevronLeft: 'chevron-left',
-  chevronRight: 'chevron-right'
+  chevronRight: 'chevron-right',
+  chevronUp: 'chevron-up'
 };
 
 const iconDir = resolve('node_modules/lucide-static/icons');

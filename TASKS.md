@@ -8,6 +8,29 @@
 
 **Done before the order:** 0.1 scaffold, 0.2 budget (90 MB / 0.035% CPU), 0.3 helper ping (6.3 MB), 0.4a live SMTC + PNG art, 0.4b CF_HDROP clipboard. Plus UI work outside the phase order: the app UI system, the canonical preview, the focus/cleanup pass (cards 21–35), the 2026-10-28 cleanup (card 43), the segmented-tab redesign (cards 44–54), the 100/136 capsule pass (cards 55–56), the 2026-10-29 audit fix pass (card 64), and the 6% capsule scale to 94×30 / 128×30 in a 136×42 window (card 67).
 
+## I. UI trust pass (approved 2026-11-04)
+
+These run before the phase tasks, as previous UI passes did. The canonical preview keeps every state; the app only shows what works. 2.4/2.5 proof is part of 9.9.
+
+- [ ] **9.1 Honest surfaces** — *Depends on: 2.3.*
+  - Hide Timer, Calendar, Settings, and the pill timer/done actions in the app until their engines land. Keep them in `showcase/app-preview.html`. No dead tab or dead control in the app.
+- [ ] **9.2 Add files picker** — *Depends on: 3.1.*
+  - Native `dialog.showOpenDialog` through preload/main; add picked paths to the same shelf; empty state and action row both work. A drop while the panel is open refreshes the Files list.
+- [ ] **9.3 Panel flow** — *Depends on: 1.3.*
+  - Esc resets main's panel state; the panel animates out over 150ms; the 16px margin dismisses; opening picks Files, Music, or the last tab from the pill state. No stuck reopen.
+- [ ] **9.4 Feedback and safety** — *Depends on: 3.3, 3.5.*
+  - Visible status for copy/add/remove failures; 5s Undo after a row remove; confirm Quit when the shelf is non-empty; a `Connection lost` pill state when the helper dies; tray Hide.
+- [ ] **9.5 Quiet idle and chevron** — *Depends on: 1.5, 2.2.*
+  - 30×30 star-only quiet after 20s idle; 94×30 on hover; 2s return; idle-only. A 16px chevron in the music hover row opens the panel.
+- [ ] **9.6 Hit area** — *Depends on: 9.5.*
+  - Shape the window to the visible pill with a 6px shadow halo so the transparent margins click through. Re-test drag, hover, panel, and the real-mouse checks.
+- [ ] **9.7 Files and Music layout** — *Depends on: 3.3, 2.3.*
+  - Files rows start at the top with actions pinned bottom. More breathing room around the Music progress block.
+- [ ] **9.8 Keyboard and accessibility** — *Depends on: 1.6.*
+  - Pill role, name, Enter, focus ring, live region; focus restoration on panel close; Settings tab inside the tablist; calendar focus style. Pull 1.8 forward.
+- [ ] **9.9 Proof** — *Depends on: 9.1–9.8.*
+  - Add runtime checks for the quiet state, chevron, auto-pick, Esc/reopen, margin click-through, Add files, Undo, and quit confirm. Prove 2.4 and 2.5. `.\verify.ps1` exits 0.
+
 ---
 
 ## A. Shell that feels right
@@ -72,6 +95,7 @@
 - [ ] **2.4 Session picking** — *Depends on: 2.1.*
   - Two players at once → last-touched wins; switching apps in the media popup switches Beam.
   - _Verify:_ Spotify + browser tab, toggle foreground, pill follows.
+  - _Built 2026-11-02, unticked._ The helper resolves one session per read (current, else newest playing), listens for `SessionsChanged`, and answers `music.sessions` / `music.pick` under `BEAM_MUSIC_SESSIONS_TEST=1`; check 24 switches a real player both ways. Not ticked: `.\verify.ps1` stopped at check 17, where the real Ctrl+V into Explorer lost the foreground to Freebuff.
 - [ ] **2.5 Degrade gracefully** — *Depends on: 2.3.*
   - Player with no artwork, paused player, player closed mid-track.
   - _Verify:_ no crash, no blank frame, placeholder shown.

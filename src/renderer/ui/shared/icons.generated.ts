@@ -11,9 +11,9 @@ export const ICON_PATHS: Record<string, string> = {
   "trash": "<path d=\"M10 11v6\" />\n  <path d=\"M14 11v6\" />\n  <path d=\"M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6\" />\n  <path d=\"M3 6h18\" />\n  <path d=\"M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2\" />",
   "file": "<path d=\"M6 22a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h8a2.4 2.4 0 0 1 1.704.706l3.588 3.588A2.4 2.4 0 0 1 20 8v12a2 2 0 0 1-2 2z\" />\n  <path d=\"M14 2v5a1 1 0 0 0 1 1h5\" />",
   "folder": "<path d=\"M20 20a2 2 0 0 0 2-2V8a2 2 0 0 0-2-2h-7.9a2 2 0 0 1-1.69-.9L9.6 3.9A2 2 0 0 0 7.93 3H4a2 2 0 0 0-2 2v13a2 2 0 0 0 2 2Z\" />",
-  "monitor": "<rect width=\"20\" height=\"14\" x=\"2\" y=\"3\" rx=\"2\" />\n  <line x1=\"8\" x2=\"16\" y1=\"21\" y2=\"21\" />\n  <line x1=\"12\" x2=\"12\" y1=\"17\" y2=\"21\" />",
   "check": "<path d=\"M20 6 9 17l-5-5\" />",
   "plus": "<path d=\"M5 12h14\" />\n  <path d=\"M12 5v14\" />",
   "chevronLeft": "<path d=\"m15 18-6-6 6-6\" />",
-  "chevronRight": "<path d=\"m9 18 6-6-6-6\" />"
+  "chevronRight": "<path d=\"m9 18 6-6-6-6\" />",
+  "chevronUp": "<path d=\"m18 15-6-6-6 6\" />"
 };

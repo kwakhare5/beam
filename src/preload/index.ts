@@ -1,50 +1,34 @@
 import { contextBridge, ipcRenderer, webUtils } from 'electron';
-
-type ShelfFile = {
-  path: string;
-  name: string;
-  sizeBytes: number;
-  kind: 'file' | 'folder';
-  missing: boolean;
-};
-
-type CopyResult = { ok: boolean; count: number; error?: string };
-
-type MusicState = {
-  title: string;
-  artist: string;
-  playing: boolean;
-  art: string | null;
-  positionMs: number;
-  durationMs: number;
-};
+import { IPC, type AddResult, type CopyResult, type FileChange, type HelperState, type MusicState, type ShelfFile } from '../shared/ipc';
 
 contextBridge.exposeInMainWorld('beam', {
   getPathForFile: (file: File): string => webUtils.getPathForFile(file),
-  addFiles: (paths: string[]): Promise<{ count: number; accepted: number; truncated: boolean; limit: number }> =>
-    ipcRenderer.invoke('beam:files:add', paths),
+  addFiles: (paths: string[]): Promise<AddResult> => ipcRenderer.invoke(IPC.filesAdd, paths),
+  pickFiles: (): Promise<AddResult | null> => ipcRenderer.invoke(IPC.filesPick),
   copyFiles: (paths: string[], source: 'row' | 'all'): Promise<CopyResult> =>
-    ipcRenderer.invoke('beam:files:copy', { paths, source }),
-  startFileDrag: (paths: string[]): void => ipcRenderer.send('beam:files:drag', paths),
-  removeFile: (path: string): Promise<{ ok: boolean; files: ShelfFile[] }> =>
-    ipcRenderer.invoke('beam:files:remove', path),
-  clearFiles: (): Promise<{ ok: boolean; files: ShelfFile[] }> => ipcRenderer.invoke('beam:files:clear'),
-  openPanel: (): void => ipcRenderer.send('beam:panel:request-open'),
-  panelCollapsed: (): void => ipcRenderer.send('beam:panel:collapsed'),
-  beginWindowDrag: (x: number, y: number): void => ipcRenderer.send('beam:window:drag-start', x, y),
-  moveWindowDrag: (x: number, y: number): void => ipcRenderer.send('beam:window:drag-move', x, y),
-  endWindowDrag: (x: number, y: number): void => ipcRenderer.send('beam:window:drag-end', x, y),
+    ipcRenderer.invoke(IPC.filesCopy, { paths, source }),
+  startFileDrag: (paths: string[]): void => ipcRenderer.send(IPC.filesDrag, paths),
+  removeFile: (path: string): Promise<FileChange> => ipcRenderer.invoke(IPC.filesRemove, path),
+  clearFiles: (): Promise<FileChange> => ipcRenderer.invoke(IPC.filesClear),
+  openPanel: (): void => ipcRenderer.send(IPC.panelRequestOpen),
+  panelCollapsed: (): void => ipcRenderer.send(IPC.panelCollapsed),
+  setPillSize: (width: number, height: number): void => ipcRenderer.send(IPC.pillSize, width, height),
+  beginWindowDrag: (x: number, y: number): void => ipcRenderer.send(IPC.windowDragStart, x, y),
+  moveWindowDrag: (x: number, y: number): void => ipcRenderer.send(IPC.windowDragMove, x, y),
+  endWindowDrag: (x: number, y: number): void => ipcRenderer.send(IPC.windowDragEnd, x, y),
   onPanelOpen: (callback: (files: ShelfFile[]) => void): void => {
-    ipcRenderer.on('beam:panel:open', (_event, files: ShelfFile[]) => callback(files));
+    ipcRenderer.on(IPC.panelOpen, (_event, files: ShelfFile[]) => callback(files));
   },
   onPanelDismiss: (callback: () => void): void => {
-    ipcRenderer.on('beam:panel:dismiss', () => callback());
+    ipcRenderer.on(IPC.panelDismiss, () => callback());
   },
   onMusicState: (callback: (state: MusicState | null) => void): void => {
-    ipcRenderer.on('beam:music:state', (_event, state: MusicState | null) => callback(state));
+    ipcRenderer.on(IPC.musicState, (_event, state: MusicState | null) => callback(state));
   },
-  reportPanelTiming: (ms: number, reduced: boolean): void =>
-    ipcRenderer.send('beam:panel:timing', ms, reduced),
+  onHelperState: (callback: (state: HelperState) => void): void => {
+    ipcRenderer.on(IPC.helperState, (_event, state: HelperState) => callback(state));
+  },
+  reportPanelTiming: (ms: number, reduced: boolean): void => ipcRenderer.send(IPC.panelTiming, ms, reduced),
   musicCommand: (cmd: 'toggle' | 'next' | 'prev'): Promise<{ ok: boolean; error?: string }> =>
-    ipcRenderer.invoke('beam:music:command', cmd)
+    ipcRenderer.invoke(IPC.musicCommand, cmd)
 });

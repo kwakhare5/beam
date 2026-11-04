@@ -22,7 +22,8 @@ internal sealed class MusicWatcher : IDisposable
         ResetArtFolder();
         manager = await GlobalSystemMediaTransportControlsSessionManager.RequestAsync();
         manager.CurrentSessionChanged += OnManagerChanged;
-        Attach(manager.GetCurrentSession());
+        manager.SessionsChanged += OnSessionsChanged;
+        Attach(Resolve());
         await PublishAsync();
     }
 
@@ -30,7 +31,7 @@ internal sealed class MusicWatcher : IDisposable
     {
         try
         {
-            var current = manager?.GetCurrentSession() ?? session;
+            var current = Resolve();
             if (current is null)
             {
                 return (false, "no active media session");
@@ -51,12 +52,61 @@ internal sealed class MusicWatcher : IDisposable
         }
     }
 
+    public async Task<JsonArray> SessionsAsync()
+    {
+        var list = new JsonArray();
+        var mgr = manager;
+        if (mgr is null) return list;
+
+        var current = mgr.GetCurrentSession();
+        foreach (var candidate in mgr.GetSessions())
+        {
+            try
+            {
+                var props = await candidate.TryGetMediaPropertiesAsync();
+                list.Add(new JsonObject
+                {
+                    ["app"] = candidate.SourceAppUserModelId ?? string.Empty,
+                    ["title"] = props?.Title ?? string.Empty,
+                    ["playing"] = candidate.GetPlaybackInfo()?.PlaybackStatus == GlobalSystemMediaTransportControlsSessionPlaybackStatus.Playing,
+                    ["current"] = current is not null && current.SourceAppUserModelId == candidate.SourceAppUserModelId
+                });
+            }
+            catch (Exception ex)
+            {
+                Protocol.Log($"session list failed: {ex.Message}");
+            }
+        }
+        return list;
+    }
+
+    public async Task<(bool Ok, string? Error)> PickAsync(string app)
+    {
+        var mgr = manager;
+        if (mgr is null) return (false, "no media manager");
+
+        var match = mgr.GetSessions()
+            .FirstOrDefault(candidate => string.Equals(candidate.SourceAppUserModelId, app, StringComparison.OrdinalIgnoreCase));
+        if (match is null) return (false, "no session for that app");
+
+        try
+        {
+            var ok = await match.TryTogglePlayPauseAsync();
+            return ok ? (true, null) : (false, "the player refused the command");
+        }
+        catch (Exception ex)
+        {
+            return (false, ex.Message);
+        }
+    }
+
     public void Dispose()
     {
         disposed = true;
         if (manager is not null)
         {
             manager.CurrentSessionChanged -= OnManagerChanged;
+            manager.SessionsChanged -= OnSessionsChanged;
             manager = null;
         }
         Detach();
@@ -66,7 +116,14 @@ internal sealed class MusicWatcher : IDisposable
     private void OnManagerChanged(GlobalSystemMediaTransportControlsSessionManager sender, CurrentSessionChangedEventArgs args)
     {
         if (disposed) return;
-        Attach(sender.GetCurrentSession());
+        Attach(Resolve());
+        _ = PublishAsync();
+    }
+
+    private void OnSessionsChanged(GlobalSystemMediaTransportControlsSessionManager sender, SessionsChangedEventArgs args)
+    {
+        if (disposed) return;
+        Attach(Resolve());
         _ = PublishAsync();
     }
 
@@ -74,6 +131,50 @@ internal sealed class MusicWatcher : IDisposable
     {
         if (disposed) return;
         _ = PublishAsync();
+    }
+
+    // Windows marks a session current when the user touches its player, and the media flyout
+    // switches it the same way. When no session is current the pill would go blank even though
+    // another player is still running, so the newest playing session stands in.
+    private GlobalSystemMediaTransportControlsSession? Resolve()
+    {
+        var mgr = manager;
+        if (mgr is null) return session;
+
+        var current = mgr.GetCurrentSession();
+        if (current is not null) return current;
+
+        return MostRecentPlaying(mgr);
+    }
+
+    private static GlobalSystemMediaTransportControlsSession? MostRecentPlaying(GlobalSystemMediaTransportControlsSessionManager mgr)
+    {
+        GlobalSystemMediaTransportControlsSession? best = null;
+        var newest = DateTimeOffset.MinValue;
+
+        foreach (var candidate in mgr.GetSessions())
+        {
+            try
+            {
+                if (candidate.GetPlaybackInfo()?.PlaybackStatus != GlobalSystemMediaTransportControlsSessionPlaybackStatus.Playing)
+                {
+                    continue;
+                }
+
+                var stamp = candidate.GetTimelineProperties().LastUpdatedTime;
+                if (best is null || stamp > newest)
+                {
+                    best = candidate;
+                    newest = stamp;
+                }
+            }
+            catch (Exception ex)
+            {
+                Protocol.Log($"session probe failed: {ex.Message}");
+            }
+        }
+
+        return best;
     }
 
     private void Attach(GlobalSystemMediaTransportControlsSession? next)
@@ -106,7 +207,7 @@ internal sealed class MusicWatcher : IDisposable
     {
         try
         {
-            var current = session;
+            var current = Resolve();
             JsonObject line;
 
             if (current is null)

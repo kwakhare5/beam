@@ -55,8 +55,13 @@ body.is-open .pill {
   visibility: hidden;
 }
 
-body.is-open .panel-wrap {
+body.is-open .panel-wrap,
+body.is-closing .panel-wrap {
   visibility: visible;
+}
+
+body.is-closing .pill {
+  display: none;
 }
 
 .panel-wrap .panel {
@@ -71,6 +76,11 @@ body.is-open .panel-wrap {
 body.is-open .panel {
   transform: none;
   opacity: 1;
+}
+
+body.is-closing .panel {
+  transform: scale(0.96);
+  opacity: 0;
 }
 
 .skeleton {
