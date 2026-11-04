@@ -54,6 +54,8 @@ export function pill(data: PillData): string {
     data.art && music
       ? `<img class="mascot pill-art" src="${esc(data.art)}" alt="" />`
       : `<img class="mascot" src="${MASCOTS.master}" alt="" />`;
+  const role = music ? 'group' : 'button';
+  const label = music ? 'Beam media controls' : 'Beam — open panel';
 
-  return `<div class="pill${expands ? ' expands' : ''}${music ? ' has-controls' : ''}" data-state="${data.state}"${data.hover ? ' data-hover="true"' : ''}><div class="mascot-wrap">${thumb}${pip}</div><div class="slot"><div class="meta">${rest}</div>${timerAction}</div>${doneActions}${controls}</div>`;
+  return `<div class="pill${expands ? ' expands' : ''}${music ? ' has-controls' : ''}" role="${role}" tabindex="0" aria-label="${esc(label)}" data-state="${data.state}"${data.hover ? ' data-hover="true"' : ''}><div class="mascot-wrap">${thumb}${pip}</div><div class="slot"><div class="meta">${rest}</div>${timerAction}</div>${doneActions}${controls}</div>`;
 }

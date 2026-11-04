@@ -31,7 +31,7 @@ function tabs(active: Tab, enabled: ReadonlyArray<Tab>): string {
     ? `<button type="button" class="tab settings" role="tab" id="tab-settings" aria-controls="panel-settings" aria-label="Settings" aria-selected="${active === 'settings'}" tabindex="${active === 'settings' ? 0 : -1}">${icon('sliders')}</button>`
     : '';
 
-  return `<div class="tabs" role="tablist" aria-label="Beam panels"><div class="tab-track" role="presentation">${buttons}</div>${settings}</div>`;
+  return `<div class="tabs" role="tablist" aria-label="Beam panels"><div class="tab-track">${buttons}</div>${settings}</div>`;
 }
 
 export function panel(tab: Tab, data: PanelData): string {
@@ -48,7 +48,7 @@ export function panel(tab: Tab, data: PanelData): string {
     enabled.includes('settings') ? settingsPanel(data.settings, active === 'settings') : ''
   ].join('');
 
-  return `<div class="panel">${tabs(active, enabled)}${bodies}</div>`;
+  return `<div class="panel" tabindex="-1">${tabs(active, enabled)}${bodies}</div>`;
 }
 
 export { bindPanelTabs } from './tab-nav';

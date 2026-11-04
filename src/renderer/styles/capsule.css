@@ -238,6 +238,11 @@
   transition: opacity 120ms var(--ease);
 }
 
+.pill:focus-visible {
+  outline: 2px solid var(--primary);
+  outline-offset: 2px;
+}
+
 .controls {
   gap: var(--space-1);
 }

@@ -197,6 +197,10 @@
           <div class="compare-window"><div data-pill="paused"></div></div>
         </div>
         <div class="g-board-card">
+          <div class="g-card-meta"><span>playing · no art (star fallback)</span><code>94×30</code></div>
+          <div class="compare-window"><div data-pill="playingNoArt"></div></div>
+        </div>
+        <div class="g-board-card">
           <div class="g-card-meta"><span>timer · rest (time + green dot)</span><code>94×30</code></div>
           <div class="compare-window"><div data-pill="timerRest"></div></div>
         </div>
@@ -250,10 +254,6 @@
         <div class="g-board-panel-card">
           <div class="g-card-meta"><span>calendar · month grid</span><code>420×284</code></div>
           <div class="f-open"><div id="board-panel-calendar"></div></div>
-        </div>
-        <div class="g-board-panel-card">
-          <div class="g-card-meta"><span>settings · five rows</span><code>420×284</code></div>
-          <div class="f-open"><div id="board-panel-settings"></div></div>
         </div>
       </div>
 
@@ -413,6 +413,7 @@
       <div class="g-subnav" role="group" aria-label="Panel states">
         <button type="button" data-panel-key="music" aria-pressed="true">Music</button>
         <button type="button" data-panel-key="musicPaused" aria-pressed="false">Music paused</button>
+        <button type="button" data-panel-key="musicNoArt" aria-pressed="false">Music no art</button>
         <button type="button" data-panel-key="musicEmpty" aria-pressed="false">Music empty</button>
         <button type="button" data-panel-key="musicLoading" aria-pressed="false">Music loading</button>
         <button type="button" data-panel-key="files" aria-pressed="false">Files</button>
@@ -425,7 +426,6 @@
         <button type="button" data-panel-key="timerRunning" aria-pressed="false">Timer running</button>
         <button type="button" data-panel-key="timerDone" aria-pressed="false">Timer done</button>
         <button type="button" data-panel-key="calendar" aria-pressed="false">Calendar</button>
-        <button type="button" data-panel-key="settings" aria-pressed="false">Settings</button>
       </div>
 
       <div class="g-panel-stage">
@@ -566,7 +566,8 @@
     files,
     timer: { mode: 'idle', digits: '25:00', note: 'Press start', preset: '25' },
     calendar: { view: calView, today: new Date() },
-    settings: { startup: true, shortcut: 'Alt + Space', volume: 70, theme: theme() }
+    settings: { startup: true, shortcut: 'Alt + Space', volume: 70, theme: theme() },
+    enabledTabs: ['music', 'files', 'timer', 'calendar']
   });
 
   let calView = new Date();
@@ -576,6 +577,7 @@
     const base = panelBase();
     switch (key) {
       case 'musicPaused': return { tab: 'music', data: { ...base, music: { ...base.music, playing: false } } };
+      case 'musicNoArt': return { tab: 'music', data: { ...base, music: { ...base.music, art: undefined } } };
       case 'musicEmpty': return { tab: 'music', data: { ...base, music: { title: '', subtitle: '' } } };
       case 'musicLoading': return { tab: 'music', data: { ...base, music: { title: '', subtitle: '', loading: true } } };
       case 'filesEmpty': return { tab: 'files', data: { ...base, files: [] } };
@@ -587,7 +589,6 @@
       case 'timerRunning': return { tab: 'timer', data: { ...base, timer: { mode: 'running', digits: '07:42', note: 'Focus', preset: '10' } } };
       case 'timerDone': return { tab: 'timer', data: { ...base, timer: { mode: 'done', digits: '00:00', note: 'Timer finished' } } };
       case 'calendar': return { tab: 'calendar', data: base };
-      case 'settings': return { tab: 'settings', data: base };
       default: return { tab: key, data: base };
     }
   }
@@ -705,8 +706,7 @@
       'board-panel-music': 'music',
       'board-panel-files': 'files',
       'board-panel-timer': 'timer',
-      'board-panel-calendar': 'calendar',
-      'board-panel-settings': 'settings'
+      'board-panel-calendar': 'calendar'
     };
     for (const [id, tab] of Object.entries(board)) {
       const el = document.getElementById(id);
