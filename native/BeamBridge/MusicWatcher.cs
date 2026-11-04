@@ -1,5 +1,3 @@
-using System.Security.Cryptography;
-using System.Text;
 using System.Text.Json.Nodes;
 using Windows.Graphics.Imaging;
 using Windows.Media.Control;
@@ -9,8 +7,6 @@ namespace BeamBridge;
 
 internal sealed class MusicWatcher : IDisposable
 {
-    private static readonly string ArtDir = Path.Combine(Path.GetTempPath(), "Beam", "art");
-
     private readonly object gate = new();
     private GlobalSystemMediaTransportControlsSessionManager? manager;
     private GlobalSystemMediaTransportControlsSession? session;
@@ -19,7 +15,6 @@ internal sealed class MusicWatcher : IDisposable
 
     public async Task StartAsync()
     {
-        ResetArtFolder();
         manager = await GlobalSystemMediaTransportControlsSessionManager.RequestAsync();
         manager.CurrentSessionChanged += OnManagerChanged;
         manager.SessionsChanged += OnSessionsChanged;
@@ -110,7 +105,6 @@ internal sealed class MusicWatcher : IDisposable
             manager = null;
         }
         Detach();
-        ResetArtFolder();
     }
 
     private void OnManagerChanged(GlobalSystemMediaTransportControlsSessionManager sender, CurrentSessionChangedEventArgs args)
@@ -228,12 +222,10 @@ internal sealed class MusicWatcher : IDisposable
                     Protocol.Log($"timeline unavailable: {ex.Message}");
                 }
 
-                string? artPath = null;
+                string? art = null;
                 if (props?.Thumbnail is not null)
                 {
-                    artPath = await SaveArtAsync(
-                        props.Thumbnail,
-                        Hash(current.SourceAppUserModelId, props.Title, props.Artist));
+                    art = await ReadArtAsync(props.Thumbnail);
                 }
 
                 line = new JsonObject
@@ -245,7 +237,7 @@ internal sealed class MusicWatcher : IDisposable
                         ["title"] = props?.Title ?? string.Empty,
                         ["artist"] = props?.Artist ?? string.Empty,
                         ["album"] = props?.AlbumTitle ?? string.Empty,
-                        ["artPath"] = artPath,
+                        ["art"] = art,
                         ["playing"] = playback?.PlaybackStatus == GlobalSystemMediaTransportControlsSessionPlaybackStatus.Playing,
                         ["positionMs"] = timeline is null ? 0 : (long)timeline.Position.TotalMilliseconds,
                         ["durationMs"] = timeline is null ? 0 : (long)timeline.EndTime.TotalMilliseconds
@@ -267,7 +259,7 @@ internal sealed class MusicWatcher : IDisposable
         }
     }
 
-    private static async Task<string?> SaveArtAsync(IRandomAccessStreamReference thumbnail, string hash)
+    private static async Task<string?> ReadArtAsync(IRandomAccessStreamReference thumbnail)
     {
         try
         {
@@ -292,34 +284,12 @@ internal sealed class MusicWatcher : IDisposable
                 reader.ReadBytes(bytes);
             }
 
-            Directory.CreateDirectory(ArtDir);
-            var path = Path.Combine(ArtDir, hash + ".png");
-            await File.WriteAllBytesAsync(path, bytes);
-            return path;
+            return Convert.ToBase64String(bytes);
         }
         catch (Exception ex)
         {
             Protocol.Log($"artwork failed: {ex.Message}");
             return null;
-        }
-    }
-
-    private static string Hash(params string?[] parts)
-    {
-        var text = string.Join("|", parts.Select(part => part ?? string.Empty));
-        var digest = SHA1.HashData(Encoding.UTF8.GetBytes(text));
-        return Convert.ToHexString(digest)[..16].ToLowerInvariant();
-    }
-
-    private static void ResetArtFolder()
-    {
-        try
-        {
-            if (Directory.Exists(ArtDir)) Directory.Delete(ArtDir, true);
-        }
-        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
-        {
-            Protocol.Log($"art wipe failed: {ex.Message}");
         }
     }
 }

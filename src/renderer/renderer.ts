@@ -45,7 +45,17 @@ declare global {
 }
 
 document.body.insertAdjacentHTML('afterbegin', iconSprite());
+document.body.insertAdjacentHTML('afterbegin', '<div class="sr-only" role="status" aria-live="polite" data-live></div>');
 bindArtFallback(document);
+
+const liveEl = document.querySelector<HTMLElement>('[data-live]');
+let liveText = '';
+
+function announce(text: string): void {
+  if (!liveEl || text === liveText) return;
+  liveText = text;
+  liveEl.textContent = text;
+}
 
 const app = document.querySelector<HTMLElement>('#app');
 
@@ -70,6 +80,106 @@ const QUIET_RETURN = 2000;
 let quiet = false;
 let quietTimer: number | undefined;
 let pillHovered = false;
+
+type LastUsed = 'music' | 'files' | 'timer' | 'calendar';
+const ENABLED_TABS: ReadonlyArray<Tab> = ['music', 'files', 'timer', 'calendar'];
+let lastUsed: LastUsed | null = null;
+let timerMode: 'idle' | 'custom' | 'running' | 'done' = 'idle';
+let timerPreset: '5' | '10' | '25' | 'custom' = '25';
+let timerCustom = '25';
+let timerDeadline = 0;
+let timerTick: number | undefined;
+let calendarView = new Date();
+
+function stamp(tab: LastUsed): void {
+  lastUsed = tab;
+}
+
+function clock(ms: number): string {
+  const total = Math.max(0, Math.ceil(ms / 1000));
+  return `${Math.floor(total / 60)}:${String(total % 60).padStart(2, '0')}`;
+}
+
+function customMinutes(): number {
+  return Math.max(1, Math.min(999, Math.round(Number(timerCustom) || 25)));
+}
+
+function timerData(): PanelData['timer'] {
+  if (timerMode === 'running') {
+    return { mode: 'running', digits: clock(timerDeadline - Date.now()), note: 'Focus', preset: timerPreset };
+  }
+  if (timerMode === 'done') {
+    return { mode: 'done', digits: '0:00', note: 'Timer finished', preset: timerPreset };
+  }
+  const minutes = timerPreset === 'custom' ? customMinutes() : Number(timerPreset);
+  if (timerPreset === 'custom') {
+    return { mode: 'custom', digits: `${minutes}:00`, note: 'Set a length', preset: 'custom', customMinutes: timerCustom };
+  }
+  return { mode: 'idle', digits: `${minutes}:00`, note: 'Press start', preset: timerPreset };
+}
+
+function stopTimerTick(): void {
+  if (timerTick !== undefined) {
+    window.clearInterval(timerTick);
+    timerTick = undefined;
+  }
+}
+
+function finishTimer(): void {
+  stopTimerTick();
+  timerMode = 'done';
+  timerDeadline = 0;
+  renderPill();
+  renderPanel();
+  announce('Timer finished');
+}
+
+function tickTimer(): void {
+  if (timerMode !== 'running') return;
+  const left = timerDeadline - Date.now();
+  if (left <= 0) {
+    finishTimer();
+    return;
+  }
+  const digits = clock(left);
+  const pillDigits = pillEl?.querySelector<HTMLElement>('[data-pill-digits]');
+  if (pillDigits) pillDigits.textContent = digits;
+  const panelDigits = wrapEl?.querySelector<HTMLElement>('.panel-timer [data-timer-digits]');
+  if (panelDigits) panelDigits.textContent = digits;
+  panelData.timer.digits = digits;
+}
+
+function startTimer(minutes: number): void {
+  const mins = Math.max(1, Math.min(999, Math.round(minutes)));
+  timerDeadline = Date.now() + mins * 60000;
+  timerMode = 'running';
+  stamp('timer');
+  stopTimerTick();
+  timerTick = window.setInterval(tickTimer, 250);
+  renderPill();
+  renderPanel();
+  announce(`Timer started for ${mins} ${mins === 1 ? 'minute' : 'minutes'}`);
+}
+
+function cancelTimer(): void {
+  stopTimerTick();
+  timerMode = 'idle';
+  timerDeadline = 0;
+  renderPill();
+  renderPanel();
+}
+
+function dismissTimer(): void {
+  timerMode = 'idle';
+  timerDeadline = 0;
+  renderPill();
+  renderPanel();
+}
+
+function pickTab(rows: number): Tab {
+  if (lastUsed && ENABLED_TABS.includes(lastUsed)) return lastUsed;
+  return music ? 'music' : rows > 0 ? 'files' : 'music';
+}
 
 function fileLabel(count: number): string {
   return count === 1 ? '1 file' : `${count} files`;
@@ -117,20 +227,74 @@ function renderControls(state: string): void {
   else pillEl.insertAdjacentHTML('beforeend', markup);
 }
 
+function renderPillSlot(state: string, label: string): void {
+  if (!pillEl) return;
+  const slot = pillEl.querySelector<HTMLElement>('.slot');
+  const meta = slot?.querySelector<HTMLElement>('.meta');
+  if (!slot || !meta) return;
+  if (state === 'timer') {
+    meta.innerHTML = `<div class="digits" data-pill-digits>${clock(timerDeadline - Date.now())}</div>`;
+  } else if (state === 'done') {
+    meta.innerHTML = `<span class="state-icon" aria-hidden="true"><svg aria-hidden="true" focusable="false"><use href="#i-check"/></svg></span>`;
+  } else {
+    meta.innerHTML = '<div class="title"></div>';
+    const title = meta.querySelector<HTMLElement>('.title');
+    if (title) {
+      title.textContent = label;
+      title.title = label;
+    }
+  }
+  const existing = slot.querySelector<HTMLElement>('.pill-action');
+  if (state === 'timer') {
+    if (!existing) {
+      slot.insertAdjacentHTML(
+        'beforeend',
+        '<button type="button" class="icon-btn pill-action" data-action="pill-timer-cancel" aria-label="Cancel timer"><svg aria-hidden="true" focusable="false"><use href="#i-x"/></svg></button>'
+      );
+    }
+  } else {
+    existing?.remove();
+  }
+  const done = pillEl.querySelector<HTMLElement>('.done-actions');
+  if (state === 'done') {
+    if (!done) {
+      pillEl.insertAdjacentHTML(
+        'beforeend',
+        '<div class="pill-overlay done-actions"><span class="done-label">Done</span><button type="button" class="icon-btn pill-action" data-action="pill-timer-dismiss" aria-label="Dismiss"><svg aria-hidden="true" focusable="false"><use href="#i-x"/></svg></button></div>'
+      );
+    }
+  } else {
+    done?.remove();
+  }
+}
+
 function renderPill(): void {
   if (!pillEl) return;
-  const idle = !override && !music && shelfCount === 0;
+  const timerState = timerMode === 'running' ? 'timer' : timerMode === 'done' ? 'done' : null;
+  const idle = !override && !music && shelfCount === 0 && !timerState;
   const quietState = helperOk && idle && quiet && !pillHovered;
   const state = helperOk
     ? override?.state ??
+      timerState ??
       (music ? (music.playing ? 'playing' : 'paused') : shelfCount > 0 ? 'files' : quietState ? 'quiet' : 'idle')
     : 'error';
   const label = helperOk
-    ? override?.label ?? (music ? music.title : shelfCount > 0 ? fileLabel(shelfCount) : quietState ? '' : 'Beam')
+    ? override?.label ??
+      (timerMode === 'done'
+        ? 'Done'
+        : timerMode === 'running'
+          ? ''
+          : music
+            ? music.title
+            : shelfCount > 0
+              ? fileLabel(shelfCount)
+              : quietState
+                ? ''
+                : 'Beam')
     : 'Connection lost';
-  const musicVisual = helperOk && Boolean(music) && state !== 'files' && state !== 'drag' && state !== 'error';
+  const musicVisual = helperOk && Boolean(music) && (state === 'playing' || state === 'paused');
   pillEl.dataset.state = state;
-  pillEl.classList.toggle('expands', musicVisual);
+  pillEl.classList.toggle('expands', musicVisual || state === 'timer' || state === 'done' || state === 'error');
   setMark(musicVisual && music ? music.art : null);
   setPip(
     !helperOk
@@ -141,14 +305,38 @@ function renderPill(): void {
           ? music.playing
             ? 'playing'
             : 'paused'
-          : null
+          : state === 'timer' && music
+            ? music.playing
+              ? 'playing'
+              : 'paused'
+            : null
   );
   renderControls(state);
-  const title = pillEl.querySelector<HTMLElement>('.title');
-  if (title) {
-    title.textContent = label;
-    title.title = label;
-  }
+  renderPillSlot(state, label);
+  pillEl.setAttribute('role', state === 'playing' || state === 'paused' ? 'group' : 'button');
+  pillEl.setAttribute(
+    'aria-label',
+    !helperOk
+      ? 'Connection lost'
+      : state === 'playing' || state === 'paused'
+        ? `${music!.playing ? 'Playing' : 'Paused'} ${music!.title}`
+        : state === 'timer'
+          ? `Timer ${clock(timerDeadline - Date.now())}, open panel`
+          : state === 'done'
+            ? 'Timer finished — open panel'
+            : state === 'files'
+              ? `${fileLabel(shelfCount)} — open panel`
+              : 'Beam — open panel'
+  );
+  announce(
+    !helperOk
+      ? 'Connection lost'
+      : state === 'playing' || state === 'paused'
+        ? `${music!.playing ? 'Playing' : 'Paused'} ${music!.title}`
+        : state === 'files'
+          ? fileLabel(shelfCount)
+          : ''
+  );
 }
 
 function setPill(state: string, label: string): void {
@@ -169,6 +357,7 @@ function idleEligible(): boolean {
     helperOk &&
     !music &&
     shelfCount === 0 &&
+    timerMode === 'idle' &&
     !override &&
     !pillHovered &&
     !pillEl?.matches(':hover') &&
@@ -216,7 +405,7 @@ const panelData: PanelData = {
   timer: { mode: 'idle', digits: '25:00', note: 'Pick a length', preset: '25' },
   calendar: new Date(),
   settings: { startup: false, shortcut: 'Alt + Space', volume: 60, theme: 'dark' },
-  enabledTabs: ['music', 'files']
+  enabledTabs: ENABLED_TABS
 };
 
 let activeTab: Tab = 'music';
@@ -239,6 +428,7 @@ function applyFiles(files: ShelfFile[]): void {
 }
 
 function applyAddResult(result: AddResult): void {
+  stamp('files');
   applyFiles(result.files);
   if (noticeTimer !== undefined) window.clearTimeout(noticeTimer);
   if (result.truncated) {
@@ -310,6 +500,8 @@ async function clearShelf(): Promise<void> {
 
 function renderPanel(): void {
   if (!app) return;
+  panelData.timer = timerData();
+  panelData.calendar = { view: calendarView, today: new Date() };
   if (!wrapEl) {
     wrapEl = document.createElement('div');
     wrapEl.className = 'panel-wrap';
@@ -318,22 +510,80 @@ function renderPanel(): void {
     wrapEl.addEventListener('click', (event) => {
       const target = event.target;
       if (!(target instanceof Element)) return;
+      const root = event.currentTarget as HTMLElement;
       const tab = target.closest<HTMLElement>('[role="tab"]');
-      if (tab) activeTab = tab.id.replace('tab-', '') as Tab;
+      if (tab) {
+        activeTab = tab.id.replace('tab-', '') as Tab;
+        if (ENABLED_TABS.includes(activeTab)) stamp(activeTab as LastUsed);
+      }
+      const preset = target.closest<HTMLElement>('[data-timer-preset]')?.dataset.timerPreset;
+      if (preset) {
+        timerPreset = preset as '5' | '10' | '25' | 'custom';
+        timerMode = preset === 'custom' ? 'custom' : 'idle';
+        stamp('timer');
+        renderPanel();
+        return;
+      }
+      if (target.closest('[data-timer-set]')) {
+        const input = root.querySelector<HTMLInputElement>('[data-timer-minutes]');
+        timerCustom = String(Math.max(1, Math.min(999, Math.round(Number(input?.value) || 25))));
+        timerPreset = 'custom';
+        timerMode = 'idle';
+        stamp('timer');
+        renderPanel();
+        return;
+      }
+      if (target.closest('[data-timer-start]')) {
+        startTimer(timerPreset === 'custom' ? customMinutes() : Number(timerPreset));
+        return;
+      }
+      if (target.closest('[data-timer-cancel]')) {
+        cancelTimer();
+        return;
+      }
+      if (target.closest('[data-timer-dismiss]')) {
+        dismissTimer();
+        return;
+      }
+      if (target.closest('[data-cal-prev]')) {
+        calendarView = new Date(calendarView.getFullYear(), calendarView.getMonth() - 1, 1);
+        stamp('calendar');
+        renderPanel();
+        return;
+      }
+      if (target.closest('[data-cal-next]')) {
+        calendarView = new Date(calendarView.getFullYear(), calendarView.getMonth() + 1, 1);
+        stamp('calendar');
+        renderPanel();
+        return;
+      }
+      if (target.closest('[data-cal-today]')) {
+        calendarView = new Date();
+        stamp('calendar');
+        renderPanel();
+      }
     });
     wrapEl.addEventListener('keydown', (event) => {
       if (event.key !== 'ArrowLeft' && event.key !== 'ArrowRight' && event.key !== 'Home' && event.key !== 'End') return;
       const root = event.currentTarget;
       if (!(root instanceof HTMLElement)) return;
       const selected = root.querySelector<HTMLElement>('[role="tab"][aria-selected="true"]');
-      if (selected) activeTab = selected.id.replace('tab-', '') as Tab;
+      if (selected) {
+        activeTab = selected.id.replace('tab-', '') as Tab;
+        if (ENABLED_TABS.includes(activeTab)) stamp(activeTab as LastUsed);
+      }
     });
     bindClearAll(wrapEl);
     wrapEl.addEventListener('beam:files:clear', () => {
+      stamp('files');
       void clearShelf();
     });
     if (beam) {
-      bindFilesActions(wrapEl, (paths, source) => beam.copyFiles(paths, source), (path) => {
+      bindFilesActions(wrapEl, (paths, source) => {
+        stamp('files');
+        return beam.copyFiles(paths, source);
+      }, (path) => {
+        stamp('files');
         void removeRow(path);
       });
       bindFileDrag(wrapEl, (paths) => beam.startFileDrag(paths));
@@ -371,6 +621,7 @@ function renderPanel(): void {
         const action = target.closest<HTMLElement>('.music-controls [data-action]')?.dataset.action;
         if (action === 'prev' || action === 'toggle' || action === 'next') {
           event.stopPropagation();
+          stamp('music');
           void beam.musicCommand(action).catch((error: unknown) => console.error('[music] command failed', error));
         }
       });
@@ -413,6 +664,7 @@ function dismissPanel(): void {
   closingTimer = window.setTimeout(() => {
     closingTimer = undefined;
     document.body.classList.remove('is-closing');
+    pillEl?.focus({ preventScroll: true });
   }, 200);
   setTimeout(() => beam?.panelCollapsed(), 160);
   setTimeout(() => reportPillSize(), 220);
@@ -439,7 +691,16 @@ if (app && beam) {
       beam.openPanel();
       return;
     }
+    if (action === 'pill-timer-cancel') {
+      cancelTimer();
+      return;
+    }
+    if (action === 'pill-timer-dismiss') {
+      dismissTimer();
+      return;
+    }
     if (action === 'prev' || action === 'toggle' || action === 'next') {
+      stamp('music');
       void beam.musicCommand(action).catch((error: unknown) => console.error('[music] command failed', error));
       return;
     }
@@ -566,7 +827,7 @@ if (app && beam) {
 
   beam.onPanelOpen((files) => {
     wakePill();
-    activeTab = music ? 'music' : files.length > 0 ? 'files' : activeTab;
+    activeTab = pickTab(files.length);
     applyFiles(files);
     if (!panelEl) return;
     const el = panelEl;
@@ -587,6 +848,7 @@ if (app && beam) {
         started = performance.now();
       });
       document.body.classList.add('is-open');
+      el.focus({ preventScroll: true });
       el.addEventListener('transitionend', function done(event) {
         if (event.target !== el || event.propertyName !== 'transform') return;
         el.removeEventListener('transitionend', done);
@@ -649,7 +911,15 @@ if (app && beam) {
   });
 
   window.addEventListener('keydown', (event) => {
-    if (event.key === 'Escape') dismissPanel();
+    if (event.key === 'Escape') {
+      dismissPanel();
+      return;
+    }
+    if (event.key !== 'Enter' && event.key !== ' ') return;
+    if (event.target !== pillEl) return;
+    if (document.body.classList.contains('is-open') || document.body.classList.contains('is-closing')) return;
+    event.preventDefault();
+    beam?.openPanel();
   });
 
   scheduleQuiet();

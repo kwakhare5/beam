@@ -1,6 +1,5 @@
-import { app, BrowserWindow, dialog, ipcMain, nativeImage, screen } from 'electron';
+import { app, BrowserWindow, dialog, globalShortcut, ipcMain, nativeImage, screen } from 'electron';
 import { existsSync, mkdirSync, statSync, unlinkSync, writeFileSync } from 'node:fs';
-import { readFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { basename, join } from 'node:path';
 import { Bridge, type HelperEvent } from './bridge';
@@ -96,7 +95,7 @@ type MusicPayload = {
   title: string;
   artist: string;
   album: string;
-  artPath: string | null;
+  art: string | null;
   playing: boolean;
   positionMs: number;
   durationMs: number;
@@ -253,14 +252,7 @@ if (!gotLock) {
       sendMusic();
       return;
     }
-    let art: string | null = null;
-    if (payload.artPath) {
-      try {
-        art = `data:image/png;base64,${(await readFile(payload.artPath)).toString('base64')}`;
-      } catch (error) {
-        console.error('[music] art read failed', error);
-      }
-    }
+    const art = payload.art ? `data:image/png;base64,${payload.art}` : null;
     if (request !== musicRequest) return;
     musicView = {
       title: payload.title,
@@ -625,7 +617,7 @@ if (!gotLock) {
       console.log('[music] none');
     } else {
       console.log(`[music] ${music.title} - ${music.artist} (${music.app})`);
-      console.log(`[music] art ${music.artPath ?? 'none'}`);
+      console.log(`[music] art ${music.art ? 'yes' : 'none'}`);
     }
     void applyMusic(music);
   };
@@ -901,6 +893,13 @@ if (!gotLock) {
         () => quitWithConfirm()
       );
       console.log('[tray] ready');
+      if (globalShortcut.register('Alt+Space', trayToggle)) {
+        console.log('[hotkey] Alt+Space');
+      } else if (globalShortcut.register('Ctrl+Shift+Space', trayToggle)) {
+        console.log('[hotkey] Ctrl+Shift+Space (Alt+Space taken)');
+      } else {
+        console.error('[hotkey] registration failed');
+      }
 
       ipcMain.on(IPC.windowDragStart, (event, x: unknown, y: unknown) => {
         const point = readPoint(x, y);
@@ -1484,6 +1483,7 @@ if (!gotLock) {
   app.on('will-quit', (event) => {
     if (quitting) return;
     quitting = true;
+    globalShortcut.unregisterAll();
     event.preventDefault();
     void bridge.stop().finally(() => app.quit());
   });

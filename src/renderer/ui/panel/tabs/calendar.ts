@@ -54,7 +54,7 @@ export function calendarPanel(now: Date, active = true, view: Date = now, firstD
 
   const weeks = Array.from({ length: weekCount }, (_, row) => `<tr>${cells.slice(row * 7, row * 7 + 7).join('')}</tr>`).join('');
   const title = view.toLocaleString(undefined, { month: 'long', year: 'numeric' });
-  const content = `<div class="cal-head"><div class="cal-nav-group"><button type="button" class="cal-nav-btn" aria-label="Previous month">${icon('chevronLeft')}</button><span class="cal-title">${esc(title)}</span><button type="button" class="cal-nav-btn" aria-label="Next month">${icon('chevronRight')}</button></div><button type="button" class="cal-today-btn">Today</button></div><table class="cal-grid"><caption class="sr-only">${esc(title)}</caption><thead><tr>${weekdayLabels(firstDay)}</tr></thead><tbody>${weeks}</tbody></table>`;
+  const content = `<div class="cal-head"><div class="cal-nav-group"><button type="button" class="cal-nav-btn" data-cal-prev aria-label="Previous month">${icon('chevronLeft')}</button><span class="cal-title">${esc(title)}</span><button type="button" class="cal-nav-btn" data-cal-next aria-label="Next month">${icon('chevronRight')}</button></div><button type="button" class="cal-today-btn" data-cal-today>Today</button></div><table class="cal-grid"><caption class="sr-only">${esc(title)}</caption><thead><tr>${weekdayLabels(firstDay)}</tr></thead><tbody>${weeks}</tbody></table>`;
 
   return panelBody('calendar', content, '', active);
 }
