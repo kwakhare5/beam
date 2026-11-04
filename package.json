@@ -8,6 +8,8 @@
     "build": "tsc -p tsconfig.json && vite build --config vite.preload.mts && vite build",
     "start": "electron .",
     "ui": "vite --config vite.preview.mts",
+    "site:dev": "npm --prefix site run dev",
+    "site:build": "npm --prefix site run build",
     "generate:icons": "node scripts/generate-icons.mjs",
     "typecheck": "tsc -p tsconfig.json --noEmit && tsc -p tsconfig.renderer.json --noEmit",
     "verify": "powershell -NoProfile -ExecutionPolicy Bypass -File ./verify.ps1",

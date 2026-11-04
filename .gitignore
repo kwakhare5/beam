@@ -1,6 +1,8 @@
 node_modules/
 dist/
 out/
+.next/
+site/out/
 release/
 native/**/bin/
 native/**/obj/
