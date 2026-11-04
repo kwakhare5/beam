@@ -53,19 +53,19 @@ public static class BeamScreen {
 [BeamScreen]::SetCursorPos(8, 8) | Out-Null
 
 
-Write-Host '[1/24] typecheck'
+Write-Host '[1/25] typecheck'
 & $tsc -p tsconfig.json --noEmit
 if ($LASTEXITCODE -ne 0) { Write-Host 'FAIL typecheck'; exit 1 }
 & $tsc -p tsconfig.renderer.json --noEmit
 if ($LASTEXITCODE -ne 0) { Write-Host 'FAIL typecheck (renderer)'; exit 1 }
 Write-Host 'PASS typecheck'
 
-Write-Host '[2/24] build'
+Write-Host '[2/25] build'
 & npm run build
 if ($LASTEXITCODE -ne 0) { Write-Host 'FAIL build'; exit 1 }
 Write-Host 'PASS build'
 
-Write-Host '[3/24] helper build'
+Write-Host '[3/25] helper build'
 $helperDir = Join-Path $PSScriptRoot 'native\BeamBridge\dist'
 if (Test-Path -LiteralPath $helperDir) { Remove-Item -LiteralPath $helperDir -Recurse -Force }
 & dotnet publish (Join-Path $PSScriptRoot 'native\BeamBridge\BeamBridge.csproj') -c Release -o $helperDir --nologo
@@ -76,7 +76,7 @@ $helperFiles = @(Get-ChildItem -LiteralPath $helperDir -File)
 if ($helperFiles.Count -ne 1) { Write-Host "FAIL helper build: expected one file, found $($helperFiles.Count)"; exit 1 }
 Write-Host 'PASS helper build (single exe)'
 
-Write-Host '[4/24] clipboard'
+Write-Host '[4/25] clipboard'
 $clipDir = Join-Path $env:TEMP 'beam-clip'
 if (Test-Path -LiteralPath $clipDir) { Remove-Item -LiteralPath $clipDir -Recurse -Force }
 New-Item -ItemType Directory -Path $clipDir | Out-Null
@@ -126,7 +126,7 @@ if ($clipAfter.Count -ne 3) {
 Remove-Item -LiteralPath $clipDir -Recurse -Force
 Write-Host 'PASS clipboard (3 real paths, survive helper exit)'
 
-Write-Host '[5/24] launch + focus'
+Write-Host '[5/25] launch + focus'
 $outLog = Join-Path $env:TEMP 'beam-verify.out.log'
 $errLog = Join-Path $env:TEMP 'beam-verify.err.log'
 Remove-Item -LiteralPath $outLog -ErrorAction SilentlyContinue
@@ -203,7 +203,7 @@ if ($pillLine -notmatch '\[window\] pill=') {
 }
 Start-Sleep -Milliseconds 300
 
-Write-Host '[6/24] anchor'
+Write-Host '[6/25] anchor'
 $appOut = Get-Content -LiteralPath $outLog -Raw -ErrorAction SilentlyContinue
 $anchorMatches = [regex]::Matches($appOut, '\[window\] bounds=(-?\d+),(-?\d+),(\d+),(\d+) content=(-?\d+),(-?\d+),(\d+),(\d+) work=(-?\d+),(-?\d+),(\d+),(\d+)')
 if ($anchorMatches.Count -eq 0) {
@@ -275,7 +275,7 @@ if ([math]::Abs($waX - $wx) -gt 2 -or [math]::Abs($waY - $wy) -gt 2 -or [math]::
 }
 Write-Host "PASS anchor (pill 12px above the taskbar, centered; native rect matches; scale $scale)"
 
-Write-Host '[7/24] idle dim'
+Write-Host '[7/25] idle dim'
 $idleOut = Get-Content -LiteralPath $outLog -Raw -ErrorAction SilentlyContinue
 $idleMatch = [regex]::Match($idleOut, '\[idle\] (\{.+\})')
 if (-not $idleMatch.Success) {
@@ -298,7 +298,7 @@ if ($idle.state -eq 'playing' -or $idle.state -eq 'paused') {
   Write-Host "PASS idle dim (star $($idle.markOpacity), shell $($idle.shellOpacity), master mark, label Beam)"
 }
 
-Write-Host '[8/24] panel'
+Write-Host '[8/25] panel'
 $panelOut = $appOut
 for ($i = 0; $i -lt 50; $i++) {
   Start-Sleep -Milliseconds 300
@@ -347,7 +347,7 @@ if ($restoredW -gt 200 -or $restoredH -gt 100) {
 Remove-Item Env:BEAM_PANEL_TEST -ErrorAction SilentlyContinue
 Write-Host "PASS panel (open ${panelMs}ms reduced=$reduced, 452x316, dismissed back to the pill)"
 
-Write-Host '[9/24] helper memory'
+Write-Host '[9/25] helper memory'
 $helper = Get-Process BeamBridge -ErrorAction SilentlyContinue
 if (-not $helper) {
   Stop-Process -Id $first.Id -Force -ErrorAction SilentlyContinue
@@ -364,7 +364,7 @@ if ($helperMb -ge 60) {
 }
 Write-Host "PASS helper memory ($helperMb MB idle, cap 60 MB)"
 
-Write-Host '[10/24] single instance'
+Write-Host '[10/25] single instance'
 $second = Start-Process -FilePath $electron -ArgumentList '.' -WorkingDirectory $PSScriptRoot -PassThru
 Start-Sleep -Seconds 4
 if (-not $second.HasExited) {
@@ -381,7 +381,7 @@ if ($first.HasExited) {
 }
 Write-Host 'PASS single instance'
 
-Write-Host '[11/24] UI spec'
+Write-Host '[11/25] UI spec'
 $main = Get-Content (Join-Path $PSScriptRoot 'src\main\index.ts') -Raw
 $base = Get-Content (Join-Path $PSScriptRoot 'src\renderer\styles\base.css') -Raw
 $pill = Get-Content (Join-Path $PSScriptRoot 'src\renderer\styles\capsule.css') -Raw
@@ -679,7 +679,7 @@ if ($uiFail) {
 }
 Write-Host 'PASS UI spec'
 
-Write-Host '[12/24] move + persist'
+Write-Host '[12/25] move + persist'
 $settingsPath = $null
 $settingsBackup = Join-Path $env:TEMP 'beam-verify-settings.json'
 $hadSettings = $false
@@ -846,7 +846,7 @@ try {
 if ($hadSettings) { Copy-Item -LiteralPath $settingsBackup -Destination $settingsPath -Force } else { Remove-Item -LiteralPath $settingsPath -ErrorAction SilentlyContinue }
 Write-Host "PASS move (drag $bx,$by to $endX,$endY, saved, restart restored it, Reset returned to $anchorX,$anchorY)"
 
-Write-Host '[13/24] quit cleanup'
+Write-Host '[13/25] quit cleanup'
 $closed = $first.CloseMainWindow()
 if (-not $closed) {
   Get-Process electron,BeamBridge -ErrorAction SilentlyContinue | Stop-Process -Force
@@ -863,7 +863,7 @@ if (-not $appExited -or $helperLeft -ne 0) {
 }
 Write-Host 'PASS quit cleanup (app and helper exited)'
 
-Write-Host '[14/24] fullscreen'
+Write-Host '[14/25] fullscreen'
 $fsHarnessPath = Join-Path $env:TEMP 'beam-fs-harness.ps1'
 $fsStagePath = Join-Path $env:TEMP 'beam-fs-stage.txt'
 $fsProc = $null
@@ -983,7 +983,7 @@ if ($fsProc -and -not $fsProc.HasExited) {
 Remove-Item -LiteralPath $fsStagePath -ErrorAction SilentlyContinue
 Write-Host 'PASS fullscreen (grow to monitor bounds -> active:true, shrink -> active:false, same foreground window)'
 
-Write-Host '[15/24] fullscreen hide'
+Write-Host '[15/25] fullscreen hide'
 $hideOutLog = Join-Path $env:TEMP 'beam-fs-hide.out.log'
 $hideErrLog = Join-Path $env:TEMP 'beam-fs-hide.err.log'
 Remove-Item -LiteralPath $hideOutLog, $hideErrLog -ErrorAction SilentlyContinue
@@ -1048,7 +1048,7 @@ Remove-Item -LiteralPath $hideOutLog, $hideErrLog -ErrorAction SilentlyContinue
 Remove-Item -LiteralPath $fsHarnessPath, $fsStagePath -ErrorAction SilentlyContinue
 Write-Host 'PASS fullscreen hide (hid at fullscreen, tray click restored it, stayed shown after the exit)'
 
-Write-Host '[16/24] drop'
+Write-Host '[16/25] drop'
 $dropOutLog = Join-Path $env:TEMP 'beam-drop-verify.out.log'
 $dropErrLog = Join-Path $env:TEMP 'beam-drop-verify.err.log'
 Remove-Item -LiteralPath $dropOutLog, $dropErrLog -ErrorAction SilentlyContinue
@@ -1098,7 +1098,7 @@ Remove-Item Env:BEAM_DROP_TEST -ErrorAction SilentlyContinue
 Remove-Item -LiteralPath $dropOutLog, $dropErrLog -ErrorAction SilentlyContinue
 Write-Host 'PASS drop (3 real files read with webUtils; 51 more capped at 50 with a Max 50 notice)'
 
-Write-Host '[17/24] copy'
+Write-Host '[17/25] copy'
 $copyOutLog = Join-Path $env:TEMP 'beam-copy-verify.out.log'
 $copyErrLog = Join-Path $env:TEMP 'beam-copy-verify.err.log'
 Remove-Item -LiteralPath $copyOutLog, $copyErrLog -ErrorAction SilentlyContinue
@@ -1207,7 +1207,7 @@ Remove-Item -LiteralPath $copyPasteDir -Recurse -Force -ErrorAction SilentlyCont
 Remove-Item -LiteralPath (Join-Path $env:TEMP 'beam-copytest') -Recurse -Force -ErrorAction SilentlyContinue
 Write-Host 'PASS copy (row copy put alpha.txt on the clipboard, Copy All put all 3 paths, Ctrl+V pasted them into Explorer)'
 
-Write-Host '[18/24] drag out'
+Write-Host '[18/25] drag out'
 $dragOutLog = Join-Path $env:TEMP 'beam-dragout-verify.out.log'
 $dragOutErr = Join-Path $env:TEMP 'beam-dragout-verify.err.log'
 $dragMarker = Join-Path $env:TEMP 'beam-dragout-continue'
@@ -1323,7 +1323,7 @@ Remove-Item -LiteralPath $dragPaste -Recurse -Force -ErrorAction SilentlyContinu
 Remove-Item -LiteralPath (Join-Path $env:TEMP 'beam-dragout') -Recurse -Force -ErrorAction SilentlyContinue
 Write-Host 'PASS drag out (a real mouse drag dropped alpha.txt into Explorer; the deleted beta.txt row lost its drag; an off-shelf path was rejected)'
 
-Write-Host '[19/24] missing badge'
+Write-Host '[19/25] missing badge'
 $missingOut = Join-Path $env:TEMP 'beam-missing-verify.out.log'
 $missingErr = Join-Path $env:TEMP 'beam-missing-verify.err.log'
 Remove-Item -LiteralPath $missingOut, $missingErr -ErrorAction SilentlyContinue
@@ -1364,7 +1364,7 @@ Remove-Item -LiteralPath $missingOut, $missingErr -ErrorAction SilentlyContinue
 Remove-Item -LiteralPath (Join-Path $env:TEMP 'beam-missing') -Recurse -Force -ErrorAction SilentlyContinue
 Write-Host 'PASS missing badge (deleted file shows Missing with the File moved or deleted tooltip, no copy or drag, and the pill gains a red pip)'
 
-Write-Host '[20/24] clear all'
+Write-Host '[20/25] clear all'
 $clearOut = Join-Path $env:TEMP 'beam-clear-verify.out.log'
 $clearErr = Join-Path $env:TEMP 'beam-clear-verify.err.log'
 Remove-Item -LiteralPath $clearOut, $clearErr -ErrorAction SilentlyContinue
@@ -1632,7 +1632,7 @@ load(0);
   exit 1
 }
 
-Write-Host '[21/24] music pill'
+Write-Host '[21/25] music pill'
 $musicOut = Join-Path $env:TEMP 'beam-music-verify.out.log'
 $musicErr = Join-Path $env:TEMP 'beam-music-verify.err.log'
 Remove-Item -LiteralPath $musicOut, $musicErr -ErrorAction SilentlyContinue
@@ -1683,7 +1683,7 @@ Remove-Item Env:BEAM_MUSIC_TEST -ErrorAction SilentlyContinue
 Remove-Item -LiteralPath $musicOut, $musicErr -ErrorAction SilentlyContinue
 Write-Host "PASS music pill ('$($musicInput.title)' $musicWant, art=$($musicProbe.art), shown in $($musicProbe.ms)ms)"
 
-Write-Host '[22/24] music controls'
+Write-Host '[22/25] music controls'
 $cmdOut = Join-Path $env:TEMP 'beam-music-commands.out.log'
 $cmdErr = Join-Path $env:TEMP 'beam-music-commands.err.log'
 Remove-Item -LiteralPath $cmdOut, $cmdErr -ErrorAction SilentlyContinue
@@ -1764,7 +1764,7 @@ function Format-BeamClock([int]$seconds) {
   return '{0}:{1:D2}' -f $minutes, $secs
 }
 
-Write-Host '[23/24] music tab'
+Write-Host '[23/25] music tab'
 $tabOut = Join-Path $env:TEMP 'beam-music-tab.out.log'
 $tabErr = Join-Path $env:TEMP 'beam-music-tab.err.log'
 Remove-Item -LiteralPath $tabOut, $tabErr -ErrorAction SilentlyContinue
@@ -1864,7 +1864,7 @@ Remove-Item Env:BEAM_MUSIC_TAB_TEST -ErrorAction SilentlyContinue
 Remove-Item -LiteralPath $tabOut, $tabErr -ErrorAction SilentlyContinue
 Write-Host "PASS music tab ($tabResult)"
 
-Write-Host '[24/24] session picking'
+Write-Host '[24/25] session picking'
 # Player one is still running from check 21. A second real player with a different app id
 # joins here so Beam has two live sessions to follow. Windows hands the current session over
 # only when a player starts or stops playing, so the test toggles the same player twice.
@@ -1962,6 +1962,124 @@ try {
 Clear-BeamPlayers
 Remove-Item Env:BEAM_MUSIC_SESSIONS_TEST -ErrorAction SilentlyContinue
 Remove-Item -LiteralPath $pickOut, $pickErr -ErrorAction SilentlyContinue
+
+Write-Host '[25/25] UI pass'
+$uiOutLog = Join-Path $env:TEMP 'beam-ui-verify.out.log'
+$uiErrLog = Join-Path $env:TEMP 'beam-ui-verify.err.log'
+Remove-Item -LiteralPath $uiOutLog, $uiErrLog -ErrorAction SilentlyContinue
+$env:BEAM_UI_TEST = '1'
+$uiApp = $null
+try {
+  $uiApp = Start-Process -FilePath $electron -ArgumentList '.' -WorkingDirectory $PSScriptRoot -PassThru -RedirectStandardOutput $uiOutLog -RedirectStandardError $uiErrLog
+  $uiOut = ''
+  $uiStop = (Get-Date).AddSeconds(75)
+  while ((Get-Date) -lt $uiStop) {
+    Start-Sleep -Milliseconds 250
+    if ($uiApp.HasExited) { throw 'the app exited during the UI pass' }
+    $uiOut = Get-Content -LiteralPath $uiOutLog -Raw -ErrorAction SilentlyContinue
+    if ($uiOut -match '\[ui\] done') { break }
+  }
+  if ($uiOut -notmatch '\[ui\] done') { throw 'the UI pass never finished' }
+
+  function Get-UiLog([string]$text, [string]$tag) {
+    $match = [regex]::Match($text, "\[ui\] $tag (\{[^\r\n]*\})")
+    if (-not $match.Success) { throw "the UI pass never logged '$tag'" }
+    return $match.Groups[1].Value | ConvertFrom-Json
+  }
+
+  $start = Get-UiLog $uiOut 'start'
+  if ([int]$start.w -ne 94 -or [int]$start.h -ne 30) { throw "the resting pill is $($start.w)x$($start.h), expected 94x30" }
+  $add = Get-UiLog $uiOut 'add'
+  if ([int]$add.accepted -ne 3 -or [int]$add.shelf -ne 3) { throw "the shelf took $($add.accepted) of 3 files" }
+  $open = Get-UiLog $uiOut 'open'
+  if (-not $open.ok -or @($open.selected) -notcontains 'files') {
+    throw "the panel opened on '$(@($open.selected) -join ',')' after the shelf changed, expected files"
+  }
+  $undo = Get-UiLog $uiOut 'undo'
+  if ([int]$undo.afterRemove -ne 2 -or [int]$undo.afterUndo -ne 3 -or -not $undo.undoVisible) {
+    throw "Undo left $($undo.afterRemove) rows then $($undo.afterUndo)"
+  }
+  if ($undo.status -ne 'Restored') { throw "Undo status read '$($undo.status)'" }
+  $timer = Get-UiLog $uiOut 'timer'
+  if (-not $timer.ok -or $timer.state -ne 'timer' -or $timer.mode -notmatch 'mode-running') {
+    throw "the running timer left pill '$($timer.state)' mode '$($timer.mode)'"
+  }
+  if ($timer.digits -notmatch '^\d{1,2}:\d{2}$') { throw "the pill read '$($timer.digits)'" }
+  if ([math]::Abs([int]$timer.faceTop - [int]$timer.actionBottom) -gt 2) {
+    throw "the running timer is not centered (top air $($timer.faceTop), bottom air $($timer.actionBottom))"
+  }
+  $timercancel = Get-UiLog $uiOut 'timercancel'
+  if (-not $timercancel.ok -or $null -ne $timercancel.digits) { throw 'Cancel did not clear the pill timer' }
+  $calendar = Get-UiLog $uiOut 'calendar'
+  if ($calendar.before -eq $calendar.next -or $calendar.back -ne $calendar.before) {
+    throw "calendar went '$($calendar.before)' -> '$($calendar.next)' -> '$($calendar.back)'"
+  }
+  $esc = Get-UiLog $uiOut 'esc'
+  if (-not $esc.ok) { throw 'Escape did not close the panel' }
+  $lastused = Get-UiLog $uiOut 'lastused'
+  if (@($lastused.selected) -notcontains 'calendar') {
+    throw "reopening after the calendar landed on '$(@($lastused.selected) -join ',')'"
+  }
+  $clear = Get-UiLog $uiOut 'clear'
+  if ([int]$clear.shelf -ne 0 -or [int]$clear.rows -ne 0 -or $clear.label -ne 'Beam') {
+    throw "Clear All left $($clear.shelf) paths, $($clear.rows) rows, label '$($clear.label)'"
+  }
+  $chevron = Get-UiLog $uiOut 'chevron'
+  if ($null -ne $chevron.skipped) {
+    Write-Host "SKIP chevron (no media session: $($chevron.skipped))"
+  } elseif (-not $chevron.ok) {
+    throw 'the pill chevron did not open the panel'
+  }
+  $quiet = Get-UiLog $uiOut 'quiet'
+  if ($null -ne $quiet.skipped) {
+    Write-Host "SKIP quiet (a media session was live: $($quiet.skipped))"
+  } else {
+    if (-not $quiet.ok -or [int]$quiet.w -ne 30 -or [int]$quiet.h -ne 30) {
+      throw "quiet read $($quiet.state) $($quiet.w)x$($quiet.h), expected 30x30"
+    }
+    $quietwake = Get-UiLog $uiOut 'quietwake'
+    if (-not $quietwake.ok) { throw 'the quiet pill did not wake on hover' }
+  }
+
+  Start-Sleep -Milliseconds 600
+  $uiHwnd = [IntPtr]::Zero
+  for ($i = 0; $i -lt 20; $i++) {
+    $uiApp.Refresh()
+    $uiHwnd = $uiApp.MainWindowHandle
+    if ($uiHwnd -ne [IntPtr]::Zero) { break }
+    Start-Sleep -Milliseconds 100
+  }
+  if ($uiHwnd -eq [IntPtr]::Zero) { throw 'the Beam window handle never appeared' }
+  $uiRect = New-Object BeamScreen+RECT
+  if (-not [BeamScreen]::GetWindowRect($uiHwnd, [ref]$uiRect)) { throw 'the Beam window rect could not be read' }
+  $midY = [int](($uiRect.Top + $uiRect.Bottom) / 2)
+  $pillPoint = New-Object BeamScreen+POINT
+  $pillPoint.X = [int](($uiRect.Left + $uiRect.Right) / 2)
+  $pillPoint.Y = $midY
+  $marginPoint = New-Object BeamScreen+POINT
+  $marginPoint.X = $uiRect.Left + 2
+  $marginPoint.Y = $midY
+  $pillRoot = [BeamScreen]::GetAncestor([BeamScreen]::WindowFromPoint($pillPoint), 2)
+  $marginRoot = [BeamScreen]::GetAncestor([BeamScreen]::WindowFromPoint($marginPoint), 2)
+  if ($pillRoot -ne $uiHwnd) { throw 'the pill center is not Beam hit area' }
+  if ($marginRoot -eq $uiHwnd) { throw 'the transparent margin still belongs to Beam' }
+
+  $closed = $uiApp.CloseMainWindow()
+  if (-not $closed) { throw 'the pill did not close after the UI pass' }
+  $exited = $uiApp.WaitForExit(8000)
+  Start-Sleep -Milliseconds 500
+  $uiHelperLeft = @(Get-Process BeamBridge -ErrorAction SilentlyContinue).Count
+  if (-not $exited -or $uiHelperLeft -ne 0) { throw "the app did not exit cleanly (exited=$exited helperLeft=$uiHelperLeft)" }
+} catch {
+  if ($uiApp -and -not $uiApp.HasExited) { $uiApp.Kill() }
+  Get-Process electron,BeamBridge -ErrorAction SilentlyContinue | Stop-Process -Force
+  Remove-Item Env:BEAM_UI_TEST -ErrorAction SilentlyContinue
+  Write-Host "FAIL UI pass: $($_.Exception.Message)"
+  exit 1
+}
+Remove-Item Env:BEAM_UI_TEST -ErrorAction SilentlyContinue
+Remove-Item -LiteralPath $uiOutLog, $uiErrLog -ErrorAction SilentlyContinue
+Write-Host 'PASS UI pass (94x30 rest, shelf add/undo, last-used tab, centered running timer, calendar nav, Esc, chevron, 30x30 quiet + wake, cleared shelf, margin click-through)'
 
 Remove-Item Env:BEAM_SETTINGS_PATH -ErrorAction SilentlyContinue
 Remove-Item -LiteralPath (Join-Path $env:TEMP 'beam-verify-active-settings.json') -ErrorAction SilentlyContinue

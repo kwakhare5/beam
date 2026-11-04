@@ -30,6 +30,7 @@ These run before the phase tasks, as previous UI passes did. The canonical previ
   - Pill role, name, Enter, focus ring, live region; focus restoration on panel close; Settings tab inside the tablist; calendar focus style. Pull 1.8 forward.
 - [ ] **9.9 Proof** — *Depends on: 9.1–9.8.*
   - Add runtime checks for the quiet state, chevron, auto-pick, Esc/reopen, margin click-through, Add files, Undo, and quit confirm. Prove 2.4 and 2.5. `.\verify.ps1` exits 0.
+  - _Built 2026-11-04:_ check 25 runs a `BEAM_UI_TEST` app and asserts 94×30 rest, shelf add/undo, files auto-pick, last-used reopen, centered 5-minute timer, calendar nav, Esc, chevron (when a session is live), 30×30 quiet + hover wake, Clear All, and a real `WindowFromPoint` margin hit test; it passes standalone. Not ticked: check 16 is red — Electron 45 delivers every CDP `Input.dispatchDragEvent` as `dragenter`, so no synthetic drop lands and no `[files] add` fires. Quit confirm and the timer done face are not covered.
 
 ---
 

@@ -201,6 +201,7 @@ if (!gotLock) {
   const musicCmdTest = process.env.BEAM_MUSIC_CMD_TEST === '1';
   const musicTabTest = process.env.BEAM_MUSIC_TAB_TEST === '1';
   const musicSessionsTest = process.env.BEAM_MUSIC_SESSIONS_TEST === '1';
+  const uiTest = process.env.BEAM_UI_TEST === '1';
   let musicView: MusicState | null = null;
   let helperOk = true;
   let liveMusicApp = '';
@@ -500,6 +501,245 @@ if (!gotLock) {
       target.webContents.debugger.detach();
       console.log('[music] tab done');
     }
+  }
+
+  type UiSnapshot = {
+    viewport: number;
+    state: string | null;
+    label: string | null;
+    digits: string | null;
+    w: number;
+    h: number;
+    open: boolean;
+    selected: string[];
+    timerMode: string | null;
+    faceTop: number | null;
+    actionBottom: number | null;
+    rows: number;
+    undo: boolean;
+    status: string | null;
+    calTitle: string | null;
+    chevron: boolean;
+  };
+
+  async function runUiTest(target: BrowserWindow): Promise<void> {
+    const ui = (tag: string, data: unknown): void => console.log(`[ui] ${tag} ${JSON.stringify(data)}`);
+    const wait = (ms: number): Promise<void> => new Promise((resolve) => setTimeout(resolve, ms));
+    const snap = async (): Promise<UiSnapshot> =>
+      (await target.webContents.executeJavaScript(
+        `(() => {
+          const pill = document.querySelector('.pill');
+          const rect = pill?.getBoundingClientRect();
+          const body = document.querySelector('#panel-timer');
+          const face = body?.querySelector('.timer-face');
+          const actions = body?.querySelector('.actions');
+          const bRect = body?.getBoundingClientRect();
+          const fRect = face?.getBoundingClientRect();
+          const aRect = actions?.getBoundingClientRect();
+          return {
+            viewport: window.innerHeight,
+            state: pill?.dataset.state ?? null,
+            label: pill?.querySelector('.title')?.textContent ?? null,
+            digits: document.querySelector('.pill .digits')?.textContent ?? null,
+            w: rect ? Math.round(rect.width) : 0,
+            h: rect ? Math.round(rect.height) : 0,
+            open: document.body.classList.contains('is-open'),
+            selected: [...document.querySelectorAll('[role="tab"][aria-selected="true"]')].map((tab) =>
+              tab.id.replace('tab-', '')
+            ),
+            timerMode: body?.className ?? null,
+            faceTop: bRect && fRect ? Math.round(fRect.top - bRect.top) : null,
+            actionBottom: bRect && aRect ? Math.round(bRect.bottom - aRect.bottom) : null,
+            rows: document.querySelectorAll('#panel-files .row').length,
+            undo: Boolean(document.querySelector('[data-files-undo]')),
+            status: document.querySelector('[data-files-status]')?.textContent ?? null,
+            calTitle: document.querySelector('#panel-calendar .cal-title')?.textContent ?? null,
+            chevron: Boolean(pill?.querySelector('[data-action="panel"]'))
+          };
+        })()`
+      )) as UiSnapshot;
+    const point = async (selector: string): Promise<{ x: number; y: number } | null> =>
+      (await target.webContents.executeJavaScript(
+        `(() => {
+          const rect = document.querySelector(${JSON.stringify(selector)})?.getBoundingClientRect();
+          return rect ? { x: Math.round(rect.left + rect.width / 2), y: Math.round(rect.top + rect.height / 2) } : null;
+        })()`
+      )) as { x: number; y: number } | null;
+    const clickAt = async (at: { x: number; y: number }): Promise<void> => {
+      target.webContents.sendInputEvent({ type: 'mouseMove', x: at.x, y: at.y });
+      await wait(60);
+      target.webContents.sendInputEvent({ type: 'mouseDown', x: at.x, y: at.y, button: 'left', clickCount: 1 });
+      target.webContents.sendInputEvent({ type: 'mouseUp', x: at.x, y: at.y, button: 'left', clickCount: 1 });
+    };
+    const click = async (selector: string): Promise<boolean> => {
+      const at = await point(selector);
+      if (!at) return false;
+      await clickAt(at);
+      return true;
+    };
+    const escape = (): void => {
+      target.webContents.sendInputEvent({ type: 'keyDown', keyCode: 'Escape' });
+      target.webContents.sendInputEvent({ type: 'keyUp', keyCode: 'Escape' });
+    };
+    const until = async (
+      want: (state: UiSnapshot) => boolean,
+      ms: number
+    ): Promise<{ ok: boolean; snap: UiSnapshot }> => {
+      const deadline = Date.now() + ms;
+      let current = await snap();
+      while (Date.now() < deadline && !want(current)) {
+        await wait(60);
+        current = await snap();
+      }
+      return { ok: want(current), snap: current };
+    };
+    const park = async (): Promise<void> => {
+      target.webContents.sendInputEvent({ type: 'mouseMove', x: 2, y: 2 });
+      await wait(320);
+    };
+
+    await wait(500);
+    const start = await snap();
+    ui('start', { state: start.state, music: Boolean(musicView), chevron: start.chevron, w: start.w, h: start.h, viewport: start.viewport });
+    if (musicView) ui('quiet', { skipped: 'music' });
+
+    const dir = join(tmpdir(), 'beam-uitest');
+    mkdirSync(dir, { recursive: true });
+    const paths = ['ui-one.txt', 'ui-two.txt', 'ui-three.txt'].map((name) => join(dir, name));
+    paths.forEach((path, index) => writeFileSync(path, `beam ${index}\n`));
+    // CDP Input.dispatchDragEvent collapses every synthetic drag to dragenter in this Electron,
+    // so the shelf is filled through the same IPC the picker uses.
+    const added = (await target.webContents.executeJavaScript(
+      `window.beam.addFiles(${JSON.stringify(paths)}).then((result) => ({ accepted: result.accepted, count: result.count }))`
+    )) as { accepted: number; count: number };
+    const dropped = await until((state) => shelf.length === 3, 3000);
+    ui('add', { accepted: added.accepted, shelf: shelf.length, ok: dropped.ok, state: dropped.snap.state, label: dropped.snap.label });
+
+    await park();
+    await click('.pill');
+    const opened = await until((state) => state.open, 3000);
+    ui('open', { ok: opened.ok, selected: opened.snap.selected, chevron: opened.snap.chevron });
+
+    const removeAt = await point('#panel-files .row [data-remove-path]');
+    if (removeAt) {
+      await clickAt(removeAt);
+      const removed = await until((state) => state.rows === 2 && state.undo, 3000);
+      const undoAt = await point('[data-files-undo]');
+      if (undoAt) await clickAt(undoAt);
+      const restored = await until((state) => state.rows === 3, 3000);
+      ui('undo', {
+        afterRemove: removed.snap.rows,
+        afterUndo: restored.snap.rows,
+        undoVisible: removed.snap.undo,
+        status: restored.snap.status,
+        shelf: shelf.length
+      });
+    } else {
+      ui('undo', { ok: false, reason: 'no-remove-button' });
+    }
+
+    await click('#tab-timer');
+    await wait(150);
+    await click('#panel-timer [data-timer-preset="5"]');
+    await wait(150);
+    await click('#panel-timer [data-timer-start]');
+    const running = await until((state) => state.state === 'timer', 2500);
+    ui('timer', {
+      ok: running.ok,
+      state: running.snap.state,
+      digits: running.snap.digits,
+      mode: running.snap.timerMode,
+      faceTop: running.snap.faceTop,
+      actionBottom: running.snap.actionBottom
+    });
+    await click('#panel-timer [data-timer-cancel]');
+    const cancelled = await until((state) => state.state !== 'timer', 2500);
+    ui('timercancel', { ok: cancelled.ok, state: cancelled.snap.state, digits: cancelled.snap.digits });
+
+    await click('#tab-calendar');
+    await wait(150);
+    const calBefore = (await snap()).calTitle;
+    await click('#panel-calendar [data-cal-next]');
+    await wait(150);
+    const calNext = (await snap()).calTitle;
+    await click('#panel-calendar [data-cal-today]');
+    await wait(150);
+    const calBack = (await snap()).calTitle;
+    ui('calendar', { before: calBefore, next: calNext, back: calBack });
+
+    escape();
+    const closed = await until((state) => !state.open, 3000);
+    ui('esc', { ok: closed.ok, open: closed.snap.open });
+
+    if (musicView) {
+      await park();
+      const pillAt = await point('.pill');
+      if (pillAt) target.webContents.sendInputEvent({ type: 'mouseMove', x: pillAt.x, y: pillAt.y });
+      await wait(260);
+      const clicked = await click('.pill [data-action="panel"]');
+      const chevron = await until((state) => state.open, 3000);
+      ui('chevron', { ok: clicked && chevron.ok, selected: chevron.snap.selected });
+      escape();
+      await until((state) => !state.open, 3000);
+    } else {
+      ui('chevron', { skipped: 'no-music' });
+    }
+
+    await park();
+    await click('.pill');
+    const reopened = await until((state) => state.open, 3000);
+    ui('lastused', { ok: reopened.ok, selected: reopened.snap.selected });
+    escape();
+    await until((state) => !state.open, 3000);
+    await wait(250);
+
+    if (musicView) {
+      target.webContents.send(IPC.musicState, null);
+      const dropped2 = await until((state) => state.state !== 'playing' && state.state !== 'paused', 2000);
+      ui('nullstate', { ok: dropped2.ok, state: dropped2.snap.state });
+      sendMusic();
+      await wait(300);
+    } else {
+      ui('nullstate', { skipped: 'no-music' });
+    }
+
+    await park();
+    await click('.pill');
+    await until((state) => state.open, 3000);
+    await click('#tab-files');
+    await wait(200);
+    await click('#panel-files .clear-all');
+    await wait(150);
+    await click('#panel-files .clear-all');
+    const cleared = await until((state) => shelf.length === 0, 3000);
+    const clearSnap = await snap();
+    ui('clear', { ok: cleared.ok, shelf: shelf.length, rows: clearSnap.rows, state: clearSnap.state, label: clearSnap.label });
+    escape();
+    await until((state) => !state.open, 3000);
+    await wait(400);
+    await park();
+
+    if (!musicView) {
+      let quiet = await snap();
+      const quietDeadline = Date.now() + 24000;
+      while (Date.now() < quietDeadline && quiet.state !== 'quiet' && quiet.state !== 'playing' && quiet.state !== 'paused') {
+        await wait(200);
+        quiet = await snap();
+      }
+      if (quiet.state === 'quiet') {
+        await wait(250);
+        quiet = await snap();
+      }
+      const quietOk = quiet.state === 'quiet' && quiet.w === 30 && quiet.h === 30;
+      ui('quiet', { ok: quietOk, state: quiet.state, w: quiet.w, h: quiet.h, viewport: quiet.viewport });
+      if (quietOk) {
+        const at = await point('.pill');
+        if (at) target.webContents.sendInputEvent({ type: 'mouseMove', x: at.x, y: at.y });
+        const woke = await until((state) => state.state !== 'quiet', 3000);
+        ui('quietwake', { ok: woke.ok, state: woke.snap.state, w: woke.snap.w });
+      }
+    }
+    console.log('[ui] done');
   }
 
   async function pillSnapshot(): Promise<{ state: string | null; label: string | null }> {
@@ -1125,6 +1365,13 @@ if (!gotLock) {
             void runMusicTabTest(window, openPanel).catch((error: unknown) =>
               console.error('[music] tab failed', error)
             );
+          }
+        }, 1200);
+      }
+      if (uiTest) {
+        setTimeout(() => {
+          if (!window.isDestroyed()) {
+            void runUiTest(window).catch((error: unknown) => console.error('[ui] failed', error));
           }
         }, 1200);
       }

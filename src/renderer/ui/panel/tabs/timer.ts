@@ -45,5 +45,5 @@ export function timerPanel(data: TimerData, active = true): string {
   const body = mode === 'done' ? doneFace() : face(data.digits, data.note);
   const actions = mode === 'running' ? cancel : mode === 'done' ? done : start;
 
-  return panelBody('timer', `${head}${body}${actions}`, 'panel-timer', active);
+  return panelBody('timer', `${head}${body}${actions}`, `panel-timer mode-${mode}`, active);
 }
