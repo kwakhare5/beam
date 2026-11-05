@@ -1,0 +1,15 @@
+.scratch/
+release/
+release-next/
+node_modules/
+native/**/bin/
+native/**/obj/
+showcase/
+docs/
+dist/
+/*.mp3
+.env*
+.vercel/
+site/.next/
+site/out/
+site/public/demo/

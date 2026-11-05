@@ -23,8 +23,8 @@ const params = new URLSearchParams(window.location.search);
 const instance = params.get('instance') ?? 'demo';
 
 const TRACKS = [
-  { title: 'Dark Cyberpunk', artist: 'NverAvetyanMusic', src: `${base}dark.mp3`, art: `${base}cover-dark-512.png` },
-  { title: 'Trapanomics', artist: 'Arulo', src: `${base}trap.mp3`, art: `${base}cover-trap-512.png` }
+  { title: 'Ovo', artist: 'Arulo', src: `${base}ovo.mp3`, art: `${base}cover-ovo-512.png` },
+  { title: 'Carti Bih', artist: 'Arulo', src: `${base}carti-bih.mp3`, art: `${base}cover-carti-bih-512.png` }
 ] as const;
 
 let trackIndex = 0;
