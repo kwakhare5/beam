@@ -134,8 +134,52 @@ a:hover > .star-logo {
   }
 }
 
+.star-logo .eye-wink,
+.star-logo .eye-pupil {
+  transform-box: fill-box;
+  transform-origin: center;
+}
+
+.star-logo .eye-wink {
+  animation: eye-wink 5.4s ease-in-out infinite;
+}
+
+.star-logo .eye-pupil {
+  animation: eye-blink 6.4s ease-in-out infinite;
+}
+
+@keyframes eye-wink {
+  0%,
+  84%,
+  100% {
+    transform: scaleY(1);
+  }
+  88% {
+    transform: scaleY(0.12);
+  }
+  92% {
+    transform: scaleY(1);
+  }
+}
+
+@keyframes eye-blink {
+  0%,
+  88%,
+  100% {
+    transform: scaleY(1);
+  }
+  92% {
+    transform: scaleY(0.08);
+  }
+  96% {
+    transform: scaleY(1);
+  }
+}
+
 @media (prefers-reduced-motion: reduce) {
   .star-logo,
+  .star-logo .eye-wink,
+  .star-logo .eye-pupil,
   a:hover > .star-logo {
     animation: none;
   }

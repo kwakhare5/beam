@@ -16,3 +16,5 @@ native/**/obj/
 
 # local copyrighted rips — never commit
 /*.mp3
+
+release-next/

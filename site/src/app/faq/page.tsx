@@ -1,7 +1,7 @@
 import type { Metadata } from 'next';
-import Image from 'next/image';
 import Link from 'next/link';
 import { Plus } from 'lucide-react';
+import { StarLogo } from '../star';
 
 const REPO = 'https://github.com/kwakhare5/beam';
 const RELEASES = `${REPO}/releases/latest`;
@@ -56,7 +56,7 @@ export default function FaqPage() {
       <header className="border-b border-hairline">
         <nav className="mx-auto flex h-14 w-full max-w-4xl items-center justify-between px-4 sm:px-5">
           <Link href="/" className="flex items-center gap-2 text-[15px] font-semibold tracking-tight">
-            <Image src="/mascot.svg" alt="" width={20} height={20} className="star-logo" />
+            <StarLogo size={20} />
             beam.
           </Link>
           <div className="flex items-center gap-4 text-[13px] text-muted sm:gap-5 sm:text-sm">
