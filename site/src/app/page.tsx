@@ -1,81 +1,8 @@
-'use client';
-
 import Link from 'next/link';
-import { ArrowUpRight, CalendarDays, FolderOpen, Music2, Plus, Timer } from 'lucide-react';
+import { ArrowUpRight, Plus } from 'lucide-react';
+import { FAQ, FEATURES, RELEASES, REPO } from '../content/site';
 import { HandArrow, StarLogo } from '../components/brand';
 import { LiveDemo } from '../components/live-demo';
-
-const REPO = 'https://github.com/kwakhare5/beam';
-const RELEASES = `${REPO}/releases/latest`;
-
-const FEATURES = [
-  {
-    icon: Music2,
-    title: 'music',
-    body: 'Whatever is playing, from any app Windows knows about. Previous, play, and next without leaving what you were doing.',
-    chip: 'bg-blue-tint',
-    ink: 'text-blue-bright'
-  },
-  {
-    icon: FolderOpen,
-    title: 'files',
-    body: 'Drop files on the bar to keep them close. Copy them all at once, or drag one into Explorer.',
-    chip: 'bg-orange-tint',
-    ink: 'text-orange'
-  },
-  {
-    icon: Timer,
-    title: 'timer',
-    body: 'A countdown that keeps real time through sleep. Pick a preset, or set any length.',
-    chip: 'bg-green-tint',
-    ink: 'text-green'
-  },
-  {
-    icon: CalendarDays,
-    title: 'calendar',
-    body: 'This month at a glance. Move between months, or jump back to today.',
-    chip: 'bg-purple-tint',
-    ink: 'text-purple'
-  }
-];
-
-const FAQ = [
-  {
-    question: 'Does beam need an account?',
-    answer: 'No. There is no sign-in, no cloud, and no sync. The app makes no network requests.'
-  },
-  {
-    question: 'What does it store on my PC?',
-    answer:
-      'The bar’s position, in %APPDATA%\\Beam\\settings.json. Files on the shelf are paths kept in memory, and they clear when you quit.'
-  },
-  {
-    question: 'Windows says it’s unsafe. What now?',
-    answer:
-      'The preview is unsigned, so SmartScreen warns once. Choose More info, then Run anyway. The full source is on GitHub.'
-  },
-  {
-    question: 'Alt + Space is already taken.',
-    answer: 'Beam falls back to Ctrl + Shift + Space when Windows will not give it Alt + Space.'
-  },
-  {
-    question: 'Which Windows versions work?',
-    answer: 'Windows 11. That is the system the preview is built and tested on.'
-  },
-  {
-    question: 'How do I remove it?',
-    answer: 'Delete the exe. To clear the saved position too, delete %APPDATA%\\Beam.'
-  },
-  {
-    question: 'Does the demo send anything?',
-    answer:
-      'No. It runs the app’s panel in this page with two local audio files. The only requests are for the site’s own files.'
-  },
-  {
-    question: 'Can I copy files out of the demo?',
-    answer: 'No. A browser cannot write to Explorer, so copy and drag-out wait for the Windows app.'
-  }
-];
 
 export default function HomePage() {
   return (
@@ -159,13 +86,11 @@ export default function HomePage() {
         </section>
 
         <section id="demo" className="pb-14">
-          <div className="relative mb-8 flex justify-center">
+          <div className="mb-2 flex flex-col items-center">
             <p className="font-hand text-2xl text-purple">go on, click the star.</p>
-            <HandArrow className="absolute left-[calc(50%+22px)] top-1 text-purple" />
+            <HandArrow className="mt-1 text-purple" />
           </div>
-          <div className="demo-fit">
-            <LiveDemo />
-          </div>
+          <LiveDemo />
           <p className="mt-4 text-center text-[13px] text-muted">
             The real app, running in this page. The music is two free tracks, and the Files tab takes real dropped files.
             Copy and drag-out work in the Windows app.

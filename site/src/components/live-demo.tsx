@@ -2,6 +2,8 @@
 
 import { useEffect, useState } from 'react';
 
+const demoPath = process.env.NODE_ENV === 'development' ? '/demo/index.html' : '/demo';
+
 export function LiveDemo() {
   const [open, setOpen] = useState(false);
 
@@ -19,7 +21,7 @@ export function LiveDemo() {
   return (
     <div className="demo-fit" data-open={open}>
       <div className="demo-stage" data-open={open}>
-        <iframe src="/demo?instance=hero" title="beam — live app demo" className="demo-frame" data-open={open} loading="lazy" />
+        <iframe src={`${demoPath}?instance=hero`} title="beam — live app demo" className="demo-frame" data-open={open} loading="lazy" />
       </div>
     </div>
   );
