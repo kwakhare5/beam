@@ -2,7 +2,7 @@
 
 import Link from 'next/link';
 import { useEffect, useState } from 'react';
-import { ArrowUpRight, CalendarDays, FolderOpen, Music2, Timer } from 'lucide-react';
+import { ArrowUpRight, CalendarDays, FolderOpen, Music2, Plus, Timer } from 'lucide-react';
 import { HandArrow } from './arrow';
 import { StarLogo } from './star';
 
@@ -37,6 +37,44 @@ const FEATURES = [
     body: 'This month at a glance. Move between months, or jump back to today.',
     chip: 'bg-purple-tint',
     ink: 'text-purple'
+  }
+];
+
+const FAQ = [
+  {
+    question: 'Does beam need an account?',
+    answer: 'No. There is no sign-in, no cloud, and no sync. The app makes no network requests.'
+  },
+  {
+    question: 'What does it store on my PC?',
+    answer:
+      'The bar’s position, in %APPDATA%\\Beam\\settings.json. Files on the shelf are paths kept in memory, and they clear when you quit.'
+  },
+  {
+    question: 'Windows says it’s unsafe. What now?',
+    answer:
+      'The preview is unsigned, so SmartScreen warns once. Choose More info, then Run anyway. The full source is on GitHub.'
+  },
+  {
+    question: 'Alt + Space is already taken.',
+    answer: 'Beam falls back to Ctrl + Shift + Space when Windows will not give it Alt + Space.'
+  },
+  {
+    question: 'Which Windows versions work?',
+    answer: 'Windows 11. That is the system the preview is built and tested on.'
+  },
+  {
+    question: 'How do I remove it?',
+    answer: 'Delete the exe. To clear the saved position too, delete %APPDATA%\\Beam.'
+  },
+  {
+    question: 'Does the demo send anything?',
+    answer:
+      'No. It runs the app’s panel in this page with two local audio files. The only requests are for the site’s own files.'
+  },
+  {
+    question: 'Can I copy files out of the demo?',
+    answer: 'No. A browser cannot write to Explorer, so copy and drag-out wait for the Windows app.'
   }
 ];
 
@@ -86,9 +124,9 @@ export default function HomePage() {
             <a href="#demo" className="transition-colors hover:text-ink">
               demo
             </a>
-            <Link href="/faq" prefetch={false} className="transition-colors hover:text-ink">
+            <a href="#faq" className="transition-colors hover:text-ink">
               faq
-            </Link>
+            </a>
             <a
               href={REPO}
               target="_blank"
@@ -151,9 +189,9 @@ export default function HomePage() {
         </section>
 
         <section id="demo" className="pb-14">
-          <div className="mb-1 flex items-end justify-center gap-1">
-            <HandArrow className="mb-1 text-purple" />
+          <div className="mb-1 flex items-end justify-center gap-2">
             <p className="font-hand text-2xl text-purple">go on, click the star.</p>
+            <HandArrow className="-mb-1 text-purple" />
           </div>
           <div className="demo-fit">
             <DemoFrame />
@@ -161,26 +199,6 @@ export default function HomePage() {
           <p className="mt-4 text-center text-[13px] text-muted">
             The real app, running in this page. The music is two free tracks, and the Files tab takes real dropped files.
             Copy and drag-out work in the Windows app.
-          </p>
-        </section>
-
-        <section id="screens" className="border-t border-hairline py-14">
-          <h2 className="text-2xl font-semibold sm:text-[28px]">up close.</h2>
-          <p className="mt-3 max-w-lg text-[15px] leading-relaxed text-muted">
-            The same panel from the app, live in this page. Click through the tabs; playback, the timer, and the calendar
-            all work.
-          </p>
-
-          <div className="showcase-fit mt-8">
-            <iframe
-              src="/demo/index.html?instance=up-close&open=1&sticky=1"
-              title="beam panel, live — music, files, timer and calendar tabs"
-              className="showcase-frame"
-              loading="lazy"
-            />
-          </div>
-          <p className="mt-4 text-center text-[13px] text-muted">
-            One 452×316 window: music, files, timer, calendar.
           </p>
         </section>
 
@@ -210,6 +228,27 @@ export default function HomePage() {
           <p className="py-8 text-[15px] leading-relaxed text-muted">
             That&apos;s the whole app. It rests at 94×30 pixels, opens with Alt + Space, and makes no network requests.
           </p>
+        </section>
+
+        <section id="faq" className="border-t border-hairline py-14">
+          <h2 className="text-2xl font-semibold sm:text-[28px]">questions.</h2>
+          <p className="mt-3 max-w-lg text-[15px] leading-relaxed text-muted">Short answers about the preview.</p>
+
+          <div className="mt-8 border-t border-hairline">
+            {FAQ.map((item) => (
+              <details key={item.question} className="group border-b border-hairline">
+                <summary className="flex cursor-pointer list-none items-center justify-between gap-6 py-5 text-[16px] font-medium">
+                  {item.question}
+                  <Plus
+                    className="h-4 w-4 shrink-0 text-muted transition-transform duration-200 group-open:rotate-45"
+                    strokeWidth={1.8}
+                    aria-hidden="true"
+                  />
+                </summary>
+                <p className="max-w-xl pb-5 text-[15px] leading-relaxed text-muted">{item.answer}</p>
+              </details>
+            ))}
+          </div>
         </section>
 
         <section id="download" className="border-t border-hairline py-16">
@@ -258,9 +297,9 @@ export default function HomePage() {
 
           <p className="mt-6 max-w-md text-[13px] leading-relaxed text-muted">
             The preview is unsigned, so Windows may ask once — the{' '}
-            <Link href="/faq" prefetch={false} className="underline decoration-hairline underline-offset-2 hover:text-ink">
+            <a href="#faq" className="underline decoration-hairline underline-offset-2 hover:text-ink">
               FAQ
-            </Link>{' '}
+            </a>{' '}
             has the steps. Found a bug?{' '}
             <a
               href={`${REPO}/issues`}
@@ -297,9 +336,9 @@ export default function HomePage() {
             <Link href="/changelog" prefetch={false} className="py-1 transition-colors hover:text-ink">
               changelog
             </Link>
-            <Link href="/faq" prefetch={false} className="py-1 transition-colors hover:text-ink">
+            <a href="#faq" className="py-1 transition-colors hover:text-ink">
               faq
-            </Link>
+            </a>
             <a
               href={`${REPO}/blob/main/DESIGN.md`}
               target="_blank"
