@@ -70,10 +70,28 @@
   }
 
   a:focus-visible,
-  button:focus-visible {
+  button:focus-visible,
+  summary:focus-visible {
     outline: 2px solid var(--color-blue-bright);
     outline-offset: 3px;
     border-radius: 4px;
+  }
+
+  .skip-link {
+    position: fixed;
+    top: 8px;
+    left: 8px;
+    z-index: 100;
+    padding: 8px 12px;
+    border-radius: 8px;
+    background: var(--color-ink);
+    color: #fff;
+    font-size: 13px;
+    transform: translateY(-200%);
+  }
+
+  .skip-link:focus {
+    transform: translateY(0);
   }
 }
 
@@ -131,6 +149,21 @@ a:hover > .star-logo {
   width: 100%;
 }
 
+.showcase-fit {
+  display: flex;
+  justify-content: center;
+  width: 100%;
+}
+
+.showcase-frame {
+  width: 452px;
+  height: 316px;
+  flex: none;
+  border: 0;
+  background: transparent;
+  color-scheme: dark;
+}
+
 .demo-stage {
   position: relative;
   width: 452px;
@@ -166,19 +199,26 @@ a:hover > .star-logo {
 }
 
 @media (max-width: 520px) {
-  .demo-fit {
+  .demo-fit[data-open='false'] .demo-stage {
+    width: 136px;
+  }
+
+  .demo-fit[data-open='true'],
+  .showcase-fit {
     zoom: 0.8;
   }
 }
 
 @media (max-width: 420px) {
-  .demo-fit {
+  .demo-fit[data-open='true'],
+  .showcase-fit {
     zoom: 0.74;
   }
 }
 
 @media (max-width: 360px) {
-  .demo-fit {
+  .demo-fit[data-open='true'],
+  .showcase-fit {
     zoom: 0.66;
   }
 }

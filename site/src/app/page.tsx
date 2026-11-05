@@ -1,6 +1,7 @@
 'use client';
 
 import Image from 'next/image';
+import Link from 'next/link';
 import { useEffect, useState } from 'react';
 import { ArrowUpRight, CalendarDays, FolderOpen, Music2, Timer } from 'lucide-react';
 
@@ -11,28 +12,28 @@ const FEATURES = [
   {
     icon: Music2,
     title: 'music',
-    body: 'The live track from any app Windows knows about. Previous, play, next — without leaving what you were doing.',
+    body: 'Whatever is playing, from any app Windows knows about. Previous, play, and next without leaving what you were doing.',
     chip: 'bg-blue-tint',
     ink: 'text-blue-bright'
   },
   {
     icon: FolderOpen,
     title: 'files',
-    body: 'Drop files on the bar to keep them close. Copy them all at once, or drag one straight into Explorer.',
+    body: 'Drop files on the bar to keep them close. Copy them all at once, or drag one into Explorer.',
     chip: 'bg-orange-tint',
     ink: 'text-orange'
   },
   {
     icon: Timer,
     title: 'timer',
-    body: 'A countdown that keeps real time through sleep. Pick 5, 10, 25 minutes, or set your own.',
+    body: 'A countdown that keeps real time through sleep. Pick a preset, or set any length.',
     chip: 'bg-green-tint',
     ink: 'text-green'
   },
   {
     icon: CalendarDays,
     title: 'calendar',
-    body: 'This month at a glance. Move between months, jump back to today, then get on with it.',
+    body: 'This month at a glance. Move between months, or jump back to today.',
     chip: 'bg-purple-tint',
     ink: 'text-purple'
   }
@@ -44,8 +45,8 @@ function DemoFrame() {
   useEffect(() => {
     const onMessage = (event: MessageEvent) => {
       if (event.origin !== window.location.origin) return;
-      const data = event.data as { source?: string; open?: boolean } | null;
-      if (!data || data.source !== 'beam-demo' || typeof data.open !== 'boolean') return;
+      const data = event.data as { source?: string; instance?: string; open?: boolean } | null;
+      if (!data || data.source !== 'beam-demo' || data.instance !== 'hero' || typeof data.open !== 'boolean') return;
       setOpen(data.open);
     };
     window.addEventListener('message', onMessage);
@@ -53,14 +54,16 @@ function DemoFrame() {
   }, []);
 
   return (
-    <div className="demo-stage" data-open={open}>
-      <iframe
-        src="/demo/index.html"
-        title="beam — live app demo"
-        className="demo-frame"
-        data-open={open}
-        loading="lazy"
-      />
+    <div className="demo-fit" data-open={open}>
+      <div className="demo-stage" data-open={open}>
+        <iframe
+          src="/demo/index.html?instance=hero"
+          title="beam — live app demo"
+          className="demo-frame"
+          data-open={open}
+          loading="lazy"
+        />
+      </div>
     </div>
   );
 }
@@ -69,31 +72,34 @@ export default function HomePage() {
   return (
     <div className="min-h-screen">
       <header className="sticky top-0 z-50 border-b border-hairline bg-paper">
-        <nav className="mx-auto flex h-14 w-full max-w-4xl items-center justify-between px-5">
+        <nav className="mx-auto flex h-14 w-full max-w-4xl items-center justify-between px-4 sm:px-5">
           <a href="#" className="flex items-center gap-2 text-[15px] font-semibold tracking-tight">
             <Image src="/mascot.svg" alt="" width={20} height={20} className="star-logo" priority />
             beam.
           </a>
 
-          <div className="flex items-center gap-5 text-sm text-muted">
-            <a href="#features" className="hidden transition-colors hover:text-ink sm:inline">
+          <div className="flex items-center gap-3 text-[13px] text-muted sm:gap-5 sm:text-sm">
+            <a href="#features" className="transition-colors hover:text-ink">
               features
             </a>
             <a href="#demo" className="transition-colors hover:text-ink">
               demo
             </a>
+            <Link href="/faq" prefetch={false} className="transition-colors hover:text-ink">
+              faq
+            </Link>
             <a
               href={REPO}
               target="_blank"
               rel="noopener noreferrer"
-              className="flex items-center gap-1 transition-colors hover:text-ink"
+              className="hidden items-center gap-1 transition-colors hover:text-ink sm:flex"
             >
               github
               <ArrowUpRight className="h-3.5 w-3.5" strokeWidth={1.75} />
             </a>
             <a
               href={RELEASES}
-              className="rounded-lg bg-ink px-3 py-1.5 text-sm font-medium text-white transition-colors hover:bg-black"
+              className="rounded-lg bg-ink px-3 py-1.5 font-medium text-white transition-colors hover:bg-black sm:px-3.5"
             >
               download
             </a>
@@ -101,9 +107,9 @@ export default function HomePage() {
         </nav>
       </header>
 
-      <main className="mx-auto w-full max-w-4xl px-5">
+      <main id="content" className="mx-auto w-full max-w-4xl px-5">
         <section className="pb-10 pt-16 sm:pt-20">
-          <p className="text-[15px] text-muted">A Windows 11 app that lives above your taskbar.</p>
+          <p className="text-[15px] text-muted">A Windows 11 app that sits above your taskbar.</p>
 
           <h1 className="relative mt-4 inline-block text-[clamp(2.2rem,5.6vw,3.9rem)] font-semibold leading-[1]">
             meet beam.
@@ -122,8 +128,8 @@ export default function HomePage() {
           <p className="mt-2 font-hand text-2xl text-muted sm:text-3xl">no windows to manage.</p>
 
           <p className="mt-6 max-w-xl text-base leading-relaxed text-muted">
-            Control what&apos;s playing, keep files close, start a countdown, check the month. No account, no cloud,
-            nothing else running.
+            Control what&apos;s playing, keep files close, start a countdown, check the month. One small bar, no account,
+            no cloud.
           </p>
 
           <div className="mt-8 flex flex-wrap items-center gap-3">
@@ -141,87 +147,51 @@ export default function HomePage() {
               href="#demo"
               className="rounded-lg border border-hairline bg-surface px-4 py-2.5 text-sm font-medium transition-colors hover:bg-hover"
             >
-              Try it below
+              See it live
             </a>
-            <span className="text-[13px] text-muted">v0.1.0 early preview · free</span>
+            <span className="text-[13px] text-muted">v0.1.0 early preview</span>
           </div>
         </section>
 
         <section id="demo" className="pb-14">
           <div className="mb-1 flex items-center justify-center gap-2">
+            <Image
+              src="/hand-arrow.svg"
+              alt=""
+              width={50}
+              height={44}
+              className="mt-4 opacity-80"
+              aria-hidden="true"
+            />
             <p className="font-hand text-2xl text-muted">go on, click the star.</p>
-            <Image src="/hand-arrow.svg" alt="" width={54} height={32} className="mt-2 -rotate-[18deg] opacity-80" />
           </div>
           <div className="demo-fit">
             <DemoFrame />
           </div>
           <p className="mt-4 text-center text-[13px] text-muted">
-            The real app renderer with two free demo tracks — Arulo and NverAvetyanMusic. Drag real files onto the bar;
-            copy and drag-out need the app itself.
+            The real app, running in this page. The music is two free tracks, and the Files tab takes real dropped files.
+            Copy and drag-out work in the Windows app.
           </p>
         </section>
 
         <section id="screens" className="border-t border-hairline py-14">
           <h2 className="text-2xl font-semibold sm:text-[28px]">up close.</h2>
           <p className="mt-3 max-w-lg text-[15px] leading-relaxed text-muted">
-            Real captures from the same renderer — no mockups.
+            The same panel from the app, live in this page. Click through the tabs; playback, the timer, and the calendar
+            all work.
           </p>
 
-          <figure className="mt-8">
-            <Image
-              src="/screens/pill.png"
-              alt="Beam pill on hover, showing previous, play, next and open-panel controls"
-              width={136}
-              height={42}
-              className="mx-auto h-[84px] w-auto"
+          <div className="showcase-fit mt-8">
+            <iframe
+              src="/demo/index.html?instance=up-close&open=1&sticky=1"
+              title="beam panel, live — music, files, timer and calendar tabs"
+              className="showcase-frame"
               loading="lazy"
             />
-            <figcaption className="mt-3 text-center text-[13px] text-muted">
-              The bar on hover — 94×30 grows to 128 and swaps the title for controls.
-            </figcaption>
-          </figure>
-
-          <div className="mt-8 grid gap-6 sm:grid-cols-3">
-            <figure>
-              <Image
-                src="/screens/music.png"
-                alt="Music panel with cover art, track title, progress bar and transport controls"
-                width={452}
-                height={316}
-                className="w-full"
-                loading="lazy"
-              />
-              <figcaption className="mt-3 text-[13px] text-muted">
-                <span className="font-medium text-ink">music</span> — the live track, real progress, real controls.
-              </figcaption>
-            </figure>
-            <figure>
-              <Image
-                src="/screens/files.png"
-                alt="Files panel drop area with the Beam star and an Add files button"
-                width={452}
-                height={316}
-                className="w-full"
-                loading="lazy"
-              />
-              <figcaption className="mt-3 text-[13px] text-muted">
-                <span className="font-medium text-ink">files</span> — drop files on the bar; they clear when it closes.
-              </figcaption>
-            </figure>
-            <figure>
-              <Image
-                src="/screens/timer.png"
-                alt="Timer panel counting down 4:59 with a cancel button"
-                width={452}
-                height={316}
-                className="w-full"
-                loading="lazy"
-              />
-              <figcaption className="mt-3 text-[13px] text-muted">
-                <span className="font-medium text-ink">timer</span> — a deadline countdown that keeps time through sleep.
-              </figcaption>
-            </figure>
           </div>
+          <p className="mt-4 text-center text-[13px] text-muted">
+            One 452×316 window: music, files, timer, calendar.
+          </p>
         </section>
 
         <section id="features" className="border-t border-hairline pt-14">
@@ -248,8 +218,7 @@ export default function HomePage() {
           </div>
 
           <p className="py-8 text-[15px] leading-relaxed text-muted">
-            That&apos;s the whole app. It rests at 94×30 pixels, makes zero network requests, sits around 99 MB of
-            memory, and opens with Alt + Space.
+            That&apos;s the whole app. It rests at 94×30 pixels, opens with Alt + Space, and makes no network requests.
           </p>
         </section>
 
@@ -257,7 +226,7 @@ export default function HomePage() {
           <Image src="/mascot.svg" alt="" width={40} height={40} className="star-logo" />
           <h2 className="mt-5 text-2xl font-semibold sm:text-[28px]">get beam.</h2>
           <p className="mt-3 max-w-md text-[15px] leading-relaxed text-muted">
-            A single portable exe for Windows 10 and 11. No installer, no sign-in. Download it, run it, pin it.
+            One portable exe for Windows 11. No installer, no sign-in — run it, pin it, and it stays out of the way.
           </p>
 
           <div className="mt-7 flex flex-wrap items-center gap-3">
@@ -281,7 +250,7 @@ export default function HomePage() {
           <dl className="mt-8 grid grid-cols-2 gap-x-8 gap-y-4 border-t border-hairline pt-6 text-[13px] sm:grid-cols-4">
             <div>
               <dt className="text-muted">System</dt>
-              <dd className="mt-1">Windows 10 / 11</dd>
+              <dd className="mt-1">Windows 11</dd>
             </div>
             <div>
               <dt className="text-muted">Install</dt>
@@ -298,12 +267,16 @@ export default function HomePage() {
           </dl>
 
           <p className="mt-6 max-w-md text-[13px] leading-relaxed text-muted">
-            The preview build is unsigned, so Windows SmartScreen may ask before it runs. Found a bug?{' '}
+            The preview is unsigned, so Windows may ask once — the{' '}
+            <Link href="/faq" prefetch={false} className="underline decoration-hairline underline-offset-2 hover:text-ink">
+              FAQ
+            </Link>{' '}
+            has the steps. Found a bug?{' '}
             <a
               href={`${REPO}/issues`}
               target="_blank"
               rel="noopener noreferrer"
-              className="text-muted underline decoration-hairline underline-offset-2 hover:text-ink"
+              className="underline decoration-hairline underline-offset-2 hover:text-ink"
             >
               Open an issue
             </a>
@@ -319,9 +292,9 @@ export default function HomePage() {
             <span className="font-semibold text-ink">beam.</span>
             <span>© 2026 Karan · built in public</span>
           </div>
-          <div className="flex items-center gap-5">
+          <div className="flex flex-wrap items-center gap-x-5 gap-y-2">
             <a href={REPO} target="_blank" rel="noopener noreferrer" className="py-1 transition-colors hover:text-ink">
-              GitHub
+              github
             </a>
             <a
               href={`${REPO}/blob/main/JOURNAL.md`}
@@ -329,15 +302,21 @@ export default function HomePage() {
               rel="noopener noreferrer"
               className="py-1 transition-colors hover:text-ink"
             >
-              Journal
+              journal
             </a>
+            <Link href="/changelog" prefetch={false} className="py-1 transition-colors hover:text-ink">
+              changelog
+            </Link>
+            <Link href="/faq" prefetch={false} className="py-1 transition-colors hover:text-ink">
+              faq
+            </Link>
             <a
               href={`${REPO}/blob/main/DESIGN.md`}
               target="_blank"
               rel="noopener noreferrer"
               className="py-1 transition-colors hover:text-ink"
             >
-              Design
+              design
             </a>
           </div>
         </div>
