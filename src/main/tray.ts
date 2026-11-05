@@ -1,5 +1,5 @@
-import { Menu, Tray, app, nativeImage } from 'electron';
-import { join } from 'node:path';
+import { Menu, Tray, nativeImage } from 'electron';
+import { trayIconPath } from './paths';
 
 export function createTray(
   onSettings: () => void,
@@ -8,7 +8,7 @@ export function createTray(
   onHide: () => void,
   onQuit: () => void
 ): Tray {
-  const icon = nativeImage.createFromPath(join(app.getAppPath(), 'assets', 'tray.ico'));
+  const icon = nativeImage.createFromPath(trayIconPath());
   const tray = new Tray(icon);
   tray.setToolTip('Beam');
   tray.on('click', onToggle);

@@ -1,26 +1,347 @@
-import React from 'react';
-import { Navbar } from '@/components/Navbar';
-import { Hero } from '@/components/Hero';
-import { CapsuleMechanics } from '@/components/CapsuleMechanics';
-import { FeaturesGrid } from '@/components/FeaturesGrid';
-import { PerformanceStrip } from '@/components/PerformanceStrip';
-import { Footer } from '@/components/Footer';
-import { OriginalBeam } from '@/components/OriginalBeam';
+'use client';
+
+import Image from 'next/image';
+import { useEffect, useState } from 'react';
+import { ArrowUpRight, CalendarDays, FolderOpen, Music2, Timer } from 'lucide-react';
+
+const REPO = 'https://github.com/kwakhare5/beam';
+const RELEASES = `${REPO}/releases/latest`;
+
+const FEATURES = [
+  {
+    icon: Music2,
+    title: 'music',
+    body: 'The live track from any app Windows knows about. Previous, play, next — without leaving what you were doing.',
+    chip: 'bg-blue-tint',
+    ink: 'text-blue-bright'
+  },
+  {
+    icon: FolderOpen,
+    title: 'files',
+    body: 'Drop files on the bar to keep them close. Copy them all at once, or drag one straight into Explorer.',
+    chip: 'bg-orange-tint',
+    ink: 'text-orange'
+  },
+  {
+    icon: Timer,
+    title: 'timer',
+    body: 'A countdown that keeps real time through sleep. Pick 5, 10, 25 minutes, or set your own.',
+    chip: 'bg-green-tint',
+    ink: 'text-green'
+  },
+  {
+    icon: CalendarDays,
+    title: 'calendar',
+    body: 'This month at a glance. Move between months, jump back to today, then get on with it.',
+    chip: 'bg-purple-tint',
+    ink: 'text-purple'
+  }
+];
+
+function DemoFrame() {
+  const [open, setOpen] = useState(false);
+
+  useEffect(() => {
+    const onMessage = (event: MessageEvent) => {
+      if (event.origin !== window.location.origin) return;
+      const data = event.data as { source?: string; open?: boolean } | null;
+      if (!data || data.source !== 'beam-demo' || typeof data.open !== 'boolean') return;
+      setOpen(data.open);
+    };
+    window.addEventListener('message', onMessage);
+    return () => window.removeEventListener('message', onMessage);
+  }, []);
+
+  return (
+    <div className="demo-stage" data-open={open}>
+      <iframe
+        src="/demo/index.html"
+        title="beam — live app demo"
+        className="demo-frame"
+        data-open={open}
+        loading="lazy"
+      />
+    </div>
+  );
+}
 
 export default function HomePage() {
   return (
-    <div className="relative min-h-screen bg-bg text-ink overflow-x-hidden selection:bg-[#ffaa00]/30 selection:text-black">
-      <Navbar />
-      <main>
-        <Hero />
-        <CapsuleMechanics />
-        <FeaturesGrid />
-        <PerformanceStrip />
-      </main>
-      <Footer />
+    <div className="min-h-screen">
+      <header className="sticky top-0 z-50 border-b border-hairline bg-paper">
+        <nav className="mx-auto flex h-14 w-full max-w-4xl items-center justify-between px-5">
+          <a href="#" className="flex items-center gap-2 text-[15px] font-semibold tracking-tight">
+            <Image src="/mascot.svg" alt="" width={20} height={20} className="star-logo" priority />
+            beam.
+          </a>
 
-      {/* Real Original Desktop Beam Component (Floating at bottom-center of screen) */}
-      <OriginalBeam />
+          <div className="flex items-center gap-5 text-sm text-muted">
+            <a href="#features" className="hidden transition-colors hover:text-ink sm:inline">
+              features
+            </a>
+            <a href="#demo" className="transition-colors hover:text-ink">
+              demo
+            </a>
+            <a
+              href={REPO}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="flex items-center gap-1 transition-colors hover:text-ink"
+            >
+              github
+              <ArrowUpRight className="h-3.5 w-3.5" strokeWidth={1.75} />
+            </a>
+            <a
+              href={RELEASES}
+              className="rounded-lg bg-ink px-3 py-1.5 text-sm font-medium text-white transition-colors hover:bg-black"
+            >
+              download
+            </a>
+          </div>
+        </nav>
+      </header>
+
+      <main className="mx-auto w-full max-w-4xl px-5">
+        <section className="pb-10 pt-16 sm:pt-20">
+          <p className="text-[15px] text-muted">A Windows 11 app that lives above your taskbar.</p>
+
+          <h1 className="relative mt-4 inline-block text-[clamp(2.2rem,5.6vw,3.9rem)] font-semibold leading-[1]">
+            meet beam.
+            <Image
+              src="/mascot.svg"
+              alt=""
+              width={56}
+              height={56}
+              className="star-logo absolute -right-1 -top-4 h-10 w-10 rotate-12 sm:-right-2 sm:-top-6 sm:h-14 sm:w-14"
+              priority
+            />
+          </h1>
+
+          <p className="mt-3 text-[20px] font-medium text-ink sm:text-[22px]">music, files, time — all in one place.</p>
+
+          <p className="mt-2 font-hand text-2xl text-muted sm:text-3xl">no windows to manage.</p>
+
+          <p className="mt-6 max-w-xl text-base leading-relaxed text-muted">
+            Control what&apos;s playing, keep files close, start a countdown, check the month. No account, no cloud,
+            nothing else running.
+          </p>
+
+          <div className="mt-8 flex flex-wrap items-center gap-3">
+            <a
+              href={RELEASES}
+              className="inline-flex items-center gap-2 rounded-lg bg-ink px-4 py-2.5 text-sm font-medium text-white transition-colors hover:bg-black"
+            >
+              <svg viewBox="0 0 24 24" className="h-4 w-4" fill="none" stroke="currentColor" strokeWidth="1.8" aria-hidden="true">
+                <path d="M12 3v12m0 0-4-4m4 4 4-4" strokeLinecap="round" strokeLinejoin="round" />
+                <path d="M5 19h14" strokeLinecap="round" />
+              </svg>
+              Download for Windows
+            </a>
+            <a
+              href="#demo"
+              className="rounded-lg border border-hairline bg-surface px-4 py-2.5 text-sm font-medium transition-colors hover:bg-hover"
+            >
+              Try it below
+            </a>
+            <span className="text-[13px] text-muted">v0.1.0 early preview · free</span>
+          </div>
+        </section>
+
+        <section id="demo" className="pb-14">
+          <div className="mb-1 flex items-center justify-center gap-2">
+            <p className="font-hand text-2xl text-muted">go on, click the star.</p>
+            <Image src="/hand-arrow.svg" alt="" width={54} height={32} className="mt-2 -rotate-[18deg] opacity-80" />
+          </div>
+          <div className="demo-fit">
+            <DemoFrame />
+          </div>
+          <p className="mt-4 text-center text-[13px] text-muted">
+            The real app renderer with two free demo tracks — Arulo and NverAvetyanMusic. Drag real files onto the bar;
+            copy and drag-out need the app itself.
+          </p>
+        </section>
+
+        <section id="screens" className="border-t border-hairline py-14">
+          <h2 className="text-2xl font-semibold sm:text-[28px]">up close.</h2>
+          <p className="mt-3 max-w-lg text-[15px] leading-relaxed text-muted">
+            Real captures from the same renderer — no mockups.
+          </p>
+
+          <figure className="mt-8">
+            <Image
+              src="/screens/pill.png"
+              alt="Beam pill on hover, showing previous, play, next and open-panel controls"
+              width={136}
+              height={42}
+              className="mx-auto h-[84px] w-auto"
+              loading="lazy"
+            />
+            <figcaption className="mt-3 text-center text-[13px] text-muted">
+              The bar on hover — 94×30 grows to 128 and swaps the title for controls.
+            </figcaption>
+          </figure>
+
+          <div className="mt-8 grid gap-6 sm:grid-cols-3">
+            <figure>
+              <Image
+                src="/screens/music.png"
+                alt="Music panel with cover art, track title, progress bar and transport controls"
+                width={452}
+                height={316}
+                className="w-full"
+                loading="lazy"
+              />
+              <figcaption className="mt-3 text-[13px] text-muted">
+                <span className="font-medium text-ink">music</span> — the live track, real progress, real controls.
+              </figcaption>
+            </figure>
+            <figure>
+              <Image
+                src="/screens/files.png"
+                alt="Files panel drop area with the Beam star and an Add files button"
+                width={452}
+                height={316}
+                className="w-full"
+                loading="lazy"
+              />
+              <figcaption className="mt-3 text-[13px] text-muted">
+                <span className="font-medium text-ink">files</span> — drop files on the bar; they clear when it closes.
+              </figcaption>
+            </figure>
+            <figure>
+              <Image
+                src="/screens/timer.png"
+                alt="Timer panel counting down 4:59 with a cancel button"
+                width={452}
+                height={316}
+                className="w-full"
+                loading="lazy"
+              />
+              <figcaption className="mt-3 text-[13px] text-muted">
+                <span className="font-medium text-ink">timer</span> — a deadline countdown that keeps time through sleep.
+              </figcaption>
+            </figure>
+          </div>
+        </section>
+
+        <section id="features" className="border-t border-hairline pt-14">
+          <h2 className="text-2xl font-semibold sm:text-[28px]">what&apos;s inside.</h2>
+
+          <div className="mt-4">
+            {FEATURES.map((feature) => {
+              const Icon = feature.icon;
+              return (
+                <div key={feature.title} className="flex gap-4 border-b border-hairline py-6 last:border-b-0">
+                  <span
+                    className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-full ${feature.chip}`}
+                    aria-hidden="true"
+                  >
+                    <Icon className={`h-4 w-4 ${feature.ink}`} strokeWidth={1.9} />
+                  </span>
+                  <div>
+                    <h3 className="text-[16px] font-semibold">{feature.title}</h3>
+                    <p className="mt-1 max-w-lg text-[15px] leading-relaxed text-muted">{feature.body}</p>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+
+          <p className="py-8 text-[15px] leading-relaxed text-muted">
+            That&apos;s the whole app. It rests at 94×30 pixels, makes zero network requests, sits around 99 MB of
+            memory, and opens with Alt + Space.
+          </p>
+        </section>
+
+        <section id="download" className="border-t border-hairline py-16">
+          <Image src="/mascot.svg" alt="" width={40} height={40} className="star-logo" />
+          <h2 className="mt-5 text-2xl font-semibold sm:text-[28px]">get beam.</h2>
+          <p className="mt-3 max-w-md text-[15px] leading-relaxed text-muted">
+            A single portable exe for Windows 10 and 11. No installer, no sign-in. Download it, run it, pin it.
+          </p>
+
+          <div className="mt-7 flex flex-wrap items-center gap-3">
+            <a
+              href={RELEASES}
+              className="inline-flex items-center gap-2 rounded-lg bg-ink px-4 py-2.5 text-sm font-medium text-white transition-colors hover:bg-black"
+            >
+              Download for Windows
+            </a>
+            <a
+              href={`${REPO}#commands`}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="inline-flex items-center gap-1.5 rounded-lg border border-hairline bg-surface px-4 py-2.5 text-sm font-medium transition-colors hover:bg-hover"
+            >
+              Build from source
+              <ArrowUpRight className="h-3.5 w-3.5" strokeWidth={1.75} />
+            </a>
+          </div>
+
+          <dl className="mt-8 grid grid-cols-2 gap-x-8 gap-y-4 border-t border-hairline pt-6 text-[13px] sm:grid-cols-4">
+            <div>
+              <dt className="text-muted">System</dt>
+              <dd className="mt-1">Windows 10 / 11</dd>
+            </div>
+            <div>
+              <dt className="text-muted">Install</dt>
+              <dd className="mt-1">Portable exe</dd>
+            </div>
+            <div>
+              <dt className="text-muted">Shortcut</dt>
+              <dd className="mt-1">Alt + Space</dd>
+            </div>
+            <div>
+              <dt className="text-muted">Build</dt>
+              <dd className="mt-1">Unsigned preview</dd>
+            </div>
+          </dl>
+
+          <p className="mt-6 max-w-md text-[13px] leading-relaxed text-muted">
+            The preview build is unsigned, so Windows SmartScreen may ask before it runs. Found a bug?{' '}
+            <a
+              href={`${REPO}/issues`}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="text-muted underline decoration-hairline underline-offset-2 hover:text-ink"
+            >
+              Open an issue
+            </a>
+            .
+          </p>
+        </section>
+      </main>
+
+      <footer className="border-t border-hairline">
+        <div className="mx-auto flex w-full max-w-4xl flex-col gap-4 px-5 py-8 text-[13px] text-muted sm:flex-row sm:items-center sm:justify-between">
+          <div className="flex items-center gap-2">
+            <Image src="/mascot.svg" alt="" width={14} height={14} className="star-logo" />
+            <span className="font-semibold text-ink">beam.</span>
+            <span>© 2026 Karan · built in public</span>
+          </div>
+          <div className="flex items-center gap-5">
+            <a href={REPO} target="_blank" rel="noopener noreferrer" className="py-1 transition-colors hover:text-ink">
+              GitHub
+            </a>
+            <a
+              href={`${REPO}/blob/main/JOURNAL.md`}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="py-1 transition-colors hover:text-ink"
+            >
+              Journal
+            </a>
+            <a
+              href={`${REPO}/blob/main/DESIGN.md`}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="py-1 transition-colors hover:text-ink"
+            >
+              Design
+            </a>
+          </div>
+        </div>
+      </footer>
     </div>
   );
 }
