@@ -5,6 +5,7 @@ import { basename, join } from 'node:path';
 import { Bridge, type HelperEvent } from './bridge';
 import { IPC, type AddResult, type CopyResult, type MusicState, type ShelfFile } from '../shared/ipc';
 import { getSettingsPath, loadSettings, saveSettings, type BeamSettings, type SavedPosition } from './settings';
+import { helperPath, trayIconPath } from './paths';
 import { createTray } from './tray';
 
 const WINDOW_WIDTH = 136;
@@ -862,7 +863,7 @@ if (!gotLock) {
     void applyMusic(music);
   };
   const bridge = new Bridge(
-    join(app.getAppPath(), 'native', 'BeamBridge', 'dist', 'BeamBridge.exe'),
+    helperPath(),
     onHelperEvent,
     () => {
       helperOk = false;
@@ -1241,7 +1242,7 @@ if (!gotLock) {
           console.error(`[files] drag rejected missing=${missing.length}`);
           return;
         }
-        const icon = nativeImage.createFromPath(join(app.getAppPath(), 'assets', 'tray.ico'));
+        const icon = nativeImage.createFromPath(trayIconPath());
         console.log(`[files] drag=${dragPaths.length} ok=true`);
         event.sender.startDrag({ file: first, files: dragPaths, icon });
       });

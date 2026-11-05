@@ -5,5 +5,10 @@ directories:
 files:
   - dist/**/*
   - package.json
+extraResources:
+  - from: native/BeamBridge/dist/BeamBridge.exe
+    to: BeamBridge.exe
+  - from: assets/tray.ico
+    to: tray.ico
 win:
   target: portable

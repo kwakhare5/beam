@@ -132,25 +132,35 @@ Light overrides every color token in the `[data-theme='light']` block of `tokens
 > The marketing website is post-v1 and not part of the desktop app runtime or build. Never ship assets from `showcase/`.
 
 ## 8. Marketing Website Direction & Brand Identity
-- **Design Theme:** Notion-like warm light gray canvas (`#f5f5f5`), pure white cards (`#ffffff`), and crisp 0.5px hairline borders.
-- **Editorial Tone:** Calm lowercase copy punctuated with periods (`meet beam.`, `one bar for everything.`).
-- **Hand-Drawn Accent Font:** `Caveat` (weight 600) for notes, arrow callouts, and doodle captions (website only; never in desktop app).
+- **Design Theme:** Notion-like warm paper canvas (`#f7f7f5`) with white surfaces and 1px hairline dividers. No cards on the landing page; sections sit on the paper and separate by hairlines.
+- **Type:** Inter (self-hosted variable, `site/public/fonts/InterVariable.woff2`) for all UI and body text, including numerals. Caveat (self-hosted, `site/public/fonts/Caveat.woff2`) for exactly two hand-drawn accents per page: the hero aside and the demo hint. No system display faces and no mono.
+- **Editorial Tone:** Calm lowercase copy punctuated with periods; short lines, no feature-card grids, no stat blocks.
+- **Real UI demo:** the landing page embeds the actual app renderer. `site/demo/main.ts` imports `src/renderer/ui` plus `src/renderer/styles.css`; Vite builds it into `site/public/demo`, and the page iframes it at real sizes (136×42 closed, 452×316 open) with same-origin postMessage resizing and a collapsed stage when closed. Never rebuild the demo as hand-written markup.
+- **Demo audio:** two free-licensed local MP3s — Trapanomics (Arulo, Mixkit Free Licence) and Dark Cyberpunk (NverAvetyanMusic, Pixabay Content Licence) — played by a real `HTMLAudioElement` driving the pill and panel progress. Covers are generated demo art. No YouTube, no streaming, no external requests; credits live in `site/demo/public/CREDITS.txt`.
+- **Hero lockup:** the star sits on the tail of "meet beam." as an overlapping superscript, not as a separate icon. Copy is "meet beam." / "music, files, time — all in one place." / "no windows to manage." It bobs on a 4.6s loop and spring-spins on hover; the demo hint carries a thin hand-drawn arrow (`site/public/hand-arrow.svg`) aimed at the demo. Both respect reduced motion. The navbar is sticky on the paper background.
+- **Type scale:** hero `clamp(2.2rem, 5.6vw, 3.9rem)` (62.4px at 1440); section h2 24px mobile / 28px desktop; hero subline 20/22px; body 16px; feature body and proof 15px; feature titles 16px; captions, footer and micro copy 13px; Inter only, tabular numerals for times.
+- **Download path:** the primary CTA points at GitHub `releases/latest`; build-from-source is secondary. A four-item strip (System / Install / Shortcut / Build) states Windows 10–11, portable exe, Alt + Space, unsigned preview. Packaging ships `BeamBridge.exe` and `tray.ico` through electron-builder `extraResources` and resolves them from `process.resourcesPath` when packaged.
+- **Screenshot gallery:** the `up close.` section uses four real captures in `site/public/screens` — the hover pill at 3× and the music, files and timer panels at 2× — on the paper background with 13px captions. Never substitute mockups or hand-built replicas.
+- **Small pages:** a branded `app/not-found.tsx` (`nothing here.`) is generated as `404.html`. The Files demo accepts real OS file drops (real names and sizes); copy and drag-out remain app-only.
+- **Hint:** “go on, click the star.” and the hand-drawn arrow share one line; the arrow points into the demo stage.
 
 ### Marketing Web Tokens
 | Token | Hex / Value | Purpose |
 |---|---|---|
-| `--bg` | `#f5f5f5` | Page background canvas (warm light gray) |
-| `--surface` | `#ffffff` | Cards, floating nav pill, pricing cards |
-| `--fill` | `#e9e8ea` | Sub-wells, preview tracks, recessed stages |
-| `--track` | `#d4d4d4` | Progress tracks, slider backdrops |
-| `--side` | `#f2f2f4` | Sidebar and nested panel background |
-| `--k-line` | `rgba(0, 0, 0, 0.08)` | 0.5px hairline borders |
-| `--ink` | `#000000` | Primary text and headings |
-| `--ink-2` | `rgba(0, 0, 0, 0.64)` | Subtitles, lede paragraphs, secondary copy |
-| `--ink-3` | `rgba(0, 0, 0, 0.56)` | Captions, timestamps, disabled indicators |
-| `--sel` | `#0a84ff` | Primary action / selection blue (Apple system blue) |
-| `--folder` | `#5bb0ff` | File shelf folder accents |
-| `--play` | `#ffd23f` | Timer progress / warning yellow |
+| `--paper` | `#f7f7f5` | Page background canvas |
+| `--surface` | `#ffffff` | Buttons, inputs, raised controls |
+| `--ink` | `#191918` | Primary text and headings |
+| `--muted` | `#5f5c56` | Body copy, captions, secondary links |
+| `--hairline` | `#e9e9e7` | 1px dividers and control borders |
+| `--hover` | `#f1f1ef` | Hover fill for ghost controls |
+| `--gold` | `#ffaa00` | Brand accent (matches the app's `--primary`) |
+| `--blue` | `#2383e2` (tint `#d3e5ef`) | Music icon only |
+| `--orange` | `#d9730d` (tint `#fadec9`) | Files icon |
+| `--green` | `#448361` (tint `#dbeddb`) | Timer icon |
+| `--purple` | `#9065b0` (tint `#e8deee`) | Calendar icon |
+| `--red` | `#d44c47` | Error text only |
+
+Notion tag colours are limited to the four tinted feature icon chips, never body text. Primary buttons are ink with white text; blue is not a primary colour. Text selection is a soft gold. The star bobs and tilts on a 4.6s loop and spins on hover; both are disabled under `prefers-reduced-motion`.
 
 ## 9. Mascot Suite & Vector Assets
 Governed by installed skills [`svg-logo-designer`](file:///d:/Beam/.agents/skills/svg-logo-designer/SKILL.md) and [`illustration-style`](file:///d:/Beam/.agents/skills/illustration-style/SKILL.md):

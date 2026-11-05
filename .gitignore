@@ -3,6 +3,7 @@ dist/
 out/
 .next/
 site/out/
+site/public/demo/
 release/
 native/**/bin/
 native/**/obj/
@@ -12,3 +13,6 @@ native/**/obj/
 *.log
 *.tsbuildinfo
 .freebuff/
+
+# local copyrighted rips — never commit
+/*.mp3

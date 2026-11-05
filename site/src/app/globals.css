@@ -1,42 +1,192 @@
-@import url('https://fonts.googleapis.com/css2?family=Caveat:wght@600&family=Inter:wght@400;500;600;700&display=swap');
+@import "tailwindcss";
 
-@tailwind base;
-@tailwind components;
-@tailwind utilities;
-
-:root {
-  --bg: #f5f5f5;
-  --surface: #ffffff;
-  --fill: #e9e8ea;
-  --track: #d4d4d4;
-  --side: #f2f2f4;
-  --k-line: rgba(0, 0, 0, 0.08);
-  --ink: #000000;
-  --ink-2: rgba(0, 0, 0, 0.64);
-  --ink-3: rgba(0, 0, 0, 0.56);
-  --sel: #0a84ff;
-  --folder: #5bb0ff;
-  --play: #ffd23f;
-  --gold: #FFAA00;
+@font-face {
+  font-family: 'Inter';
+  src: url('/fonts/InterVariable.woff2') format('woff2-variations');
+  font-weight: 100 900;
+  font-style: normal;
+  font-display: swap;
 }
 
-body {
-  background-color: var(--bg);
-  color: var(--ink);
-  font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
-  -webkit-font-smoothing: antialiased;
-  -moz-osx-font-smoothing: grayscale;
+@font-face {
+  font-family: 'Caveat';
+  src: url('/fonts/Caveat.woff2') format('woff2');
+  font-weight: 400 700;
+  font-style: normal;
+  font-display: swap;
 }
 
-.font-hand {
-  font-family: 'Caveat', cursive;
+@theme {
+  --color-paper: #f7f7f5;
+  --color-surface: #ffffff;
+  --color-ink: #191918;
+  --color-muted: #5f5c56;
+  --color-hairline: #e9e9e7;
+  --color-hover: #f1f1ef;
+  --color-gold: #ffaa00;
+
+  --color-blue-bright: #2383e2;
+  --color-blue-tint: #d3e5ef;
+  --color-orange: #d9730d;
+  --color-orange-tint: #fadec9;
+  --color-green: #448361;
+  --color-green-tint: #dbeddb;
+  --color-purple: #9065b0;
+  --color-purple-tint: #e8deee;
+  --color-red: #d44c47;
+
+  --font-sans: 'Inter', ui-sans-serif, system-ui, sans-serif;
+  --font-hand: 'Caveat', 'Segoe Script', cursive;
 }
 
-/* Hairline border utility */
-.border-hairline {
-  border: 1px solid rgba(0, 0, 0, 0.08);
+@layer base {
+  html {
+    scroll-behavior: smooth;
+    overflow-x: clip;
+  }
+
+  body {
+    background-color: var(--color-paper);
+    color: var(--color-ink);
+    font-family: var(--font-sans);
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
+
+  ::selection {
+    background: rgba(255, 170, 0, 0.3);
+    color: #37352f;
+  }
+
+  h1,
+  h2,
+  h3 {
+    letter-spacing: -0.02em;
+    text-wrap: balance;
+  }
+
+  section[id] {
+    scroll-margin-top: 88px;
+  }
+
+  a:focus-visible,
+  button:focus-visible {
+    outline: 2px solid var(--color-blue-bright);
+    outline-offset: 3px;
+    border-radius: 4px;
+  }
 }
 
-.dark-border-hairline {
-  border: 1px solid rgba(255, 255, 255, 0.08);
+/* ---------- animated logo ---------- */
+
+.star-logo {
+  animation: star-bob 4.6s ease-in-out infinite;
+  transform-origin: 50% 55%;
+}
+
+a:hover > .star-logo {
+  animation: star-spin 620ms cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+@keyframes star-bob {
+  0%,
+  100% {
+    transform: translateY(0) rotate(0deg) scale(1);
+  }
+  18% {
+    transform: translateY(-3px) rotate(-11deg) scale(1.07);
+  }
+  44% {
+    transform: translateY(1px) rotate(9deg) scale(1);
+  }
+  66% {
+    transform: translateY(-2px) rotate(-4deg) scale(1.03);
+  }
+  82% {
+    transform: translateY(0) rotate(2deg) scale(1);
+  }
+}
+
+@keyframes star-spin {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .star-logo,
+  a:hover > .star-logo {
+    animation: none;
+  }
+}
+
+/* ---------- real app demo ---------- */
+
+.demo-fit {
+  display: flex;
+  justify-content: center;
+  width: 100%;
+}
+
+.demo-stage {
+  position: relative;
+  width: 452px;
+  height: 72px;
+  flex: none;
+  transition: height 180ms cubic-bezier(0.23, 1, 0.32, 1);
+}
+
+.demo-stage[data-open='true'] {
+  height: 316px;
+}
+
+.demo-frame {
+  position: absolute;
+  left: 50%;
+  bottom: 0;
+  width: 136px;
+  height: 42px;
+  transform: translateX(-50%);
+  border: 0;
+  background: transparent;
+  color-scheme: dark;
+  transition:
+    width 180ms cubic-bezier(0.23, 1, 0.32, 1),
+    height 180ms cubic-bezier(0.23, 1, 0.32, 1);
+  transition-delay: 160ms;
+}
+
+.demo-frame[data-open='true'] {
+  width: 452px;
+  height: 316px;
+  transition-delay: 0ms;
+}
+
+@media (max-width: 520px) {
+  .demo-fit {
+    zoom: 0.8;
+  }
+}
+
+@media (max-width: 420px) {
+  .demo-fit {
+    zoom: 0.74;
+  }
+}
+
+@media (max-width: 360px) {
+  .demo-fit {
+    zoom: 0.66;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .demo-frame,
+  .demo-stage {
+    transition: none;
+    transition-delay: 0ms;
+  }
 }
