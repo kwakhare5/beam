@@ -1,5 +1,5 @@
 import Link from 'next/link';
-import { StarLogo } from './star';
+import { StarLogo } from '../components/brand';
 
 export default function NotFound() {
   return (

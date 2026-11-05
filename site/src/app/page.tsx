@@ -1,10 +1,9 @@
 'use client';
 
 import Link from 'next/link';
-import { useEffect, useState } from 'react';
 import { ArrowUpRight, CalendarDays, FolderOpen, Music2, Plus, Timer } from 'lucide-react';
-import { HandArrow } from './arrow';
-import { StarLogo } from './star';
+import { HandArrow, StarLogo } from '../components/brand';
+import { LiveDemo } from '../components/live-demo';
 
 const REPO = 'https://github.com/kwakhare5/beam';
 const RELEASES = `${REPO}/releases/latest`;
@@ -77,35 +76,6 @@ const FAQ = [
     answer: 'No. A browser cannot write to Explorer, so copy and drag-out wait for the Windows app.'
   }
 ];
-
-function DemoFrame() {
-  const [open, setOpen] = useState(false);
-
-  useEffect(() => {
-    const onMessage = (event: MessageEvent) => {
-      if (event.origin !== window.location.origin) return;
-      const data = event.data as { source?: string; instance?: string; open?: boolean } | null;
-      if (!data || data.source !== 'beam-demo' || data.instance !== 'hero' || typeof data.open !== 'boolean') return;
-      setOpen(data.open);
-    };
-    window.addEventListener('message', onMessage);
-    return () => window.removeEventListener('message', onMessage);
-  }, []);
-
-  return (
-    <div className="demo-fit" data-open={open}>
-      <div className="demo-stage" data-open={open}>
-        <iframe
-          src="/demo/index.html?instance=hero"
-          title="beam — live app demo"
-          className="demo-frame"
-          data-open={open}
-          loading="lazy"
-        />
-      </div>
-    </div>
-  );
-}
 
 export default function HomePage() {
   return (
@@ -194,7 +164,7 @@ export default function HomePage() {
             <HandArrow className="absolute left-[calc(50%+22px)] top-1 text-purple" />
           </div>
           <div className="demo-fit">
-            <DemoFrame />
+            <LiveDemo />
           </div>
           <p className="mt-4 text-center text-[13px] text-muted">
             The real app, running in this page. The music is two free tracks, and the Files tab takes real dropped files.

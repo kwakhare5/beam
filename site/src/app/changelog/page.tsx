@@ -1,6 +1,6 @@
 import type { Metadata } from 'next';
 import Link from 'next/link';
-import { StarLogo } from '../star';
+import { StarLogo } from '../../components/brand';
 
 const REPO = 'https://github.com/kwakhare5/beam';
 const RELEASES = `${REPO}/releases/latest`;
