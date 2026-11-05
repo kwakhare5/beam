@@ -1,9 +1,10 @@
 'use client';
 
-import Image from 'next/image';
 import Link from 'next/link';
 import { useEffect, useState } from 'react';
 import { ArrowUpRight, CalendarDays, FolderOpen, Music2, Timer } from 'lucide-react';
+import { HandArrow } from './arrow';
+import { StarLogo } from './star';
 
 const REPO = 'https://github.com/kwakhare5/beam';
 const RELEASES = `${REPO}/releases/latest`;
@@ -74,7 +75,7 @@ export default function HomePage() {
       <header className="sticky top-0 z-50 border-b border-hairline bg-paper">
         <nav className="mx-auto flex h-14 w-full max-w-4xl items-center justify-between px-4 sm:px-5">
           <a href="#" className="flex items-center gap-2 text-[15px] font-semibold tracking-tight">
-            <Image src="/mascot.svg" alt="" width={20} height={20} className="star-logo" priority />
+            <StarLogo size={20} />
             beam.
           </a>
 
@@ -113,19 +114,15 @@ export default function HomePage() {
 
           <h1 className="relative mt-4 inline-block text-[clamp(2.2rem,5.6vw,3.9rem)] font-semibold leading-[1]">
             meet beam.
-            <Image
-              src="/mascot.svg"
-              alt=""
-              width={56}
-              height={56}
-              className="star-logo absolute -right-1 -top-4 h-10 w-10 rotate-12 sm:-right-2 sm:-top-6 sm:h-14 sm:w-14"
-              priority
+            <StarLogo
+              size={56}
+              className="star-logo absolute -right-1 -top-4 h-10 w-10 sm:-right-2 sm:-top-6 sm:h-14 sm:w-14"
             />
           </h1>
 
           <p className="mt-3 text-[20px] font-medium text-ink sm:text-[22px]">music, files, time — all in one place.</p>
 
-          <p className="mt-2 font-hand text-2xl text-muted sm:text-3xl">no windows to manage.</p>
+          <p className="mt-2 font-hand text-2xl text-orange sm:text-3xl">no windows to manage.</p>
 
           <p className="mt-6 max-w-xl text-base leading-relaxed text-muted">
             Control what&apos;s playing, keep files close, start a countdown, check the month. One small bar, no account,
@@ -154,16 +151,9 @@ export default function HomePage() {
         </section>
 
         <section id="demo" className="pb-14">
-          <div className="mb-1 flex items-center justify-center gap-2">
-            <Image
-              src="/hand-arrow.svg"
-              alt=""
-              width={50}
-              height={44}
-              className="mt-4 opacity-80"
-              aria-hidden="true"
-            />
-            <p className="font-hand text-2xl text-muted">go on, click the star.</p>
+          <div className="mb-1 flex items-end justify-center gap-1">
+            <HandArrow className="mb-1 text-purple" />
+            <p className="font-hand text-2xl text-purple">go on, click the star.</p>
           </div>
           <div className="demo-fit">
             <DemoFrame />
@@ -223,7 +213,7 @@ export default function HomePage() {
         </section>
 
         <section id="download" className="border-t border-hairline py-16">
-          <Image src="/mascot.svg" alt="" width={40} height={40} className="star-logo" />
+          <StarLogo size={40} />
           <h2 className="mt-5 text-2xl font-semibold sm:text-[28px]">get beam.</h2>
           <p className="mt-3 max-w-md text-[15px] leading-relaxed text-muted">
             One portable exe for Windows 11. No installer, no sign-in — run it, pin it, and it stays out of the way.
@@ -288,7 +278,7 @@ export default function HomePage() {
       <footer className="border-t border-hairline">
         <div className="mx-auto flex w-full max-w-4xl flex-col gap-4 px-5 py-8 text-[13px] text-muted sm:flex-row sm:items-center sm:justify-between">
           <div className="flex items-center gap-2">
-            <Image src="/mascot.svg" alt="" width={14} height={14} className="star-logo" />
+            <StarLogo size={14} />
             <span className="font-semibold text-ink">beam.</span>
             <span>© 2026 Karan · built in public</span>
           </div>
