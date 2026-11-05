@@ -193,21 +193,6 @@ a:hover > .star-logo {
   width: 100%;
 }
 
-.showcase-fit {
-  display: flex;
-  justify-content: center;
-  width: 100%;
-}
-
-.showcase-frame {
-  width: 452px;
-  height: 316px;
-  flex: none;
-  border: 0;
-  background: transparent;
-  color-scheme: dark;
-}
-
 .demo-stage {
   position: relative;
   width: 452px;
@@ -247,22 +232,19 @@ a:hover > .star-logo {
     width: 136px;
   }
 
-  .demo-fit[data-open='true'],
-  .showcase-fit {
+  .demo-fit[data-open='true'] {
     zoom: 0.8;
   }
 }
 
 @media (max-width: 420px) {
-  .demo-fit[data-open='true'],
-  .showcase-fit {
+  .demo-fit[data-open='true'] {
     zoom: 0.74;
   }
 }
 
 @media (max-width: 360px) {
-  .demo-fit[data-open='true'],
-  .showcase-fit {
+  .demo-fit[data-open='true'] {
     zoom: 0.66;
   }
 }

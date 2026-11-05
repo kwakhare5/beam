@@ -21,8 +21,6 @@ if (!app) throw new Error('Beam demo needs #app');
 const base = import.meta.env.BASE_URL;
 const params = new URLSearchParams(window.location.search);
 const instance = params.get('instance') ?? 'demo';
-const sticky = params.get('sticky') === '1';
-const initialOpen = params.get('open') === '1';
 
 const TRACKS = [
   { title: 'Dark Cyberpunk', artist: 'NverAvetyanMusic', src: `${base}dark.mp3`, art: `${base}cover-dark-512.png` },
@@ -149,7 +147,7 @@ function notifyParent(open: boolean): void {
   parentWindow?.postMessage({ source: 'beam-demo', instance, open }, '*');
 }
 
-function openPanel(focusPanel = true): void {
+function openPanel(): void {
   if (opened) return;
   opened = true;
   activeTab = 'music';
@@ -157,13 +155,13 @@ function openPanel(focusPanel = true): void {
   void panelWrap.offsetWidth;
   requestAnimationFrame(() => {
     document.body.classList.add('is-open');
-    if (focusPanel) panelWrap.querySelector<HTMLElement>('.panel')?.focus({ preventScroll: true });
+    panelWrap.querySelector<HTMLElement>('.panel')?.focus({ preventScroll: true });
   });
   notifyParent(true);
 }
 
 function closePanel(): void {
-  if (!opened || sticky) return;
+  if (!opened) return;
   opened = false;
   document.body.classList.remove('is-open');
   document.body.classList.add('is-closing');
@@ -408,4 +406,3 @@ window.setInterval(() => {
 renderPill();
 renderPanel();
 notifyParent(false);
-if (initialOpen) openPanel(false);
