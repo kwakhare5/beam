@@ -189,9 +189,9 @@ export default function HomePage() {
         </section>
 
         <section id="demo" className="pb-14">
-          <div className="mb-1 flex items-end justify-center gap-2">
+          <div className="relative mb-8 flex justify-center">
             <p className="font-hand text-2xl text-purple">go on, click the star.</p>
-            <HandArrow className="-mb-1 text-purple" />
+            <HandArrow className="absolute left-[calc(50%+22px)] top-1 text-purple" />
           </div>
           <div className="demo-fit">
             <DemoFrame />
