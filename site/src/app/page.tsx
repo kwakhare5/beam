@@ -88,7 +88,7 @@ export default function HomePage() {
         <section id="demo" className="pb-14">
           <div className="mb-2 flex flex-col items-center">
             <p className="font-hand text-2xl text-purple">go on, click the star.</p>
-            <HandArrow className="mt-1 text-purple" />
+            <HandArrow className="pointer-events-none mt-1 translate-y-8 text-purple" />
           </div>
           <LiveDemo />
           <p className="mt-4 text-center text-[13px] text-muted">
