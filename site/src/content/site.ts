@@ -1,7 +1,6 @@
 import { CalendarDays, FolderOpen, Music2, Timer } from 'lucide-react';
 
 export const REPO = 'https://github.com/kwakhare5/beam';
-export const RELEASES = `${REPO}/releases/latest`;
 
 export const FEATURES = [
   {
@@ -47,7 +46,7 @@ export const FAQ = [
   {
     question: 'Windows says it’s unsafe. What now?',
     answer:
-      'The preview is unsigned, so SmartScreen warns once. Choose More info, then Run anyway. The full source is on GitHub.'
+      'When the build ships it will be unsigned, so SmartScreen will warn once. Choose More info, then Run anyway. The full source is on GitHub.'
   },
   {
     question: 'Alt + Space is already taken.',

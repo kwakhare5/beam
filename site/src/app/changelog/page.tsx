@@ -3,7 +3,6 @@ import Link from 'next/link';
 import { StarLogo } from '../../components/brand';
 
 const REPO = 'https://github.com/kwakhare5/beam';
-const RELEASES = `${REPO}/releases/latest`;
 
 export const metadata: Metadata = {
   title: 'changelog',
@@ -48,10 +47,10 @@ export default function ChangelogPage() {
               back to beam
             </Link>
             <a
-              href={RELEASES}
+              href="/#demo"
               className="rounded-lg bg-ink px-3 py-1.5 font-medium text-white transition-colors hover:bg-black sm:px-3.5"
             >
-              download
+              try the demo
             </a>
           </div>
         </nav>
