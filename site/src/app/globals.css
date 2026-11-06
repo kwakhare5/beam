@@ -243,6 +243,12 @@ a:hover > .star-logo {
 
 @media (max-width: 360px) {
   .demo-fit[data-open='true'] {
+    zoom: 0.72;
+  }
+}
+
+@media (max-width: 339px) {
+  .demo-fit[data-open='true'] {
     zoom: 0.66;
   }
 }

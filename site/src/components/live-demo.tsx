@@ -1,11 +1,12 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 
 const demoPath = process.env.NODE_ENV === 'development' ? '/demo/index.html' : '/demo';
 
 export function LiveDemo() {
   const [open, setOpen] = useState(false);
+  const stageRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     const onMessage = (event: MessageEvent) => {
@@ -18,9 +19,24 @@ export function LiveDemo() {
     return () => window.removeEventListener('message', onMessage);
   }, []);
 
+  useEffect(() => {
+    if (!open) return;
+    const id = window.setTimeout(() => {
+      const stage = stageRef.current;
+      if (!stage) return;
+      const rect = stage.getBoundingClientRect();
+      if (rect.bottom <= window.innerHeight - 16 && rect.top >= 72) return;
+      stage.scrollIntoView({
+        block: 'center',
+        behavior: window.matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth'
+      });
+    }, 240);
+    return () => window.clearTimeout(id);
+  }, [open]);
+
   return (
     <div className="demo-fit" data-open={open}>
-      <div className="demo-stage" data-open={open}>
+      <div className="demo-stage" data-open={open} ref={stageRef}>
         <iframe src={`${demoPath}?instance=hero`} title="beam — live app demo" className="demo-frame" data-open={open} loading="lazy" />
       </div>
     </div>

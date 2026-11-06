@@ -1,6 +1,6 @@
 import Link from 'next/link';
 import { ArrowUpRight, Plus } from 'lucide-react';
-import { FAQ, FEATURES, RELEASES, REPO } from '../content/site';
+import { FAQ, FEATURES, REPO } from '../content/site';
 import { HandArrow, StarLogo } from '../components/brand';
 import { LiveDemo } from '../components/live-demo';
 
@@ -15,7 +15,7 @@ export default function HomePage() {
           </a>
 
           <div className="flex items-center gap-3 text-[13px] text-muted sm:gap-5 sm:text-sm">
-            <a href="#features" className="transition-colors hover:text-ink">
+            <a href="#features" className="hidden transition-colors hover:text-ink min-[360px]:block">
               features
             </a>
             <a href="#demo" className="transition-colors hover:text-ink">
@@ -34,10 +34,10 @@ export default function HomePage() {
               <ArrowUpRight className="h-3.5 w-3.5" strokeWidth={1.75} />
             </a>
             <a
-              href={RELEASES}
+              href="#download"
               className="rounded-lg bg-ink px-3 py-1.5 font-medium text-white transition-colors hover:bg-black sm:px-3.5"
             >
-              download
+              get beam
             </a>
           </div>
         </nav>
@@ -66,22 +66,20 @@ export default function HomePage() {
 
           <div className="mt-8 flex flex-wrap items-center gap-3">
             <a
-              href={RELEASES}
-              className="inline-flex items-center gap-2 rounded-lg bg-ink px-4 py-2.5 text-sm font-medium text-white transition-colors hover:bg-black"
-            >
-              <svg viewBox="0 0 24 24" className="h-4 w-4" fill="none" stroke="currentColor" strokeWidth="1.8" aria-hidden="true">
-                <path d="M12 3v12m0 0-4-4m4 4 4-4" strokeLinecap="round" strokeLinejoin="round" />
-                <path d="M5 19h14" strokeLinecap="round" />
-              </svg>
-              Download for Windows
-            </a>
-            <a
               href="#demo"
-              className="rounded-lg border border-hairline bg-surface px-4 py-2.5 text-sm font-medium transition-colors hover:bg-hover"
+              className="inline-flex items-center gap-2 rounded-lg bg-ink px-4 py-2.5 text-sm font-medium text-white transition-colors hover:bg-black"
             >
               See it live
             </a>
-            <span className="text-[13px] text-muted">v0.1.0 early preview</span>
+            <a
+              href={`${REPO}#commands`}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="rounded-lg border border-hairline bg-surface px-4 py-2.5 text-sm font-medium transition-colors hover:bg-hover"
+            >
+              Build from source
+            </a>
+            <span className="text-[13px] text-muted">v0.1.0 preview · Windows build not published yet</span>
           </div>
         </section>
 
@@ -150,24 +148,24 @@ export default function HomePage() {
           <StarLogo size={40} />
           <h2 className="mt-5 text-2xl font-semibold sm:text-[28px]">get beam.</h2>
           <p className="mt-3 max-w-md text-[15px] leading-relaxed text-muted">
-            One portable exe for Windows 11. No installer, no sign-in — run it, pin it, and it stays out of the way.
+            The first Windows build is not published yet. Build it from source today, or try the live demo above.
           </p>
 
           <div className="mt-7 flex flex-wrap items-center gap-3">
             <a
-              href={RELEASES}
-              className="inline-flex items-center gap-2 rounded-lg bg-ink px-4 py-2.5 text-sm font-medium text-white transition-colors hover:bg-black"
-            >
-              Download for Windows
-            </a>
-            <a
               href={`${REPO}#commands`}
               target="_blank"
               rel="noopener noreferrer"
-              className="inline-flex items-center gap-1.5 rounded-lg border border-hairline bg-surface px-4 py-2.5 text-sm font-medium transition-colors hover:bg-hover"
+              className="inline-flex items-center gap-1.5 rounded-lg bg-ink px-4 py-2.5 text-sm font-medium text-white transition-colors hover:bg-black"
             >
               Build from source
               <ArrowUpRight className="h-3.5 w-3.5" strokeWidth={1.75} />
+            </a>
+            <a
+              href="#demo"
+              className="rounded-lg border border-hairline bg-surface px-4 py-2.5 text-sm font-medium transition-colors hover:bg-hover"
+            >
+              See it live
             </a>
           </div>
 
@@ -177,8 +175,8 @@ export default function HomePage() {
               <dd className="mt-1">Windows 11</dd>
             </div>
             <div>
-              <dt className="text-muted">Install</dt>
-              <dd className="mt-1">Portable exe</dd>
+              <dt className="text-muted">Status</dt>
+              <dd className="mt-1">Not published</dd>
             </div>
             <div>
               <dt className="text-muted">Shortcut</dt>
@@ -191,7 +189,7 @@ export default function HomePage() {
           </dl>
 
           <p className="mt-6 max-w-md text-[13px] leading-relaxed text-muted">
-            The preview is unsigned, so Windows may ask once — the{' '}
+            When the build ships it will be unsigned, so Windows may ask once — the{' '}
             <a href="#faq" className="underline decoration-hairline underline-offset-2 hover:text-ink">
               FAQ
             </a>{' '}
