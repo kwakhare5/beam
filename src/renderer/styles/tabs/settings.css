@@ -24,6 +24,10 @@
   color: var(--muted-foreground);
 }
 
+.setting .hint.error {
+  color: var(--destructive);
+}
+
 .stepper {
   display: flex;
   align-items: center;

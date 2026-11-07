@@ -3,7 +3,7 @@ import { statSync } from 'node:fs';
 import { join } from 'node:path';
 import { Bridge, type HelperEvent } from './bridge';
 import { BeamTimer } from './timer';
-import { IPC, type AddResult, type CopyResult, type ShelfFile, type TimerSnapshot } from '../shared/ipc';
+import { IPC, type AddResult, type CopyResult, type SettingsPatch, type SettingsResult, type SettingsSnapshot, type ShelfFile, type TimerSnapshot } from '../shared/ipc';
 import { getSettingsPath, loadSettings, saveSettings, type BeamSettings } from './settings';
 import { helperPath, trayIconPath } from './paths';
 import { createTray } from './tray';
@@ -19,7 +19,8 @@ import {
   WINDOW_WIDTH
 } from './geometry';
 import { MAX_SHELF, Shelf } from './shelf';
-import { registerHotkey } from './hotkey';
+import { currentHotkey, DEFAULT_HOTKEY, rebindHotkey, registerHotkey } from './hotkey';
+import { isStartupEnabled, setStartupEnabled } from './startup';
 import { MusicService, type MusicPayload } from './music';
 import { PanelController } from './panel';
 
@@ -73,9 +74,16 @@ if (!gotLock) {
   let fullscreenActive = false;
   const shelf = new Shelf();
   const panel = new PanelController(() => win, () => pillPosition, () => shelf.rows(), applyWindowShape);
-  const openPanel = (): void => panel.show();
+  const openPanel = (tab?: 'settings'): void => panel.show(tab);
   const closePanel = (): void => panel.hide();
-  let settings: BeamSettings = { version: 1, position: null };
+  let settings: BeamSettings = {
+    version: 1,
+    position: null,
+    startup: false,
+    shortcut: '',
+    volume: 60,
+    theme: 'dark'
+  };
   let pillPosition: Electron.Rectangle = {
     x: 0,
     y: 0,
@@ -86,6 +94,7 @@ if (!gotLock) {
   const panelTest = process.env.BEAM_PANEL_TEST === '1';
   const resetTest = process.env.BEAM_RESET_TEST === '1';
   const idleTest = process.env.BEAM_IDLE_TEST === '1';
+  const settingsTest = process.env.BEAM_SETTINGS_TEST ?? '';
   const fullscreenTest = process.env.BEAM_FULLSCREEN_TEST === '1';
   const dropTest = process.env.BEAM_DROP_TEST === '1';
   const copyTest = process.env.BEAM_COPY_TEST === '1';
@@ -285,7 +294,7 @@ if (!gotLock) {
         placeWindow(target, true);
         pillPosition = target.getBounds();
         setTimeout(() => {
-          if (target.isDestroyed()) return;
+          if (target.isDestroyed() || panel.open || windowDrag) return;
           placeWindow(target, false);
           pillPosition = target.getBounds();
         }, 500);
@@ -336,6 +345,9 @@ if (!gotLock) {
   app.whenReady().then(() => {
     settings = loadSettings();
     console.log(`[settings] path=${getSettingsPath()}`);
+    console.log(
+      `[settings] loaded theme=${settings.theme} volume=${settings.volume} shortcut=${settings.shortcut || 'default'} startup=${isStartupEnabled()}`
+    );
     const restoredBounds = savedPillBounds(settings.position);
     pillPosition = restoredBounds ?? anchorBounds();
 
@@ -356,6 +368,18 @@ if (!gotLock) {
     createWindow(restoredBounds !== null);
     if (win) {
       const window = win;
+      let settingsError = '';
+      const settingsSnapshot = (): SettingsSnapshot => ({
+        startup: isStartupEnabled(),
+        shortcut: currentHotkey() || settings.shortcut || DEFAULT_HOTKEY,
+        volume: settings.volume,
+        theme: settings.theme,
+        ...(settingsError ? { error: settingsError } : {})
+      });
+      const sendSettings = (): void => {
+        if (!window.isDestroyed()) window.webContents.send(IPC.settingsState, settingsSnapshot());
+      };
+      window.webContents.on('did-finish-load', sendSettings);
       const showPill = (source: string): void => {
         if (window.isDestroyed()) return;
         hiddenByFullscreen = false;
@@ -484,14 +508,19 @@ if (!gotLock) {
       };
 
       tray = createTray(
-        () => {},
+        () => openPanel('settings'),
         () => resetPosition(),
         () => trayToggle(),
         () => hideFromTray(),
         () => quitWithConfirm()
       );
       console.log('[tray] ready');
-      const hotkey = registerHotkey(trayToggle);
+      const hotkey = registerHotkey(trayToggle, settings.shortcut || DEFAULT_HOTKEY);
+      settings.startup = isStartupEnabled();
+      if (hotkey && hotkey !== settings.shortcut) {
+        settings.shortcut = hotkey;
+        saveSettings(settings);
+      }
       if (hotkey === 'Alt+Space') console.log('[hotkey] Alt+Space');
       else if (hotkey) console.log(`[hotkey] ${hotkey} (Alt+Space taken)`);
       else console.error('[hotkey] registration failed');
@@ -664,6 +693,71 @@ if (!gotLock) {
         console.log(`[timer] chime id=${typeof id === 'number' ? id : 0} ok=${ok === true}`);
       });
 
+      ipcMain.handle(IPC.settingsGet, (event): SettingsSnapshot => {
+        if (event.sender !== window.webContents) return settingsSnapshot();
+        return settingsSnapshot();
+      });
+
+      ipcMain.handle(IPC.settingsSet, (event, patch: unknown): SettingsResult => {
+        if (event.sender !== window.webContents) {
+          return { ok: false, settings: settingsSnapshot(), error: 'untrusted sender' };
+        }
+        if (!patch || typeof patch !== 'object') {
+          return { ok: false, settings: settingsSnapshot(), error: 'bad settings change' };
+        }
+        const change = patch as SettingsPatch;
+        settingsError = '';
+        let ok = true;
+        if (change.theme !== undefined) {
+          if (change.theme === 'dark' || change.theme === 'light') settings.theme = change.theme;
+          else { ok = false; settingsError = 'Unknown theme'; }
+        }
+        if (change.volume !== undefined) {
+          const volume = change.volume;
+          if (typeof volume === 'number' && Number.isFinite(volume)) {
+            settings.volume = Math.max(0, Math.min(100, Math.round(volume)));
+          } else {
+            ok = false;
+            settingsError = 'Volume must be 0 to 100';
+          }
+        }
+        if (change.startup !== undefined) {
+          if (typeof change.startup === 'boolean') {
+            const result = setStartupEnabled(change.startup);
+            if (result.ok) settings.startup = change.startup;
+            else { ok = false; settingsError = result.error ?? 'Startup change failed'; }
+          } else {
+            ok = false;
+            settingsError = 'Startup must be true or false';
+          }
+        }
+        if (change.shortcut !== undefined) {
+          if (typeof change.shortcut === 'string' && change.shortcut !== currentHotkey()) {
+            const result = rebindHotkey(change.shortcut, trayToggle);
+            if (result.ok) settings.shortcut = result.shortcut;
+            else { ok = false; settingsError = result.error ?? 'Shortcut unavailable'; }
+          } else if (typeof change.shortcut !== 'string') {
+            ok = false;
+            settingsError = 'Shortcut must be a chord';
+          }
+        }
+        if (ok) saveSettings(settings);
+        const snapshot = settingsSnapshot();
+        window.webContents.send(IPC.settingsState, snapshot);
+        console.log(
+          `[settings] set ok=${ok} theme=${settings.theme} volume=${settings.volume} shortcut=${currentHotkey() || 'none'} startup=${snapshot.startup}${settingsError ? ` error=${settingsError}` : ''}`
+        );
+        return { ok, settings: snapshot, ...(settingsError ? { error: settingsError } : {}) };
+      });
+
+      ipcMain.handle(IPC.settingsResetPosition, (event): SettingsResult => {
+        if (event.sender !== window.webContents) {
+          return { ok: false, settings: settingsSnapshot(), error: 'untrusted sender' };
+        }
+        resetPosition();
+        return { ok: true, settings: settingsSnapshot() };
+      });
+
       ipcMain.on(IPC.pillSize, (event, width: unknown, height: unknown) => {
         if (event.sender !== window.webContents) return;
         if (typeof width !== 'number' || !Number.isFinite(width)) return;
@@ -675,7 +769,7 @@ if (!gotLock) {
         if (!panel.open) applyWindowShape(window);
       });
 
-      ipcMain.on(IPC.panelRequestOpen, openPanel);
+      ipcMain.on(IPC.panelRequestOpen, () => openPanel());
       ipcMain.on(IPC.panelCollapsed, () => {
         panel.collapsed();
       });
@@ -714,6 +808,15 @@ if (!gotLock) {
       }
       if (emptyTest) {
         setTimeout(() => runDev((harness) => harness.runEmptyTest(window, openPanel), 'empty'), 1200);
+      }
+      if (settingsTest) {
+        const start = (): void => {
+          if (!window.isDestroyed()) {
+            runDev((harness) => harness.runSettingsTest(window, settingsTest === '1' ? 'on' : 'off', openPanel), 'settings');
+          }
+        };
+        if (window.isVisible()) setTimeout(start, 1200);
+        else window.once('show', () => setTimeout(start, 1200));
       }
       if (musicTabTest) {
         setTimeout(() => {

@@ -426,6 +426,7 @@
         <button type="button" data-panel-key="timerRunning" aria-pressed="false">Timer running</button>
         <button type="button" data-panel-key="timerDone" aria-pressed="false">Timer done</button>
         <button type="button" data-panel-key="calendar" aria-pressed="false">Calendar</button>
+        <button type="button" data-panel-key="settings" aria-pressed="false">Settings</button>
       </div>
 
       <div class="g-panel-stage">
@@ -567,7 +568,7 @@
     timer: { mode: 'idle', digits: '25:00', note: 'Press start', preset: '25' },
     calendar: { view: calView, today: new Date() },
     settings: { startup: true, shortcut: 'Alt + Space', volume: 70, theme: theme() },
-    enabledTabs: ['music', 'files', 'timer', 'calendar']
+    enabledTabs: ['music', 'files', 'timer', 'calendar', 'settings']
   });
 
   let calView = new Date();

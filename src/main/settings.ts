@@ -7,11 +7,24 @@ export interface SavedPosition {
   y: number;
 }
 
+export type Theme = 'dark' | 'light';
+
 export interface BeamSettings {
   version: 1;
   position: SavedPosition | null;
+  startup: boolean;
+  shortcut: string;
+  volume: number;
+  theme: Theme;
   [key: string]: unknown;
 }
+
+export const SETTINGS_DEFAULTS = {
+  startup: false,
+  shortcut: '',
+  volume: 60,
+  theme: 'dark' as Theme
+};
 
 export function getSettingsPath(): string {
   const override = process.env.BEAM_SETTINGS_PATH;
@@ -30,18 +43,32 @@ function isSavedPosition(value: unknown): value is SavedPosition {
   );
 }
 
+function cleanVolume(value: unknown): number {
+  if (typeof value !== 'number' || !Number.isFinite(value)) return SETTINGS_DEFAULTS.volume;
+  return Math.max(0, Math.min(100, Math.round(value)));
+}
+
 export function loadSettings(): BeamSettings {
+  const defaults: BeamSettings = { version: 1, position: null, ...SETTINGS_DEFAULTS };
   try {
     const raw = JSON.parse(readFileSync(getSettingsPath(), 'utf8')) as Record<string, unknown>;
     const position = isSavedPosition(raw.position)
       ? { x: Math.round(raw.position.x), y: Math.round(raw.position.y) }
       : null;
     if (raw.position != null && !position) console.log('[settings] dropped an invalid position');
-    return { ...raw, version: 1, position };
+    return {
+      ...raw,
+      version: 1,
+      position,
+      startup: raw.startup === true,
+      shortcut: typeof raw.shortcut === 'string' ? raw.shortcut : SETTINGS_DEFAULTS.shortcut,
+      volume: cleanVolume(raw.volume),
+      theme: raw.theme === 'light' ? 'light' : 'dark'
+    };
   } catch (error) {
     const code = (error as NodeJS.ErrnoException).code;
     if (code !== 'ENOENT') console.log('[settings] unreadable, starting from defaults');
-    return { version: 1, position: null };
+    return defaults;
   }
 }
 

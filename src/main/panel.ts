@@ -16,7 +16,7 @@ export class PanelController {
     return this.opened;
   }
 
-  show(): void {
+  show(tab?: 'settings'): void {
     const window = this.window();
     if (this.opened || !window || window.isDestroyed() || !window.isVisible()) return;
     this.opened = true;
@@ -25,7 +25,7 @@ export class PanelController {
     this.shape(window);
     console.log(`[panel] bounds=${bounds.x},${bounds.y},${bounds.width},${bounds.height}`);
     window.focus();
-    window.webContents.send(IPC.panelOpen, this.rows());
+    window.webContents.send(IPC.panelOpen, this.rows(), tab);
   }
 
   hide(): void {

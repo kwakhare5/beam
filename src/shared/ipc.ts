@@ -29,6 +29,25 @@ export type MusicState = {
 
 export type HelperState = { ok: boolean };
 
+export type Theme = 'dark' | 'light';
+
+export type SettingsSnapshot = {
+  startup: boolean;
+  shortcut: string;
+  volume: number;
+  theme: Theme;
+  error?: string;
+};
+
+export type SettingsPatch = {
+  startup?: boolean;
+  shortcut?: string;
+  volume?: number;
+  theme?: Theme;
+};
+
+export type SettingsResult = { ok: boolean; settings: SettingsSnapshot; error?: string };
+
 export type TimerSnapshot = {
   phase: 'idle' | 'running' | 'done';
   minutes: number;
@@ -53,6 +72,10 @@ export const IPC = {
   timerDismiss: 'beam:timer:dismiss',
   timerState: 'beam:timer:state',
   timerChimed: 'beam:timer:chimed',
+  settingsGet: 'beam:settings:get',
+  settingsSet: 'beam:settings:set',
+  settingsState: 'beam:settings:state',
+  settingsResetPosition: 'beam:settings:reset-position',
   panelOpen: 'beam:panel:open',
   panelDismiss: 'beam:panel:dismiss',
   panelRequestOpen: 'beam:panel:request-open',
