@@ -890,6 +890,19 @@ if (!gotLock) {
     () => {
       helperOk = false;
       sendHelperState();
+    },
+    () => {
+      console.log('[bridge] restarted');
+      helperOk = true;
+      sendHelperState();
+      void bridge
+        .ping()
+        .then((version) => console.log(`[bridge] pong ${version}`))
+        .catch((error: unknown) => {
+          helperOk = false;
+          sendHelperState();
+          console.error('[bridge] restart ping failed', error);
+        });
     }
   );
 

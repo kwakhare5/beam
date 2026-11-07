@@ -55,19 +55,19 @@ Add-Type -AssemblyName UIAutomationTypes
 [BeamScreen]::SetCursorPos(8, 8) | Out-Null
 
 
-Write-Host '[1/25] typecheck'
+Write-Host '[1/27] typecheck'
 & $tsc -p tsconfig.json --noEmit
 if ($LASTEXITCODE -ne 0) { Write-Host 'FAIL typecheck'; exit 1 }
 & $tsc -p tsconfig.renderer.json --noEmit
 if ($LASTEXITCODE -ne 0) { Write-Host 'FAIL typecheck (renderer)'; exit 1 }
 Write-Host 'PASS typecheck'
 
-Write-Host '[2/25] build'
+Write-Host '[2/27] build'
 & npm run build
 if ($LASTEXITCODE -ne 0) { Write-Host 'FAIL build'; exit 1 }
 Write-Host 'PASS build'
 
-Write-Host '[3/25] helper build'
+Write-Host '[3/27] helper build'
 $helperDir = Join-Path $PSScriptRoot 'native\BeamBridge\dist'
 if (Test-Path -LiteralPath $helperDir) { Remove-Item -LiteralPath $helperDir -Recurse -Force }
 & dotnet publish (Join-Path $PSScriptRoot 'native\BeamBridge\BeamBridge.csproj') -c Release -o $helperDir --nologo
@@ -78,7 +78,7 @@ $helperFiles = @(Get-ChildItem -LiteralPath $helperDir -File)
 if ($helperFiles.Count -ne 1) { Write-Host "FAIL helper build: expected one file, found $($helperFiles.Count)"; exit 1 }
 Write-Host 'PASS helper build (single exe)'
 
-Write-Host '[4/25] clipboard'
+Write-Host '[4/27] clipboard'
 $clipDir = Join-Path $env:TEMP 'beam-clip'
 if (Test-Path -LiteralPath $clipDir) { Remove-Item -LiteralPath $clipDir -Recurse -Force }
 New-Item -ItemType Directory -Path $clipDir | Out-Null
@@ -218,7 +218,7 @@ if ($clipAfter.Count -ne 3) {
 Remove-Item -LiteralPath $clipDir -Recurse -Force
 Write-Host 'PASS clipboard (3 real paths, survive helper exit)'
 
-Write-Host '[5/25] launch + focus'
+Write-Host '[5/27] launch + focus'
 $outLog = Join-Path $env:TEMP 'beam-verify.out.log'
 $errLog = Join-Path $env:TEMP 'beam-verify.err.log'
 Remove-Item -LiteralPath $outLog -ErrorAction SilentlyContinue
@@ -295,7 +295,7 @@ if ($pillLine -notmatch '\[window\] pill=') {
 }
 Start-Sleep -Milliseconds 300
 
-Write-Host '[6/25] anchor'
+Write-Host '[6/27] anchor'
 $appOut = Get-Content -LiteralPath $outLog -Raw -ErrorAction SilentlyContinue
 $anchorMatches = [regex]::Matches($appOut, '\[window\] bounds=(-?\d+),(-?\d+),(\d+),(\d+) content=(-?\d+),(-?\d+),(\d+),(\d+) work=(-?\d+),(-?\d+),(\d+),(\d+)')
 if ($anchorMatches.Count -eq 0) {
@@ -367,7 +367,7 @@ if ([math]::Abs($waX - $wx) -gt 2 -or [math]::Abs($waY - $wy) -gt 2 -or [math]::
 }
 Write-Host "PASS anchor (pill 12px above the taskbar, centered; native rect matches; scale $scale)"
 
-Write-Host '[7/25] idle dim'
+Write-Host '[7/27] idle dim'
 $idleOut = Get-Content -LiteralPath $outLog -Raw -ErrorAction SilentlyContinue
 $idleMatch = [regex]::Match($idleOut, '\[idle\] (\{.+\})')
 if (-not $idleMatch.Success) {
@@ -390,7 +390,7 @@ if ($idle.state -eq 'playing' -or $idle.state -eq 'paused') {
   Write-Host "PASS idle dim (star $($idle.markOpacity), shell $($idle.shellOpacity), master mark, label Beam)"
 }
 
-Write-Host '[8/25] panel'
+Write-Host '[8/27] panel'
 $panelOut = $appOut
 for ($i = 0; $i -lt 50; $i++) {
   Start-Sleep -Milliseconds 300
@@ -439,7 +439,7 @@ if ($restoredW -gt 200 -or $restoredH -gt 100) {
 Remove-Item Env:BEAM_PANEL_TEST -ErrorAction SilentlyContinue
 Write-Host "PASS panel (open ${panelMs}ms reduced=$reduced, 452x316, dismissed back to the pill)"
 
-Write-Host '[9/25] helper memory'
+Write-Host '[9/27] helper memory'
 $helper = Get-Process BeamBridge -ErrorAction SilentlyContinue
 if (-not $helper) {
   Stop-Process -Id $first.Id -Force -ErrorAction SilentlyContinue
@@ -456,7 +456,7 @@ if ($helperMb -ge 60) {
 }
 Write-Host "PASS helper memory ($helperMb MB idle, cap 60 MB)"
 
-Write-Host '[10/25] single instance'
+Write-Host '[10/27] single instance'
 $second = Start-Process -FilePath $electron -ArgumentList '.' -WorkingDirectory $PSScriptRoot -PassThru
 Start-Sleep -Seconds 4
 if (-not $second.HasExited) {
@@ -473,7 +473,7 @@ if ($first.HasExited) {
 }
 Write-Host 'PASS single instance'
 
-Write-Host '[11/25] UI spec'
+Write-Host '[11/27] UI spec'
 $main = Get-Content (Join-Path $PSScriptRoot 'src\main\index.ts') -Raw
 $base = Get-Content (Join-Path $PSScriptRoot 'src\renderer\styles\base.css') -Raw
 $pill = Get-Content (Join-Path $PSScriptRoot 'src\renderer\styles\capsule.css') -Raw
@@ -771,7 +771,7 @@ if ($uiFail) {
 }
 Write-Host 'PASS UI spec'
 
-Write-Host '[12/25] move + persist'
+Write-Host '[12/27] move + persist'
 $settingsPath = $null
 $settingsBackup = Join-Path $env:TEMP 'beam-verify-settings.json'
 $hadSettings = $false
@@ -938,7 +938,7 @@ try {
 if ($hadSettings) { Copy-Item -LiteralPath $settingsBackup -Destination $settingsPath -Force } else { Remove-Item -LiteralPath $settingsPath -ErrorAction SilentlyContinue }
 Write-Host "PASS move (drag $bx,$by to $endX,$endY, saved, restart restored it, Reset returned to $anchorX,$anchorY)"
 
-Write-Host '[13/25] quit cleanup'
+Write-Host '[13/27] quit cleanup'
 $closed = $first.CloseMainWindow()
 if (-not $closed) {
   Get-Process electron,BeamBridge -ErrorAction SilentlyContinue | Stop-Process -Force
@@ -955,7 +955,7 @@ if (-not $appExited -or $helperLeft -ne 0) {
 }
 Write-Host 'PASS quit cleanup (app and helper exited)'
 
-Write-Host '[14/25] fullscreen'
+Write-Host '[14/27] fullscreen'
 $fsHarnessPath = Join-Path $env:TEMP 'beam-fs-harness.ps1'
 $fsStagePath = Join-Path $env:TEMP 'beam-fs-stage.txt'
 $fsProc = $null
@@ -1075,7 +1075,7 @@ if ($fsProc -and -not $fsProc.HasExited) {
 Remove-Item -LiteralPath $fsStagePath -ErrorAction SilentlyContinue
 Write-Host 'PASS fullscreen (grow to monitor bounds -> active:true, shrink -> active:false, same foreground window)'
 
-Write-Host '[15/25] fullscreen hide'
+Write-Host '[15/27] fullscreen hide'
 $hideOutLog = Join-Path $env:TEMP 'beam-fs-hide.out.log'
 $hideErrLog = Join-Path $env:TEMP 'beam-fs-hide.err.log'
 Remove-Item -LiteralPath $hideOutLog, $hideErrLog -ErrorAction SilentlyContinue
@@ -1140,7 +1140,7 @@ Remove-Item -LiteralPath $hideOutLog, $hideErrLog -ErrorAction SilentlyContinue
 Remove-Item -LiteralPath $fsHarnessPath, $fsStagePath -ErrorAction SilentlyContinue
 Write-Host 'PASS fullscreen hide (hid at fullscreen, tray click restored it, stayed shown after the exit)'
 
-Write-Host '[16/25] drop'
+Write-Host '[16/27] drop'
 $dropOutLog = Join-Path $env:TEMP 'beam-drop-verify.out.log'
 $dropErrLog = Join-Path $env:TEMP 'beam-drop-verify.err.log'
 $dropFolder3 = Join-Path $env:TEMP ("beam-realdrop-3-" + $PID)
@@ -1244,7 +1244,7 @@ Remove-Item -LiteralPath $dropOutLog, $dropErrLog -ErrorAction SilentlyContinue
 Remove-Item -LiteralPath $dropFolder3, $dropFolder51 -Recurse -Force -ErrorAction SilentlyContinue
 Write-Host 'PASS drop (a real Explorer drag added 3 files through webUtils; 51 more capped the shelf at 50)'
 
-Write-Host '[17/25] copy'
+Write-Host '[17/27] copy'
 $copyOutLog = Join-Path $env:TEMP 'beam-copy-verify.out.log'
 $copyErrLog = Join-Path $env:TEMP 'beam-copy-verify.err.log'
 Remove-Item -LiteralPath $copyOutLog, $copyErrLog -ErrorAction SilentlyContinue
@@ -1359,7 +1359,7 @@ Remove-Item -LiteralPath $copyPasteDir -Recurse -Force -ErrorAction SilentlyCont
 Remove-Item -LiteralPath (Join-Path $env:TEMP 'beam-copytest') -Recurse -Force -ErrorAction SilentlyContinue
 Write-Host 'PASS copy (row copy put alpha.txt on the clipboard, Copy All put all 3 paths, Ctrl+V pasted them into Explorer)'
 
-Write-Host '[18/25] drag out'
+Write-Host '[18/27] drag out'
 $dragOutLog = Join-Path $env:TEMP 'beam-dragout-verify.out.log'
 $dragOutErr = Join-Path $env:TEMP 'beam-dragout-verify.err.log'
 $dragMarker = Join-Path $env:TEMP 'beam-dragout-continue'
@@ -1475,7 +1475,7 @@ Remove-Item -LiteralPath $dragPaste -Recurse -Force -ErrorAction SilentlyContinu
 Remove-Item -LiteralPath (Join-Path $env:TEMP 'beam-dragout') -Recurse -Force -ErrorAction SilentlyContinue
 Write-Host 'PASS drag out (a real mouse drag dropped alpha.txt into Explorer; the deleted beta.txt row lost its drag; an off-shelf path was rejected)'
 
-Write-Host '[19/25] missing badge'
+Write-Host '[19/27] missing badge'
 $missingOut = Join-Path $env:TEMP 'beam-missing-verify.out.log'
 $missingErr = Join-Path $env:TEMP 'beam-missing-verify.err.log'
 Remove-Item -LiteralPath $missingOut, $missingErr -ErrorAction SilentlyContinue
@@ -1516,7 +1516,7 @@ Remove-Item -LiteralPath $missingOut, $missingErr -ErrorAction SilentlyContinue
 Remove-Item -LiteralPath (Join-Path $env:TEMP 'beam-missing') -Recurse -Force -ErrorAction SilentlyContinue
 Write-Host 'PASS missing badge (deleted file shows Missing with the File moved or deleted tooltip, no copy or drag, and the pill gains a red pip)'
 
-Write-Host '[20/25] clear all'
+Write-Host '[20/27] clear all'
 $clearOut = Join-Path $env:TEMP 'beam-clear-verify.out.log'
 $clearErr = Join-Path $env:TEMP 'beam-clear-verify.err.log'
 Remove-Item -LiteralPath $clearOut, $clearErr -ErrorAction SilentlyContinue
@@ -1794,7 +1794,7 @@ load(0);
   exit 1
 }
 
-Write-Host '[21/25] music pill'
+Write-Host '[21/27] music pill'
 $musicOut = Join-Path $env:TEMP 'beam-music-verify.out.log'
 $musicErr = Join-Path $env:TEMP 'beam-music-verify.err.log'
 Remove-Item -LiteralPath $musicOut, $musicErr -ErrorAction SilentlyContinue
@@ -1845,7 +1845,7 @@ Remove-Item Env:BEAM_MUSIC_TEST -ErrorAction SilentlyContinue
 Remove-Item -LiteralPath $musicOut, $musicErr -ErrorAction SilentlyContinue
 Write-Host "PASS music pill ('$($musicInput.title)' $musicWant, art=$($musicProbe.art), shown in $($musicProbe.ms)ms)"
 
-Write-Host '[22/25] music controls'
+Write-Host '[22/27] music controls'
 $cmdOut = Join-Path $env:TEMP 'beam-music-commands.out.log'
 $cmdErr = Join-Path $env:TEMP 'beam-music-commands.err.log'
 Remove-Item -LiteralPath $cmdOut, $cmdErr -ErrorAction SilentlyContinue
@@ -1926,7 +1926,7 @@ function Format-BeamClock([int]$seconds) {
   return '{0}:{1:D2}' -f $minutes, $secs
 }
 
-Write-Host '[23/25] music tab'
+Write-Host '[23/27] music tab'
 $tabOut = Join-Path $env:TEMP 'beam-music-tab.out.log'
 $tabErr = Join-Path $env:TEMP 'beam-music-tab.err.log'
 Remove-Item -LiteralPath $tabOut, $tabErr -ErrorAction SilentlyContinue
@@ -2026,7 +2026,7 @@ Remove-Item Env:BEAM_MUSIC_TAB_TEST -ErrorAction SilentlyContinue
 Remove-Item -LiteralPath $tabOut, $tabErr -ErrorAction SilentlyContinue
 Write-Host "PASS music tab ($tabResult)"
 
-Write-Host '[24/25] session picking'
+Write-Host '[24/27] session picking'
 # Player one is still running from check 21. A second real player with a different app id
 # joins here so Beam has two live sessions to follow. Windows hands the current session over
 # only when a player starts or stops playing, so the test toggles the same player twice.
@@ -2125,7 +2125,7 @@ Stop-BeamPlayerApps
 Remove-Item Env:BEAM_MUSIC_SESSIONS_TEST -ErrorAction SilentlyContinue
 Remove-Item -LiteralPath $pickOut, $pickErr -ErrorAction SilentlyContinue
 
-Write-Host '[25/25] UI pass'
+Write-Host '[25/27] UI pass'
 $uiQuietOut = Join-Path $env:TEMP 'beam-ui-quiet.out.log'
 $uiQuietErr = Join-Path $env:TEMP 'beam-ui-quiet.err.log'
 $uiChevronOut = Join-Path $env:TEMP 'beam-ui-chevron.out.log'
@@ -2286,6 +2286,101 @@ Remove-Item Env:BEAM_UI_TEST -ErrorAction SilentlyContinue
 Remove-Item Env:BEAM_UI_TEST_PHASE -ErrorAction SilentlyContinue
 Remove-Item -LiteralPath $uiQuietOut, $uiQuietErr, $uiChevronOut, $uiChevronErr -ErrorAction SilentlyContinue
 Write-Host 'PASS UI pass (quiet phase: 94x30 rest, shelf add/undo, last-used tab, centered running timer, calendar nav, Esc, 30x30 quiet + wake; chevron phase: live-music chevron opened the panel; margin click-through)'
+
+Write-Host '[26/27] helper restart'
+$restartOut = Join-Path $env:TEMP 'beam-restart.out.log'
+$restartErr = Join-Path $env:TEMP 'beam-restart.err.log'
+Remove-Item -LiteralPath $restartOut, $restartErr -ErrorAction SilentlyContinue
+$env:BEAM_SETTINGS_PATH = Join-Path $env:TEMP 'beam-verify-active-settings.json'
+$restartApp = $null
+try {
+  $restartApp = Start-Process -FilePath $electron -ArgumentList '.' -WorkingDirectory $PSScriptRoot -PassThru -RedirectStandardOutput $restartOut -RedirectStandardError $restartErr
+  $restartLog = ''
+  $pongStop = (Get-Date).AddSeconds(30)
+  while ((Get-Date) -lt $pongStop) {
+    Start-Sleep -Milliseconds 200
+    if ($restartApp.HasExited) { throw 'the app exited before the helper restart test' }
+    $restartLog = Get-Content -LiteralPath $restartOut -Raw -ErrorAction SilentlyContinue
+    if ($restartLog -match '\[bridge\] pong 0\.1\.0') { break }
+  }
+  if ($restartLog -notmatch '\[bridge\] pong 0\.1\.0') { throw 'the app never answered the first helper' }
+
+  $helperBefore = Get-Process BeamBridge -ErrorAction SilentlyContinue | Sort-Object StartTime -Descending | Select-Object -First 1
+  if (-not $helperBefore) { throw 'no BeamBridge process was running' }
+  Stop-Process -Id $helperBefore.Id -Force
+
+  $restartStop = (Get-Date).AddSeconds(20)
+  $helperAfter = $null
+  while ((Get-Date) -lt $restartStop) {
+    Start-Sleep -Milliseconds 250
+    $restartLog = Get-Content -LiteralPath $restartOut -Raw -ErrorAction SilentlyContinue
+    $pongCount = ([regex]::Matches($restartLog, '\[bridge\] pong 0\.1\.0')).Count
+    if ($restartLog -match '\[bridge\] restarted' -and $pongCount -ge 2) {
+      $helperAfter = @(Get-Process BeamBridge -ErrorAction SilentlyContinue) | Where-Object { $_.Id -ne $helperBefore.Id } | Select-Object -First 1
+      if ($helperAfter) { break }
+    }
+  }
+  if (-not $helperAfter) {
+    $pongCount = ([regex]::Matches($restartLog, '\[bridge\] pong 0\.1\.0')).Count
+    throw "the helper did not come back (restarted=$([bool]($restartLog -match '\[bridge\] restarted')), pongs=$pongCount)"
+  }
+
+  $closed = $restartApp.CloseMainWindow()
+  if (-not $closed) { throw 'the pill did not close after the helper restart test' }
+  if (-not $restartApp.WaitForExit(8000)) { throw 'the app did not exit after the helper restart test' }
+  Start-Sleep -Milliseconds 500
+  $restartLeft = @(Get-Process BeamBridge -ErrorAction SilentlyContinue).Count
+  if ($restartLeft -ne 0) { throw "the helper survived the app exit ($restartLeft)" }
+  Write-Host "PASS helper restart (pid $($helperBefore.Id) -> $($helperAfter.Id), second pong)"
+} catch {
+  if ($restartApp -and -not $restartApp.HasExited) { $restartApp.Kill() }
+  Get-Process electron,BeamBridge -ErrorAction SilentlyContinue | Stop-Process -Force
+  Write-Host "FAIL helper restart: $($_.Exception.Message)"
+  exit 1
+}
+Remove-Item -LiteralPath $restartOut, $restartErr -ErrorAction SilentlyContinue
+
+Write-Host '[27/27] request timeout'
+$timeoutHarness = Join-Path $env:TEMP 'beam-bridge-timeout.js'
+$bridgeJs = Join-Path $PSScriptRoot 'dist\main\bridge.js'
+$sortExe = Join-Path $env:WINDIR 'System32\sort.exe'
+$timeoutHarnessText = @'
+const { Bridge } = require(process.argv[2]);
+const bridge = new Bridge(process.argv[3]);
+bridge.start();
+const started = Date.now();
+bridge.ping().then(
+  (version) => {
+    console.log(JSON.stringify({ ok: false, version }));
+    bridge.stop().then(() => process.exit(1));
+  },
+  (error) => {
+    console.log(JSON.stringify({ ok: /timed out on ping/.test(error.message), ms: Date.now() - started, message: error.message }));
+    bridge.stop().then(() => process.exit(0));
+  }
+);
+'@
+Set-Content -LiteralPath $timeoutHarness -Value $timeoutHarnessText -Encoding UTF8
+$timeoutOutFile = Join-Path $env:TEMP 'beam-bridge-timeout.out.log'
+$timeoutErrFile = Join-Path $env:TEMP 'beam-bridge-timeout.err.log'
+Remove-Item -LiteralPath $timeoutOutFile, $timeoutErrFile -ErrorAction SilentlyContinue
+$nodeExe = (Get-Command node -ErrorAction Stop).Source
+$timeoutProc = Start-Process -FilePath $nodeExe -ArgumentList @('--no-warnings', $timeoutHarness, $bridgeJs, $sortExe) -Wait -PassThru -RedirectStandardOutput $timeoutOutFile -RedirectStandardError $timeoutErrFile
+$timeoutCode = $timeoutProc.ExitCode
+$timeoutRaw = Get-Content -LiteralPath $timeoutOutFile -Raw -ErrorAction SilentlyContinue
+$timeout = $null
+try {
+  $timeout = ($timeoutRaw | Out-String).Trim() | ConvertFrom-Json
+} catch {
+  $timeout = $null
+}
+$timeoutErrText = Get-Content -LiteralPath $timeoutErrFile -Raw -ErrorAction SilentlyContinue
+Remove-Item -LiteralPath $timeoutHarness, $timeoutOutFile, $timeoutErrFile -ErrorAction SilentlyContinue
+if ($timeoutCode -ne 0 -or $null -eq $timeout -or -not $timeout.ok -or [int]$timeout.ms -lt 7500 -or [int]$timeout.ms -gt 11000) {
+  Write-Host "FAIL request timeout: code=$timeoutCode output='$($timeoutRaw | Out-String)' stderr='$timeoutErrText'"
+  exit 1
+}
+Write-Host "PASS request timeout (hung helper rejected ping after $([int]$timeout.ms)ms)"
 
 Remove-Item Env:BEAM_SETTINGS_PATH -ErrorAction SilentlyContinue
 Remove-Item -LiteralPath (Join-Path $env:TEMP 'beam-verify-active-settings.json') -ErrorAction SilentlyContinue

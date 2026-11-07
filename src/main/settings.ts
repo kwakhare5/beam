@@ -1,5 +1,5 @@
 import { app } from 'electron';
-import { mkdirSync, readFileSync, writeFileSync } from 'node:fs';
+import { mkdirSync, readFileSync, renameSync, writeFileSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 
 export interface SavedPosition {
@@ -56,7 +56,9 @@ export function saveSettings(settings: BeamSettings): boolean {
   try {
     const file = getSettingsPath();
     mkdirSync(dirname(file), { recursive: true });
-    writeFileSync(file, `${JSON.stringify(settings, null, 2)}\n`);
+    const temp = `${file}.tmp`;
+    writeFileSync(temp, `${JSON.stringify(settings, null, 2)}\n`);
+    renameSync(temp, file);
     return true;
   } catch (error) {
     console.error('[settings] save failed', error);
