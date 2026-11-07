@@ -29,11 +29,11 @@ No network. No database. No server. Four parts, three seams.
 
 ### Current vs target (2026-10-29)
 
-Implemented: Electron shell with single-instance lock, the 136×42 window anchored above the taskbar with the 94×30 idle capsule, tray, panel open/collapse at 452×316 with a ~150ms transform, pointer-captured window drag with a saved position (`settings.ts`), the idle star dim asserted from computed style, hide-on-fullscreen with tray restore, a file drop shelf (paths only, deduped, 50 cap, pill count), live Files rows with copy and drag-out, the live music pill with prev / play-pause / next transports, a live Music tab with 148px art and a read-only position bar, split UI modules/styles, the canonical preview, twenty-seven `verify.ps1` checks (including a real-mouse window drag → restart → reset, a real copy paste and a real row drag-out into Explorer, and a real borderless fullscreen window), and `measure.ps1`.
+Implemented: Electron shell with single-instance lock, the 136×42 window anchored above the taskbar with the 94×30 idle capsule, tray, panel open/collapse at 452×316 with a ~150ms transform, pointer-captured window drag with a saved position (`settings.ts`), the idle star dim asserted from computed style, hide-on-fullscreen with tray restore, a file drop shelf (paths only, deduped, 50 cap, pill count), live Files rows with copy and drag-out, the live music pill with prev / play-pause / next transports, a live Music tab with 148px art and a read-only position bar, a main-owned timer (`timer.ts`) with a one-shot chime and Windows notification, the live Timer and Calendar tabs, split UI modules/styles, the canonical preview, twenty-nine `verify.ps1` checks (including a real-mouse window drag → restart → reset, a real copy paste and a real row drag-out into Explorer, a real borderless fullscreen window, and timer completion while hidden), and `measure.ps1`.
 
 Built in the helper: stdio client, SMTC read with PNG artwork, CF_HDROP clipboard, fullscreen detection, ping.
 
-Still target: `window.ts` (geometry refactor), `hotkey.ts`, `src/shared/`, the timer owner, the shelf, the chime, and every tab's live wiring. Present-tense sections below describe that target until those tasks land.
+Still target: `window.ts` (geometry refactor), main service modules, the `BEAM_*` harness moved out of shipped main code, the Settings screen and startup toggle, and the packaged build. Present-tense sections below describe that target until those tasks land.
 
 ---
 
@@ -172,10 +172,11 @@ All channels prefixed `beam:`. Renderer can call, main can push. The 18 channel 
 | renderer → main | `beam:files:drag` | start drag-out; payload `string[]`, main accepts only existing shelf paths and calls `startDrag` | built |
 | renderer → main | `beam:files:remove` | remove one shelf path; replies `{ ok, files }` with fresh stat rows | built |
 | renderer → main | `beam:files:clear` | wipe the shelf; replies `{ ok, files: [] }` | built |
-| renderer → main | `beam:timer:start/stop` | presets or custom | planned |
+| renderer → main | `beam:timer:start` / `cancel` / `dismiss` | start a timer (minutes 1–999), cancel a running one, clear the done face; main owns the deadline and replies `TimerSnapshot` | built |
 | renderer → main | `beam:settings:get/set` | settings screen | planned |
 | main → renderer | `beam:music:state` | pushed on `music.changed` and again on `did-finish-load`; `{ title, artist, playing, positionMs, durationMs, art }` with `art` a PNG data URL or null | built |
-| main → renderer | `beam:timer:tick` | seconds left, pushed by main (the timer owner) | planned |
+| main → renderer | `beam:timer:state` | pushed on start/cancel/dismiss, on `did-finish-load`, and when the displayed second changes; `{ phase, minutes, remainingMs, deadline, id, alert }`; `alert` is true only in the one completion push | built |
+| renderer → main | `beam:timer:chimed` | audio ack after the chime `play()` settles; `{ id, ok }`, logged by main | built |
 
 Fullscreen hide is main-only: main calls `win.hide()` / `win.showInactive()` itself and never messages the renderer for it.
 
@@ -221,11 +222,15 @@ pointerdown on the capsule → 4px movement threshold → renderer sends screen 
 
 **Timer**
 ```
-renderer sends beam:timer:start {ms} → main stores deadline = now + ms
-→ every 1s main pushes beam:timer:tick {secondsLeft} → renderer prints it
-→ at 0: main plays chime.wav and fires the native Notification; the pill shows the done digits in gold
-→ hidden or fullscreen: same path, because the renderer never owns the clock
+renderer sends beam:timer:start {minutes} → beam:timer:start sets deadline = now + minutes * 60000
+→ a 200ms ticker reads the deadline and pushes beam:timer:state only when ceil(seconds left) changes
+→ renderer patches the pill digits and the open Timer tab; it never owns a clock
+→ at 0: the ticker clears itself, sets phase done, pushes one alert:true snapshot
+→ the renderer plays assets/beam-chime.wav once per timer id and acks beam:timer:chimed
+→ main logs the completion and fires an Electron Notification (tray balloon fallback)
+→ hidden or fullscreen: same path, because the window does not own the clock
 ```
+The 1-minute test scale (`BEAM_TIMER_SCALE_MS=1000`) exists only for checks 28–29.
 
 **Fullscreen hide**
 ```
@@ -272,7 +277,7 @@ helper's WinEventHook sees a foreground change or the foreground window resize/m
 | 2026-10-27 | Helper ships self-contained, no .NET prerequisite | Must run on a fresh Windows install |
 | 2026-10-27 | Pill starts on the primary monitor, follows across monitors when dragged, snaps back to primary if that monitor disappears | Prevents an offscreen window |
 | 2026-10-27 | Shelf stays in-memory; quitting drops contents; shelf shows a warning while non-empty | Matches PRD; silent loss would be worse |
-| 2026-10-27 | Timer deadline is owned by main, not the renderer | Chromium throttles hidden windows; the alarm must fire while the pill is hidden. **Audit 2026-11-07: not implemented — the deadline lives in the renderer (`timerDeadline`), so hidden completion and the alert have no path.** |
+| 2026-10-27 | Timer deadline is owned by main, not the renderer | Chromium throttles hidden windows; the alarm must fire while the pill is hidden. Implemented 2026-11-07 by R3 (`src/main/timer.ts`); checks 28–29 prove it. |
 | 2026-10-27 | (superseded 2026-10-29: helper drag deleted) `files.drag` runs on a dedicated STA thread in the helper | A blocking `DoDragDrop` on the stdio loop would freeze SMTC reads for the whole drag |
 | 2026-10-27 | Budget split: Electron ≤130 MB, helper ≤60 MB, total always reported | One combined number hides which side regressed |
 | 2026-10-27 | Single instance: a second launch wakes the existing pill and exits | Two pills would fight over the hotkey, tray icon, and settings file |
@@ -306,7 +311,8 @@ helper's WinEventHook sees a foreground change or the foreground window resize/m
 | 2026-11-04 | The app hides Timer, Calendar, and Settings until they work; the panel auto-picks Music, then Files, then the last tab; Add files uses the native picker and file actions report a status plus Undo | Dead tabs and dead buttons read as broken, and a silent remove or failed add left the user guessing |
 | 2026-11-04 | The preload is bundled by Vite (`vite.preload.mts`) and imports the shared channel constants at build time | A sandboxed preload can only require `electron` and builtins, so the shared-IPC import failed at runtime and `window.beam` never loaded; bundling keeps one channel source without weakening the sandbox |
 | 2026-11-04 | The panel opens to the last feature used this session — drop/picker, Files action, transport, timer, calendar, or tab visit — falling back to music → files → music | A state-based pick ignored what the user actually touched; session-only because the shelf and the live track do not survive quit |
-| 2026-11-04 | The timer counts down from a deadline in the renderer and the calendar keeps a month offset; both tabs are live, and the preview shows the same four tabs (Settings deferred) | Neither needs the helper or a network, and dead tabs broke the app/preview sync rule |
+| 2026-11-04 | The timer counts down from a deadline in the renderer and the calendar keeps a month offset; both tabs are live, and the preview shows the same four tabs (Settings deferred) | Neither needs the helper or a network, and dead tabs broke the app/preview sync rule. Timer half superseded 2026-11-07 by R3: the deadline moved to main; the calendar half stands |
+| 2026-11-07 | The timer deadline, tick push, and completion move to main; the renderer only displays snapshots, plays the bundled chime once per timer id, and acks it over `beam:timer:chimed`; main fires an Electron Notification with a tray balloon fallback | Hidden windows throttle renderer timers and a completion must fire exactly once regardless of visibility. Checks 28–29 hold start/cancel/replace, the done face, one chime, one banner, and completion behind a fullscreen window |
 
 UI decisions: ADR-0001 (component boundaries), ADR-0002 (original mascot), ADR-0003 (window, capsule, and panel sizes), ADR-0004 (vanilla shadcn-style), ADR-0005 (capsule interaction), ADR-0006 (landscape panel), ADR-0007 (capsule-to-panel interaction), ADR-0008 (content dynamics), ADR-0009 (state identity, panel completeness, and scale), ADR-0010 (capsule artwork, dot language, and panel clarity), ADR-0011 (trust pass: quiet idle, chevron, shaped hit area, live tabs only).
 
@@ -316,17 +322,17 @@ Last status audit: 2026-11-07, read-only against the code and `verify.ps1`. The 
 
 **Built and previously proven:** shell anchor, no focus steal, tray, panel open/close, drag + position save/restore/reset (single display), idle dim, fullscreen detection and hide, single instance; the file shelf (drop, copy, drag-out, missing badge, remove, Clear All) and music pill/transports/Music tab.
 
-**Built and working, not accepted by the gate:** 9.1, 9.2, 9.4, 9.7, 9.8, 9.9, the global hotkey, the timer and calendar engines, Undo, the Add files picker, keyboard access, and the landing site. 2.4, 9.3, 9.5, and 9.6 are accepted by the 2026-11-07 green run.
+**Built and working, not accepted by the gate:** 9.1, 9.2, 9.4, 9.7, 9.8, 9.9, the global hotkey, the calendar engine, Undo, the Add files picker, keyboard access, and the landing site. 2.4, 9.3, 9.5, 9.6, and timer 4.1–4.5 are accepted by the 2026-11-07 green runs.
 
-**Partial:** 2.5 has a no-art fallback and null-session debounce; paused and closed-player cases are unproven. The timer has a done face but no chime or Windows notification. Quit confirm, the native Add files dialog, and the timer done face have no verify check.
+**Partial:** 2.5 has a no-art fallback and null-session debounce; paused and closed-player cases are unproven. Quit confirm and the native Add files dialog have no verify check; the chime and toast are asserted by the audio ack and the main log path, not recorded.
 
-**Missing:** a main-owned timer deadline, hidden/fullscreen completion, Settings (7.1), startup toggle (1.7), hotkey rebinding and fallback notice, midnight calendar refresh (5.3), multi-monitor/100–150% proof, and a publishable package.
+**Missing:** Settings (7.1), startup toggle (1.7), hotkey rebinding and fallback notice, midnight calendar refresh (5.3), multi-monitor/100–150% proof, and a publishable package.
 
-**Verification:** 27 checks. The 2026-11-07 run exits 0, 27/27, no skips. Check 16 is a real Explorer→pill drag; 17 retries the Explorer foreground; 24 proves playback-driven session switching; 25 runs separate quiet and chevron phases; 26 force-kills the helper and asserts a new pid plus a second pong; 27 proves a hung request rejects after 8s.
+**Verification:** 29 checks. The 2026-11-07 R3 run exits 0, 29/29, no skips. Check 16 is a real Explorer→pill drag; 17 retries the Explorer foreground; 24 proves playback-driven session switching; 25 runs separate quiet and chevron phases; 26 force-kills the helper and asserts a new pid plus a second pong; 27 proves a hung request rejects after 8s; 28 proves timer start/cancel/replace, the done face, one chime, one banner, and dismiss; 29 proves completion behind fullscreen with the pill hidden.
 
 **Packaging:** `extraResources` lists `BeamBridge.exe` and `tray.ico`, and `src/main/paths.ts` resolves them when packaged, but `npm run dist` only calls electron-builder and no package has been built. No exe or GitHub release is published.
 
-**Open conflicts:** the historical decision says main owns the timer deadline but the code is renderer-owned; TASKS 6.1/6.2 say timer/music priority while approved ADR-0012 says last used wins (the code follows the ADR); README and TASKS previously drifted from the code and now carry the 2026-11-07 audit notes.
+**Open conflicts:** TASKS 6.1/6.2 say timer/music priority while approved ADR-0012 says last used wins (the code follows the ADR); README and TASKS previously drifted from the code and now carry the 2026-11-07 audit notes.
 
 ## 9. Known Risks
 
@@ -338,7 +344,7 @@ Last status audit: 2026-11-07, read-only against the code and `verify.ps1`. The 
 | `Alt+Space` steal | Registering it kills the system window menu for every app while Beam runs | Accepted by user 2026-10-27 |
 | Multi-file drag-out | Solved 2026-10-29: helper OLE drag spun at 100% CPU; Electron's `webContents.startDrag` with a `files` array is the path | Prove with a real drop into Explorer at 3.4 |
 | SMTC on some players | Some apps publish partial metadata, no artwork | Show text without art, never crash |
-| Helper death | Fixed 2026-11-07: requests reject after 8s, a dead helper is restarted up to 3 times in 60s, and a spawn error resets the child. Paste after a restart is still unproven. | Checks 26 and 27 hold the restart and timeout; task R3's timer work and 8.1 still need a paste-after-restart proof. |
-| Timer ownership | The deadline is renderer-owned, contrary to the main-owned decision; hidden completion and the alert are unproven. | Move the deadline and completion to main, then add chime + Windows notification and prove hidden completion. |
+| Helper death | Fixed 2026-11-07: requests reject after 8s, a dead helper is restarted up to 3 times in 60s, and a spawn error resets the child. Paste after a restart is still unproven. | Checks 26 and 27 hold the restart and timeout; 8.1 still needs a paste-after-restart proof. |
+| Timer ownership | Fixed 2026-11-07 (R3): the deadline, tick push, and one-shot completion live in `src/main/timer.ts`; the renderer only displays snapshots. Checks 28–29 prove replace, done face, chime, notification, and completion behind fullscreen. | Keep every new alert path behind that engine; never reintroduce a renderer clock. |
 | Packaging | `npm run dist` skips prerequisite builds; the release folder is incomplete and no exe is published. | Build main, renderer, preload, and the helper first, verify `app.asar` + `extraResources`, test on a clean profile, then publish. |
 | Doc drift | README/TASKS/ARCHITECTURE had stale claims about built features. | Keep the 2026-11-07 audit notes current; tick a box only after a green verify. |
