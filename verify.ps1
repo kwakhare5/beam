@@ -49,6 +49,8 @@ public static class BeamScreen {
   }
 }
 '@
+Add-Type -AssemblyName UIAutomationClient
+Add-Type -AssemblyName UIAutomationTypes
 [BeamScreen]::SetProcessDpiAwarenessContext([IntPtr](-4)) | Out-Null
 [BeamScreen]::SetCursorPos(8, 8) | Out-Null
 
@@ -109,6 +111,96 @@ function Get-DropPaths {
   }
   return @()
 }
+function Get-ExplorerFolderWindow([string]$leaf) {
+  $stop = (Get-Date).AddSeconds(15)
+  while ((Get-Date) -lt $stop) {
+    $windows = (New-Object -ComObject Shell.Application).Windows()
+    foreach ($window in $windows) {
+      if ($window.LocationName -eq $leaf) { return [IntPtr]$window.HWND }
+    }
+    Start-Sleep -Milliseconds 250
+  }
+  return [IntPtr]::Zero
+}
+
+function Get-ExplorerItemRect([IntPtr]$hwnd, [string]$name) {
+  $root = [System.Windows.Automation.AutomationElement]::FromHandle($hwnd)
+  $stop = (Get-Date).AddSeconds(15)
+  while ((Get-Date) -lt $stop) {
+    $condition = New-Object System.Windows.Automation.PropertyCondition(
+      [System.Windows.Automation.AutomationElement]::NameProperty,
+      $name
+    )
+    $item = $root.FindFirst([System.Windows.Automation.TreeScope]::Descendants, $condition)
+    if ($null -ne $item) {
+      $rect = $item.Current.BoundingRectangle
+      if ($rect.Width -gt 0 -and $rect.Height -gt 0) { return $rect }
+    }
+    Start-Sleep -Milliseconds 250
+  }
+  throw "Explorer never showed the item $name"
+}
+
+function Invoke-ExplorerDrop([string]$folder, [IntPtr]$pillHwnd) {
+  $leaf = Split-Path -Leaf $folder
+  Start-Process explorer.exe -ArgumentList "/n,$folder" | Out-Null
+  $hwnd = Get-ExplorerFolderWindow $leaf
+  if ($hwnd -eq [IntPtr]::Zero) { throw "the Explorer folder $leaf never opened" }
+  try {
+    [BeamScreen]::SetWindowPos($hwnd, [IntPtr]::Zero, 60, 40, 760, 560, 0x0040) | Out-Null
+    if (-not [BeamScreen]::ForceForeground($hwnd)) { throw "the Explorer folder $leaf never took the foreground" }
+    Start-Sleep -Milliseconds 600
+    $firstName = (Get-ChildItem -LiteralPath $folder -File | Sort-Object Name | Select-Object -First 1).Name
+    $itemRect = Get-ExplorerItemRect $hwnd $firstName
+    $itemX = [int]($itemRect.Left + $itemRect.Width / 2)
+    $itemY = [int]($itemRect.Top + $itemRect.Height / 2)
+    $pillRect = New-Object BeamScreen+RECT
+    if (-not [BeamScreen]::GetWindowRect($pillHwnd, [ref]$pillRect)) { throw 'the Beam window rect could not be read' }
+    $pillX = [int](($pillRect.Left + $pillRect.Right) / 2)
+    $pillY = [int](($pillRect.Top + $pillRect.Bottom) / 2)
+    $pillPoint = New-Object BeamScreen+POINT
+    $pillPoint.X = $pillX
+    $pillPoint.Y = $pillY
+    if ([BeamScreen]::GetAncestor([BeamScreen]::WindowFromPoint($pillPoint), 2) -ne $pillHwnd) {
+      throw 'another window covers the pill drop point'
+    }
+
+    [BeamScreen]::SetCursorPos($itemX, $itemY) | Out-Null
+    Start-Sleep -Milliseconds 250
+    [BeamScreen]::mouse_event(0x0002, 0, 0, 0, [UIntPtr]::Zero)
+    [BeamScreen]::mouse_event(0x0004, 0, 0, 0, [UIntPtr]::Zero)
+    Start-Sleep -Milliseconds 250
+    (New-Object -ComObject WScript.Shell).SendKeys('^a')
+    Start-Sleep -Milliseconds 300
+
+    [BeamScreen]::SetCursorPos($itemX, $itemY) | Out-Null
+    Start-Sleep -Milliseconds 200
+    [BeamScreen]::mouse_event(0x0002, 0, 0, 0, [UIntPtr]::Zero)
+    Start-Sleep -Milliseconds 250
+    for ($step = 1; $step -le 20; $step++) {
+      $stepX = [int]($itemX + ($pillX - $itemX) * $step / 20)
+      $stepY = [int]($itemY + ($pillY - $itemY) * $step / 20)
+      [BeamScreen]::SetCursorPos($stepX, $stepY) | Out-Null
+      Start-Sleep -Milliseconds 30
+    }
+    for ($jiggle = 0; $jiggle -lt 12; $jiggle++) {
+      $jiggleX = $pillX + ((($jiggle % 2) * 6) - 3)
+      $jiggleY = $pillY + ((([math]::Floor($jiggle / 2) % 2) * 6) - 3)
+      [BeamScreen]::SetCursorPos($jiggleX, $jiggleY) | Out-Null
+      Start-Sleep -Milliseconds 60
+    }
+    [BeamScreen]::SetCursorPos($pillX, $pillY) | Out-Null
+    Start-Sleep -Milliseconds 500
+    [BeamScreen]::mouse_event(0x0004, 0, 0, 0, [UIntPtr]::Zero)
+    Start-Sleep -Milliseconds 500
+    [BeamScreen]::mouse_event(0x0004, 0, 0, 0, [UIntPtr]::Zero)
+    Start-Sleep -Milliseconds 1500
+  } finally {
+    [BeamScreen]::PostMessage($hwnd, 0x0010, [IntPtr]::Zero, [IntPtr]::Zero) | Out-Null
+    Start-Sleep -Milliseconds 400
+  }
+}
+
 $clipPaths = @(Get-DropPaths)
 $clipMissing = @($clipFiles | Where-Object { $clipPaths -notcontains $_ })
 if ($clipReply -notmatch '"ok":true' -or $clipPaths.Count -ne 3 -or $clipMissing.Count -ne 0) {
@@ -409,8 +501,8 @@ if (-not (Test-Path (Join-Path $PSScriptRoot 'assets\tray.ico'))) {
   Write-Host 'FAIL UI spec: assets/tray.ico is missing'
   $uiFail = $true
 }
-if ($trayTs -notmatch 'new Tray\(' -or $trayTs -notmatch "label: 'Reset Position'" -or $trayTs -notmatch "label: 'Quit'" -or $trayTs -notmatch 'app\.quit\(\)') {
-  Write-Host 'FAIL UI spec: tray needs Reset Position and Quit'
+if ($trayTs -notmatch 'new Tray\(' -or $trayTs -notmatch "label: 'Reset Position'" -or $trayTs -notmatch "label: 'Quit'" -or $trayTs -notmatch 'click: onQuit' -or $main -notmatch 'app\.quit\(\)') {
+  Write-Host 'FAIL UI spec: tray needs Reset Position, Quit, and a quit path'
   $uiFail = $true
 }
 if ($main -notmatch 'createTray\(') {
@@ -1051,34 +1143,87 @@ Write-Host 'PASS fullscreen hide (hid at fullscreen, tray click restored it, sta
 Write-Host '[16/25] drop'
 $dropOutLog = Join-Path $env:TEMP 'beam-drop-verify.out.log'
 $dropErrLog = Join-Path $env:TEMP 'beam-drop-verify.err.log'
+$dropFolder3 = Join-Path $env:TEMP ("beam-realdrop-3-" + $PID)
+$dropFolder51 = Join-Path $env:TEMP ("beam-realdrop-51-" + $PID)
 Remove-Item -LiteralPath $dropOutLog, $dropErrLog -ErrorAction SilentlyContinue
+Remove-Item -LiteralPath $dropFolder3, $dropFolder51 -Recurse -Force -ErrorAction SilentlyContinue
+New-Item -ItemType Directory -Path $dropFolder3, $dropFolder51 | Out-Null
+1..3 | ForEach-Object {
+  Set-Content -LiteralPath (Join-Path $dropFolder3 ("drop-$_.beam")) -Value 'beam' -Encoding ASCII
+}
+1..51 | ForEach-Object {
+  Set-Content -LiteralPath (Join-Path $dropFolder51 ("extra-{0:D2}.beam" -f $_)) -Value 'beam' -Encoding ASCII
+}
 $env:BEAM_DROP_TEST = '1'
 $dropApp = $null
 try {
   $dropApp = Start-Process -FilePath $electron -ArgumentList '.' -WorkingDirectory $PSScriptRoot -PassThru -RedirectStandardOutput $dropOutLog -RedirectStandardError $dropErrLog
   $dropOut = ''
-  $dropStop = (Get-Date).AddSeconds(20)
+  $dropWindow = [IntPtr]::Zero
+  $dropStop = (Get-Date).AddSeconds(25)
   while ((Get-Date) -lt $dropStop) {
     Start-Sleep -Milliseconds 200
     if ($dropApp.HasExited) { throw 'the app exited before the drop run' }
     $dropOut = Get-Content -LiteralPath $dropOutLog -Raw -ErrorAction SilentlyContinue
-    if ($dropOut -match '\[drop\] settled') { break }
+    $dropApp.Refresh()
+    $dropWindow = $dropApp.MainWindowHandle
+    if ($dropOut -match '\[drop\] watch' -and $dropWindow -ne [IntPtr]::Zero) { break }
   }
-  if ($dropOut -notmatch '\[drop\] settled') { throw 'the drop test never finished' }
-  $dropChecks = @(
-    '\[files\] add=3 accepted=3 count=3 truncated=false',
-    '\[files\] add=51 accepted=47 count=50 truncated=true',
-    '\[drop\] capped state=files title=Max 50'
-  )
-  foreach ($dropCheck in $dropChecks) {
-    if ($dropOut -notmatch $dropCheck) { throw "missing drop evidence /$dropCheck/" }
+  if ($dropOut -notmatch '\[drop\] watch') { throw 'the pill probe never started' }
+  if ($dropWindow -eq [IntPtr]::Zero) { throw 'the Beam window handle never appeared' }
+
+  Invoke-ExplorerDrop $dropFolder3 $dropWindow
+  $dropStop = (Get-Date).AddSeconds(15)
+  while ((Get-Date) -lt $dropStop) {
+    Start-Sleep -Milliseconds 200
+    $dropOut = Get-Content -LiteralPath $dropOutLog -Raw -ErrorAction SilentlyContinue
+    if ($dropOut -match '\[files\] add=3 accepted=3 count=3 truncated=false') { break }
   }
-  if ($dropOut -match '\[drop\] three state=files title=3 files') {
-    if ($dropOut -notmatch '\[drop\] settled state=files title=50 files') { throw 'the settled pill did not read 50 files' }
-  } elseif ($dropOut -match '\[drop\] three state=(playing|paused) title=.+') {
-    Write-Host 'SKIP drop pill labels (music active: the pill keeps the track; counts are asserted from the [files] add log)'
-  } else {
-    throw 'the drop left the pill in an unexpected state'
+  if ($dropOut -notmatch '\[files\] add=3 accepted=3 count=3 truncated=false') {
+    throw 'the real 3-file Explorer drop never reached the shelf'
+  }
+  $dropMusic = $dropOut -match '\[drop\] watch state=(playing|paused)'
+  if (-not $dropMusic) {
+    $labelStop = (Get-Date).AddSeconds(5)
+    while ((Get-Date) -lt $labelStop) {
+      Start-Sleep -Milliseconds 200
+      $dropOut = Get-Content -LiteralPath $dropOutLog -Raw -ErrorAction SilentlyContinue
+      if ($dropOut -match '\[drop\] watch state=files title=3 files') { break }
+    }
+    if ($dropOut -notmatch '\[drop\] watch state=files title=3 files') {
+      throw 'the pill did not read 3 files after the real drop'
+    }
+  }
+
+  Invoke-ExplorerDrop $dropFolder51 $dropWindow
+  $dropStop = (Get-Date).AddSeconds(15)
+  while ((Get-Date) -lt $dropStop) {
+    Start-Sleep -Milliseconds 200
+    $dropOut = Get-Content -LiteralPath $dropOutLog -Raw -ErrorAction SilentlyContinue
+    if ($dropOut -match '\[files\] add=51 accepted=47 count=50 truncated=true') { break }
+  }
+  if ($dropOut -notmatch '\[files\] add=51 accepted=47 count=50 truncated=true') {
+    throw 'the real 51-file Explorer drop did not cap at 50'
+  }
+  if (-not $dropMusic) {
+    $labelStop = (Get-Date).AddSeconds(6)
+    while ((Get-Date) -lt $labelStop) {
+      Start-Sleep -Milliseconds 200
+      $dropOut = Get-Content -LiteralPath $dropOutLog -Raw -ErrorAction SilentlyContinue
+      if ($dropOut -match '\[drop\] watch state=files title=Max 50') { break }
+    }
+    if ($dropOut -notmatch '\[drop\] watch state=files title=Max 50') {
+      throw 'the pill did not read Max 50 after the overflow drop'
+    }
+    $labelStop = (Get-Date).AddSeconds(6)
+    while ((Get-Date) -lt $labelStop) {
+      Start-Sleep -Milliseconds 200
+      $dropOut = Get-Content -LiteralPath $dropOutLog -Raw -ErrorAction SilentlyContinue
+      if ($dropOut -match '\[drop\] watch state=files title=50 files') { break }
+    }
+    if ($dropOut -notmatch '\[drop\] watch state=files title=50 files') {
+      throw 'the pill did not settle on 50 files'
+    }
   }
 
   $closed = $dropApp.CloseMainWindow()
@@ -1096,7 +1241,8 @@ try {
 }
 Remove-Item Env:BEAM_DROP_TEST -ErrorAction SilentlyContinue
 Remove-Item -LiteralPath $dropOutLog, $dropErrLog -ErrorAction SilentlyContinue
-Write-Host 'PASS drop (3 real files read with webUtils; 51 more capped at 50 with a Max 50 notice)'
+Remove-Item -LiteralPath $dropFolder3, $dropFolder51 -Recurse -Force -ErrorAction SilentlyContinue
+Write-Host 'PASS drop (a real Explorer drag added 3 files through webUtils; 51 more capped the shelf at 50)'
 
 Write-Host '[17/25] copy'
 $copyOutLog = Join-Path $env:TEMP 'beam-copy-verify.out.log'
@@ -1153,17 +1299,23 @@ try {
     if ($pasteHwnd -ne [IntPtr]::Zero) { break }
   }
   if ($pasteHwnd -eq [IntPtr]::Zero) { throw 'the paste folder never opened' }
-  if (-not [BeamScreen]::ForceForeground($pasteHwnd)) { throw 'the paste folder never took the foreground' }
-  Start-Sleep -Milliseconds 400
-  if ([BeamScreen]::GetForegroundWindow() -ne $pasteHwnd) { throw 'the paste folder lost the foreground before the paste' }
-  $copyShell.SendKeys('^v')
   $pasted = $false
-  for ($i = 0; $i -lt 60; $i++) {
-    Start-Sleep -Milliseconds 250
-    $landed = @($copySources | Where-Object { Test-Path -LiteralPath (Join-Path $copyPasteDir (Split-Path -Leaf $_)) })
-    if ($landed.Count -eq 3) {
-      $pasted = $true
-      break
+  for ($attempt = 1; $attempt -le 2 -and -not $pasted; $attempt++) {
+    if (-not [BeamScreen]::ForceForeground($pasteHwnd)) { throw 'the paste folder never took the foreground' }
+    Start-Sleep -Milliseconds 400
+    if ([BeamScreen]::GetForegroundWindow() -ne $pasteHwnd) { continue }
+    $copyShell.SendKeys('^v')
+    for ($i = 0; $i -lt 60; $i++) {
+      Start-Sleep -Milliseconds 250
+      $landed = @($copySources | Where-Object { Test-Path -LiteralPath (Join-Path $copyPasteDir (Split-Path -Leaf $_)) })
+      if ($landed.Count -eq 3) {
+        $pasted = $true
+        break
+      }
+    }
+    if (-not $pasted) {
+      Get-ChildItem -LiteralPath $copyPasteDir -File -ErrorAction SilentlyContinue | Remove-Item -Force -ErrorAction SilentlyContinue
+      Write-Host "retrying Explorer paste (attempt $attempt lost the foreground or pasted nothing)"
     }
   }
   if (-not $pasted) { throw 'Ctrl+V in Explorer pasted nothing' }
@@ -1387,9 +1539,13 @@ try {
       ($clearLog -notmatch '\[clear\] three rows=3 note=Files clear on quit well=false state=(playing|paused) title=.+')) {
     throw 'three files did not show the quit warning'
   }
-  if (($clearLog -notmatch '\[clear\] removed rows=2 note=Files clear on quit well=false state=files title=2 files') -and
-      ($clearLog -notmatch '\[clear\] removed rows=2 note=Files clear on quit well=false state=(playing|paused) title=.+')) {
-    throw 'the row remove did not leave two files and the warning'
+  if (($clearLog -notmatch '\[clear\] removed rows=2 note=Removed well=false state=files title=2 files') -and
+      ($clearLog -notmatch '\[clear\] removed rows=2 note=Removed well=false state=(playing|paused) title=.+')) {
+    throw 'the row remove did not leave two files with the Undo status'
+  }
+  if (($clearLog -notmatch '\[clear\] warning rows=2 note=Files clear on quit well=false state=files title=2 files') -and
+      ($clearLog -notmatch '\[clear\] warning rows=2 note=Files clear on quit well=false state=(playing|paused) title=.+')) {
+    throw 'the quit warning did not return after the Undo status'
   }
   if ($clearLog -notmatch '\[files\] remove=0 count=2') { throw 'main did not record the row remove' }
   if (($clearLog -notmatch '\[clear\] empty rows=0 note= well=true state=idle title=Beam') -and
@@ -1501,6 +1657,28 @@ function Set-BeamSessionPaused([string]$app) {
   return $false
 }
 
+function Stop-BeamPlayerApps {
+  Get-CimInstance Win32_Process -Filter "Name='chrome.exe' OR Name='msedge.exe'" -ErrorAction SilentlyContinue |
+    Where-Object { $_.CommandLine -match 'beam-players' } |
+    ForEach-Object { Stop-Process -Id $_.ProcessId -Force -ErrorAction SilentlyContinue }
+}
+
+function Start-BeamChromePlayer {
+  Start-Process -FilePath $playerChromeExe -ArgumentList @(
+    '--user-data-dir=' + (Join-Path $playerRoot 'chrome'),
+    '--autoplay-policy=no-user-gesture-required',
+    '--no-first-run',
+    '--new-window',
+    ('file:///' + ($playerPage -replace '\\', '/'))
+  ) | Out-Null
+  for ($i = 0; $i -lt 40; $i++) {
+    Start-Sleep -Milliseconds 500
+    $live = Get-BeamSessions
+    if ($live | Where-Object { $_.app -match 'Chrome' -and $_.playing }) { return }
+  }
+  throw 'the local SMTC player never started playing'
+}
+
 function Clear-BeamPlayers {
   if ($playerHelper) {
     if (-not $playerHelper.HasExited) {
@@ -1510,9 +1688,7 @@ function Clear-BeamPlayers {
     if (-not $playerHelper.HasExited) { $playerHelper.Kill() }
     $playerHelper = $null
   }
-  Get-CimInstance Win32_Process -Filter "Name='chrome.exe' OR Name='msedge.exe'" -ErrorAction SilentlyContinue |
-    Where-Object { $_.CommandLine -match 'beam-players' } |
-    ForEach-Object { Stop-Process -Id $_.ProcessId -Force -ErrorAction SilentlyContinue }
+  Stop-BeamPlayerApps
   Remove-Item -LiteralPath $playerRoot -Recurse -Force -ErrorAction SilentlyContinue
 }
 
@@ -1610,21 +1786,7 @@ load(0);
     @(Get-Process BeamBridge -ErrorAction SilentlyContinue | Where-Object { $_.Id -ne $script:playerHelperId }).Count
   }
 
-  Start-Process -FilePath $playerChromeExe -ArgumentList @(
-    '--user-data-dir=' + (Join-Path $playerRoot 'chrome'),
-    '--autoplay-policy=no-user-gesture-required',
-    '--no-first-run',
-    '--new-window',
-    ('file:///' + ($playerPage -replace '\\', '/'))
-  ) | Out-Null
-
-  $playerReady = $false
-  for ($i = 0; $i -lt 40; $i++) {
-    Start-Sleep -Milliseconds 500
-    $playerLive = Get-BeamSessions
-    if ($playerLive | Where-Object { $_.app -match 'Chrome' -and $_.playing }) { $playerReady = $true; break }
-  }
-  if (-not $playerReady) { throw 'the local SMTC player never started playing' }
+  Start-BeamChromePlayer
 } catch {
   Clear-BeamPlayers
   Remove-Item Env:BEAM_MUSIC_SESSIONS_TEST -ErrorAction SilentlyContinue
@@ -1931,7 +2093,7 @@ try {
 
   if ($pickLog -match '\[sessions\] skip=one') {
     $skipMatch = [regex]::Match($pickLog, '\[sessions\] skip=one ([^\r\n]+)')
-    Write-Host "SKIP session picking (only one media session was live: $($skipMatch.Groups[1].Value.Trim()); open two players that publish SMTC and rerun)"
+    throw "the app saw one session after verify found two ($($skipMatch.Groups[1].Value.Trim()))"
   } else {
     $listMatch = [regex]::Match($pickLog, '\[sessions\] list (\[[^\r\n]+\])')
     $switchMatch = [regex]::Match($pickLog, '\[sessions\] switched (\{[^\r\n]+\})')
@@ -1959,35 +2121,69 @@ try {
   Write-Host "FAIL session picking: $($_.Exception.Message)"
   exit 1
 }
-Clear-BeamPlayers
+Stop-BeamPlayerApps
 Remove-Item Env:BEAM_MUSIC_SESSIONS_TEST -ErrorAction SilentlyContinue
 Remove-Item -LiteralPath $pickOut, $pickErr -ErrorAction SilentlyContinue
 
 Write-Host '[25/25] UI pass'
-$uiOutLog = Join-Path $env:TEMP 'beam-ui-verify.out.log'
-$uiErrLog = Join-Path $env:TEMP 'beam-ui-verify.err.log'
-Remove-Item -LiteralPath $uiOutLog, $uiErrLog -ErrorAction SilentlyContinue
-$env:BEAM_UI_TEST = '1'
+$uiQuietOut = Join-Path $env:TEMP 'beam-ui-quiet.out.log'
+$uiQuietErr = Join-Path $env:TEMP 'beam-ui-quiet.err.log'
+$uiChevronOut = Join-Path $env:TEMP 'beam-ui-chevron.out.log'
+$uiChevronErr = Join-Path $env:TEMP 'beam-ui-chevron.err.log'
+Remove-Item -LiteralPath $uiQuietOut, $uiQuietErr, $uiChevronOut, $uiChevronErr -ErrorAction SilentlyContinue
+
+function Get-UiLog([string]$text, [string]$tag) {
+  $match = [regex]::Match($text, "\[ui\] $tag (\{[^\r\n]*\})")
+  if (-not $match.Success) { throw "the UI pass never logged '$tag'" }
+  return $match.Groups[1].Value | ConvertFrom-Json
+}
+
+function Start-UiPhase([string]$phase, [string]$outLog, [string]$errLog, [int]$seconds) {
+  $env:BEAM_UI_TEST = '1'
+  $env:BEAM_UI_TEST_PHASE = $phase
+  $app = Start-Process -FilePath $electron -ArgumentList '.' -WorkingDirectory $PSScriptRoot -PassThru -RedirectStandardOutput $outLog -RedirectStandardError $errLog
+  try {
+    $log = ''
+    $stop = (Get-Date).AddSeconds($seconds)
+    while ((Get-Date) -lt $stop) {
+      Start-Sleep -Milliseconds 250
+      if ($app.HasExited) { throw "the app exited during the $phase UI pass" }
+      $log = Get-Content -LiteralPath $outLog -Raw -ErrorAction SilentlyContinue
+      if ($log -match '\[ui\] done') { break }
+    }
+    if ($log -notmatch '\[ui\] done') { throw "the $phase UI pass never finished" }
+    return @{ App = $app; Log = $log }
+  } catch {
+    if (-not $app.HasExited) { $app.Kill() }
+    throw
+  }
+}
+
+function Stop-UiPhaseApp([System.Diagnostics.Process]$app) {
+  $closed = $app.CloseMainWindow()
+  if (-not $closed) { throw 'the pill did not close after the UI pass' }
+  $exited = $app.WaitForExit(8000)
+  Start-Sleep -Milliseconds 500
+  $left = Get-LeftoverHelper
+  if (-not $exited -or $left -ne 0) { throw "the app did not exit cleanly (exited=$exited helperLeft=$left)" }
+}
+
+$uiQuiet = $null
 $uiApp = $null
+$uiChevronApp = $null
 try {
-  $uiApp = Start-Process -FilePath $electron -ArgumentList '.' -WorkingDirectory $PSScriptRoot -PassThru -RedirectStandardOutput $uiOutLog -RedirectStandardError $uiErrLog
-  $uiOut = ''
-  $uiStop = (Get-Date).AddSeconds(75)
-  while ((Get-Date) -lt $uiStop) {
-    Start-Sleep -Milliseconds 250
-    if ($uiApp.HasExited) { throw 'the app exited during the UI pass' }
-    $uiOut = Get-Content -LiteralPath $uiOutLog -Raw -ErrorAction SilentlyContinue
-    if ($uiOut -match '\[ui\] done') { break }
-  }
-  if ($uiOut -notmatch '\[ui\] done') { throw 'the UI pass never finished' }
-
-  function Get-UiLog([string]$text, [string]$tag) {
-    $match = [regex]::Match($text, "\[ui\] $tag (\{[^\r\n]*\})")
-    if (-not $match.Success) { throw "the UI pass never logged '$tag'" }
-    return $match.Groups[1].Value | ConvertFrom-Json
+  Stop-BeamPlayerApps
+  $quietWait = (Get-Date).AddSeconds(15)
+  while ((Get-Date) -lt $quietWait) {
+    Start-Sleep -Milliseconds 500
+    if (@(Get-BeamSessions).Count -eq 0) { break }
   }
 
+  $uiQuiet = Start-UiPhase 'quiet' $uiQuietOut $uiQuietErr 90
+  $uiApp = $uiQuiet.App
+  $uiOut = $uiQuiet.Log
   $start = Get-UiLog $uiOut 'start'
+  if ($start.phase -ne 'quiet') { throw "the quiet phase logged phase '$($start.phase)'" }
   if ([int]$start.w -ne 94 -or [int]$start.h -ne 30) { throw "the resting pill is $($start.w)x$($start.h), expected 94x30" }
   $add = Get-UiLog $uiOut 'add'
   if ([int]$add.accepted -ne 3 -or [int]$add.shelf -ne 3) { throw "the shelf took $($add.accepted) of 3 files" }
@@ -2025,10 +2221,8 @@ try {
     throw "Clear All left $($clear.shelf) paths, $($clear.rows) rows, label '$($clear.label)'"
   }
   $chevron = Get-UiLog $uiOut 'chevron'
-  if ($null -ne $chevron.skipped) {
-    Write-Host "SKIP chevron (no media session: $($chevron.skipped))"
-  } elseif (-not $chevron.ok) {
-    throw 'the pill chevron did not open the panel'
+  if ($chevron.skipped -ne 'quiet-phase') {
+    throw "the quiet phase did not record the expected chevron skip (got '$($chevron.skipped)')"
   }
   $quiet = Get-UiLog $uiOut 'quiet'
   if ($null -ne $quiet.skipped) {
@@ -2064,22 +2258,34 @@ try {
   if ($pillRoot -ne $uiHwnd) { throw 'the pill center is not Beam hit area' }
   if ($marginRoot -eq $uiHwnd) { throw 'the transparent margin still belongs to Beam' }
 
-  $closed = $uiApp.CloseMainWindow()
-  if (-not $closed) { throw 'the pill did not close after the UI pass' }
-  $exited = $uiApp.WaitForExit(8000)
-  Start-Sleep -Milliseconds 500
-  $uiHelperLeft = @(Get-Process BeamBridge -ErrorAction SilentlyContinue).Count
-  if (-not $exited -or $uiHelperLeft -ne 0) { throw "the app did not exit cleanly (exited=$exited helperLeft=$uiHelperLeft)" }
+  Stop-UiPhaseApp $uiApp
+  $uiApp = $null
+
+  Start-BeamChromePlayer
+  $uiChevron = Start-UiPhase 'chevron' $uiChevronOut $uiChevronErr 45
+  $uiChevronApp = $uiChevron.App
+  $chevronStart = Get-UiLog $uiChevron.Log 'start'
+  if (-not $chevronStart.music) { throw 'the chevron phase started without a live media session' }
+  $chevronLive = Get-UiLog $uiChevron.Log 'chevron'
+  if ($null -ne $chevronLive.skipped) { throw "the chevron phase skipped ($($chevronLive.skipped))" }
+  if (-not $chevronLive.ok) { throw 'the pill chevron did not open the panel' }
+  Stop-UiPhaseApp $uiChevronApp
+  $uiChevronApp = $null
+  Clear-BeamPlayers
 } catch {
   if ($uiApp -and -not $uiApp.HasExited) { $uiApp.Kill() }
+  if ($uiChevronApp -and -not $uiChevronApp.HasExited) { $uiChevronApp.Kill() }
+  Clear-BeamPlayers
   Get-Process electron,BeamBridge -ErrorAction SilentlyContinue | Stop-Process -Force
   Remove-Item Env:BEAM_UI_TEST -ErrorAction SilentlyContinue
+  Remove-Item Env:BEAM_UI_TEST_PHASE -ErrorAction SilentlyContinue
   Write-Host "FAIL UI pass: $($_.Exception.Message)"
   exit 1
 }
 Remove-Item Env:BEAM_UI_TEST -ErrorAction SilentlyContinue
-Remove-Item -LiteralPath $uiOutLog, $uiErrLog -ErrorAction SilentlyContinue
-Write-Host 'PASS UI pass (94x30 rest, shelf add/undo, last-used tab, centered running timer, calendar nav, Esc, chevron, 30x30 quiet + wake, cleared shelf, margin click-through)'
+Remove-Item Env:BEAM_UI_TEST_PHASE -ErrorAction SilentlyContinue
+Remove-Item -LiteralPath $uiQuietOut, $uiQuietErr, $uiChevronOut, $uiChevronErr -ErrorAction SilentlyContinue
+Write-Host 'PASS UI pass (quiet phase: 94x30 rest, shelf add/undo, last-used tab, centered running timer, calendar nav, Esc, 30x30 quiet + wake; chevron phase: live-music chevron opened the panel; margin click-through)'
 
 Remove-Item Env:BEAM_SETTINGS_PATH -ErrorAction SilentlyContinue
 Remove-Item -LiteralPath (Join-Path $env:TEMP 'beam-verify-active-settings.json') -ErrorAction SilentlyContinue

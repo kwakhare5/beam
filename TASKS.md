@@ -8,29 +8,70 @@
 
 **Done before the order:** 0.1 scaffold, 0.2 budget (90 MB / 0.035% CPU), 0.3 helper ping (6.3 MB), 0.4a live SMTC + PNG art, 0.4b CF_HDROP clipboard. Plus UI work outside the phase order: the app UI system, the canonical preview, the focus/cleanup pass (cards 21–35), the 2026-10-28 cleanup (card 43), the segmented-tab redesign (cards 44–54), the 100/136 capsule pass (cards 55–56), the 2026-10-29 audit fix pass (card 64), and the 6% capsule scale to 94×30 / 128×30 in a 136×42 window (card 67).
 
+## Audit snapshot — 2026-11-07 (read-only)
+
+The boxes were not changed by this audit. Read this with the notes on each task.
+
+- **Done and previously proven:** 1.1, 1.2, 1.3, 1.4 (single display), 1.5, 1.6, 0.5, 1.9, 3.1 (historical run), 3.2, 3.3, 3.4, 3.5, 2.1, 2.2, 2.3.
+- **Built and still unchecked:** 9.1, 9.2, 9.4, 9.7, 9.8, 9.9, 1.8, timer (4.1/4.2/4.4), calendar (5.1/5.2/5.4), and last-used tab notes. 2.4, 9.3, 9.5, and 9.6 are now ticked by R1.
+- **Partial:** 2.5 has a no-art fallback and null-session debounce; paused/closed-player states are unproven. 4.3 has the done face but no chime or Windows banner.
+- **Not built:** 1.7 startup toggle, 6.2 priority, 7.1 Settings screen, 4.5 hidden completion, 5.3 midnight drift, helper restart policy/timeouts, a complete packaged build.
+- **Gate history:** before R1, check 16 was red (synthetic CDP drag), 17 depended on Explorer keeping the foreground, 24 needed two live players, and 25 could not cover quiet and chevron in one run. R1 resolved all four; see the result line above.
+- **Doc conflict:** TASKS 6.1/6.2 say timer then music; ADR-0012 (approved) says last used wins. The code follows the ADR. Decide whether 6.2 is obsolete before building it.
+- **R1 result (2026-11-07):** `.\verify.ps1` exits 0, 25/25, no SKIPs. 2.4, 9.3, 9.5, and 9.6 are ticked. The real drop exposed a pill title DOM-churn bug (fixed); checks 11 and 20 were stale (quit moved to main; the 5s Undo status precedes the warning) and are corrected.
+
+## R. Codebase repair (approved 2026-11-07)
+
+**Rule:** these run before blocks I and A–H. One item at a time, one commit per item, `.\verify.ps1` after each. No feature work inside a health item and no cleanup inside a feature item. Order differs from the grill only where a product fix would otherwise be moved twice: the helper and timer land before the split.
+
+- [x] **R1 Gate hardening** — *Depends on: nothing.*
+  - Harden, do not weaken. Check 16 becomes a real Explorer→pill mouse drag using the check-18 harness; check 17 forces and verifies Explorer foreground before Ctrl+V with one retry; check 24 switches two real players with real playback instead of forced picks; check 25 splits into a no-session run (quiet) and a live-session run (chevron). Two failed attempts at the real drop stop the item and ask. Full suite exits 0; tick only what the checks prove.
+  - _Proved 2026-11-07:_ `.\verify.ps1` exit 0, 25/25, no SKIPs. Check 16 is a real Explorer→pill drag (3 files, then 51 capped at 50); 17 pasted on the first foreground attempt; 20 proved row remove → 5s Undo status → warning return; 24 followed MSEdge in 107ms and Chrome in 106ms; 25 ran a no-media quiet phase (30x30 quiet + wake) and a live-media chevron phase. The real drop exposed a real bug: the pill replaced its title DOM node on every drag move, turning every `dragover` into a fresh `dragenter`; the title now updates in place.
+- [ ] **R2 Helper reliability** — *Depends on: R1.*
+  - Bridge request timeout, stdout buffer cap, restart max 3 in 60s, spawn-error child reset; helper disposal, `RegisterClassEx` check, and uncaught `Attach` gaps; atomic settings write. Add a forced-kill check and a hung-request check.
+- [ ] **R3 Timer completion** — *Depends on: R2.*
+  - Move the deadline to main; push ticks; exactly-once completion; generate and bundle one chime WAV; Electron `Notification` with tray balloon fallback; prove hidden/fullscreen completion, done face, cancel/replace. Ticks 4.1–4.5 when proven.
+- [ ] **R4 Main/renderer/demo refactor** — *Depends on: R3.*
+  - Extract main services (window/shape, shelf, panel, music, timer, hotkey) and move the `BEAM_*` harness to `src/main/dev`, excluded from packaged files. Extract renderer core (tab pick, timer, calendar, file actions/undo) and wire `renderer.ts` to it. Demo imports the same core with a browser adapter; delete duplicated behavior. Remove the dead guard, unused `displayId`, uncleared intervals/listeners, and CSS glitches. Re-run verify and `npm --prefix site run build`.
+- [ ] **R5 Verify harness refactor** — *Depends on: R4.*
+  - Extract shared PowerShell helpers for launch/stop/CDP/wait/assert, remove duplicated drag/shutdown blocks, make skips explicit and cleanup `finally`-safe. Keep 25 checks and re-run.
+- [ ] **R6 Settings, startup, hotkey rebind** — *Depends on: R5.*
+  - Wire 7.1's five rows, tray Settings, startup toggle, hotkey capture plus fallback notice, theme switch. Persist and prove save/restart, registry entry and cleanup, hotkey toggle. Ticks 1.7, 1.8, 7.1; retires 6.2 against ADR-0012.
+- [ ] **R7 Remaining proofs** — *Depends on: R6.*
+  - Calendar midnight drift (5.3), locale week start and year boundaries, multi-monitor and 100/150% if hardware allows (otherwise mark blocked, do not tick). Windows 10 stays unproven.
+- [ ] **R8 Packaging** — *Depends on: R7.*
+  - `npm run dist` builds main, preload, renderer, and helper; outputs to `release/build`; verify asserts `app.asar`, helper, icon, and a portable launch; rename stale `release/` and `release-next/` to `*-old` after success. No publish until auth and a clean-profile checklist.
+- [ ] **R9 Docs and final gate** — *Depends on: R8.*
+  - Update ARCHITECTURE/PRD/DESIGN/AGENTS/README to code truth; add superseded banners to stale ADRs; retire timer-priority language; fix site copy claims; add `.perch/` to ignore; final `.\verify.ps1` exit 0 and site build.
+
 ## I. UI trust pass (approved 2026-11-04)
 
 These run before the phase tasks, as previous UI passes did. The canonical preview keeps every state; the app only shows what works. 2.4/2.5 proof is part of 9.9.
 
 - [ ] **9.1 Honest surfaces** — *Depends on: 2.3.*
   - Hide Timer, Calendar, Settings, and the pill timer/done actions in the app until their engines land. Keep them in `showcase/app-preview.html`. No dead tab or dead control in the app.
+  - _Superseded 2026-11-04 by ADR-0012: Timer and Calendar are live and visible; only Settings stays out until 7.1._
 - [ ] **9.2 Add files picker** — *Depends on: 3.1.*
   - Native `dialog.showOpenDialog` through preload/main; add picked paths to the same shelf; empty state and action row both work. A drop while the panel is open refreshes the Files list.
-- [ ] **9.3 Panel flow** — *Depends on: 1.3.*
+- [x] **9.3 Panel flow** — *Depends on: 1.3.*
   - Esc resets main's panel state; the panel animates out over 150ms; the 16px margin dismisses; opening picks Files, Music, or the last tab from the pill state. No stuck reopen.
+  - _Proved 2026-11-07:_ check 25 asserts files auto-pick, Esc/reopen, last-used, and the margin dismissal.
 - [ ] **9.4 Feedback and safety** — *Depends on: 3.3, 3.5.*
   - Visible status for copy/add/remove failures; 5s Undo after a row remove; confirm Quit when the shelf is non-empty; a `Connection lost` pill state when the helper dies; tray Hide.
-- [ ] **9.5 Quiet idle and chevron** — *Depends on: 1.5, 2.2.*
+- [x] **9.5 Quiet idle and chevron** — *Depends on: 1.5, 2.2.*
   - 30×30 star-only quiet after 20s idle; 94×30 on hover; 2s return; idle-only. A 16px chevron in the music hover row opens the panel.
-- [ ] **9.6 Hit area** — *Depends on: 9.5.*
+  - _Proved 2026-11-07:_ check 25 quiet phase read 30x30 and woke on hover; chevron phase opened the panel with live music.
+- [x] **9.6 Hit area** — *Depends on: 9.5.*
   - Shape the window to the visible pill with a 6px shadow halo so the transparent margins click through. Re-test drag, hover, panel, and the real-mouse checks.
+  - _Proved 2026-11-07:_ check 25's `WindowFromPoint` hit test: pill center belongs to Beam, the 16px margin does not; drag, hover, and panel checks stayed green.
 - [ ] **9.7 Files and Music layout** — *Depends on: 3.3, 2.3.*
   - Files rows start at the top with actions pinned bottom. More breathing room around the Music progress block.
 - [ ] **9.8 Keyboard and accessibility** — *Depends on: 1.6.*
   - Pill role, name, Enter, focus ring, live region; focus restoration on panel close; Settings tab inside the tablist; calendar focus style. Pull 1.8 forward.
+  - _Audit 2026-11-07: built and proven outside the suite. Settings is intentionally absent from the tablist until 7.1; this task's wording needs that correction._
 - [ ] **9.9 Proof** — *Depends on: 9.1–9.8.*
   - Add runtime checks for the quiet state, chevron, auto-pick, Esc/reopen, margin click-through, Add files, Undo, and quit confirm. Prove 2.4 and 2.5. `.\verify.ps1` exits 0.
-  - _Built 2026-11-04:_ check 25 runs a `BEAM_UI_TEST` app and asserts 94×30 rest, shelf add/undo, files auto-pick, last-used reopen, centered 5-minute timer, calendar nav, Esc, chevron (when a session is live), 30×30 quiet + hover wake, Clear All, and a real `WindowFromPoint` margin hit test; it passes standalone. Not ticked: check 16 is red — Electron 45 delivers every CDP `Input.dispatchDragEvent` as `dragenter`, so no synthetic drop lands and no `[files] add` fires. Quit confirm and the timer done face are not covered.
+  - _Built 2026-11-04:_ check 25 runs a `BEAM_UI_TEST` app and asserts 94×30 rest, shelf add/undo, files auto-pick, last-used reopen, centered 5-minute timer, calendar nav, Esc, chevron, 30×30 quiet + wake, Clear All, and a real `WindowFromPoint` margin hit test. _2026-11-07: the suite is green and both media states are covered (quiet phase and chevron phase), but quit confirm, the timer done face, chime, banner, and the native Add files dialog remain uncovered._
 
 ---
 
@@ -69,6 +110,7 @@ These run before the phase tasks, as previous UI passes did. The canonical previ
 - [x] **3.1 Drop in** — *Depends on: 1.1.*
   - Drag files onto the pill → paths held in memory, count on the pill, 50-entry cap with a clear message. Renderer reads paths with `webUtils.getPathForFile` (Electron 45 removed `File.path`).
   - _Verify (proved 2026-10-31): check 16 dispatches real Chromium drag events with 3 real files; the renderer read each path through `webUtils.getPathForFile`, main logged `[files] add=3 accepted=3 count=3 truncated=false`, and the pill read `3 files`. A second drop of 51 real files logged `add=51 accepted=47 count=50 truncated=true`, the pill read `Max 50`, and 2.6s later `50 files`. The `+N files` drag-over state exists in both the app and the preview but is not asserted by verify._
+  - _Audit 2026-11-07: check 16 is now a real Explorer→pill mouse drag and passes; the historical CDP note is superseded._
 - [x] **3.3 Copy one / Copy All** — *Depends on: 3.1, 1.3.*
   - Copy button per row (hover or focus, 24px) plus Copy All. Goes through the helper's proven `files.copy`. Built: the panel open event carries the live shelf stat'd in main, both buttons send `{ paths, source }` and main accepts only shelf paths; `Copied` feedback lasts 1.5s/1.8s.
   - _Verify (proved 2026-10-31): verify check 17 drops 3 real files, asserts the Files tab shows `alpha.txt,beta.txt,gamma.txt` at `7 B`, row copy leaves exactly `alpha.txt` on the clipboard, Copy All leaves all 3, and Ctrl+V into a real Explorer folder lands all 3 with matching sizes. `.\verify.ps1` exit 0, 17/17 PASS._
@@ -93,13 +135,14 @@ These run before the phase tasks, as previous UI passes did. The canonical previ
 - [x] **2.3 Music tab** — *Depends on: 1.3, 2.1.*
   - 148px square art, full metadata, read-only position bar with elapsed/total, same controls. No seek control (out of scope).
   - _Verify (proved 2026-11-02): check 23 opens the Music tab on the live Chrome track 'Pyar Ki' and asserts 148×148 art from a data URL, title and artist, a read-only DIV progressbar with no slider or tab stop, elapsed/total labels, and all three transports; the bar read 1s/228s and advanced 3s in 3s, and the tab play/pause flipped and restored real playback. CDP `Network.enable` saw 0 http(s) requests._
-- [ ] **2.4 Session picking** — *Depends on: 2.1.*
+- [x] **2.4 Session picking** — *Depends on: 2.1.*
   - Two players at once → last-touched wins; switching apps in the media popup switches Beam.
   - _Verify:_ Spotify + browser tab, toggle foreground, pill follows.
-  - _Built 2026-11-02, unticked._ The helper resolves one session per read (current, else newest playing), listens for `SessionsChanged`, and answers `music.sessions` / `music.pick` under `BEAM_MUSIC_SESSIONS_TEST=1`; check 24 switches a real player both ways. Not ticked: `.\verify.ps1` stopped at check 17, where the real Ctrl+V into Explorer lost the foreground to Freebuff.
+  - _Proved 2026-11-07:_ check 24 followed MSEdge in 107ms and back to Chrome in 106ms with two real sessions and no blank pill. The Windows media flyout itself is not automated; it sets the same OS current session the helper reads.
 - [ ] **2.5 Degrade gracefully** — *Depends on: 2.3.*
   - Player with no artwork, paused player, player closed mid-track.
   - _Verify:_ no crash, no blank frame, placeholder shown.
+  - _Audit 2026-11-07: the no-art star fallback and null-session debounce exist; paused/closed-player states are unproven._
 
 ## E. Timer
 
@@ -108,56 +151,70 @@ These run before the phase tasks, as previous UI passes did. The canonical previ
   - _Verify:_ each preset starts a timer with the right remaining time.
 - [ ] **4.2 Live countdown on the pill** — *Depends on: 4.1.*
   - `mm:ss` under 60 min, `h:mm:ss` above. Main owns the deadline and pushes `beam:timer:tick`; the renderer only displays it. Never a decrementing counter.
+  - _Audit 2026-11-07: the countdown uses a deadline, but it lives in the renderer (`timerDeadline` in `src/renderer/renderer.ts`), not main. Hidden-window completion is not covered._
   - _Verify:_ sleep the machine 2 minutes → countdown is still correct.
 - [ ] **4.3 Done state** — *Depends on: 4.2.*
   - Chime plays once, Windows banner fires; the pill reads Done with a gold check and gold border (no digits, no glow, no mascot swap).
+  - _Audit 2026-11-07: the done face is built; no chime or `Notification` code exists yet._
   - _Verify:_ timer reaches 0 → audible chime + visible banner, exactly one of each; the capsule shows the check, not digits.
 - [ ] **4.4 Cancel and replace** — *Depends on: 4.2.*
   - Cancel stops it. Starting a new one replaces the running one.
+  - _Audit 2026-11-07: cancel and replace are built; verify coverage is still pending._
   - _Verify:_ start 5m, start 10m → only 10m runs, pill shows 10:00.
 - [ ] **4.5 Fires while hidden** — *Depends on: 4.3, 1.9.*
   - Fullscreen game active when the timer ends.
+  - _Audit 2026-11-07: not built; the deadline is renderer-owned and there is no alert path._
   - _Verify:_ chime and banner still fire with the pill hidden.
 
 ## F. Calendar
 
 - [ ] **5.1 Month grid** — *Depends on: 1.3.*
   - Current month, correct weekday offset, local clock only. First day of the week follows the Windows locale, Sunday as fallback.
+  - _Audit 2026-11-07: built; Windows-locale week start and year-boundary cases are not covered by verify._
   - _Verify:_ matches Windows calendar for the current month and week start.
 - [ ] **5.2 Today highlighted** — *Depends on: 5.1.*
   - _Verify:_ today's cell has a visibly distinct style.
 - [ ] **5.3 Month drift** — *Depends on: 5.1.*
   - Leave the app open past midnight / month end.
+  - _Audit 2026-11-07: not built; today refreshes only when the panel renders, so midnight drift is not handled._
   - _Verify:_ date rolls without a restart.
 - [ ] **5.4 Month navigation** — *Depends on: 5.1.*
   - Chevrons move one month; Today returns to the current month. Today stays highlighted only in its own month.
+  - _Audit 2026-11-07: built; year-boundary navigation is not covered._
   - _Verify:_ arrows cross a year boundary correctly; Today restores after several months.
 
 ## G. Glue and settings
 
 - [ ] **6.1 Auto-pick on open** — *Depends on: 2.3, 4.2.*
   - Timer running → Timer. Else music playing → Music. Else last-used tab. The renderer decides from the state it already holds; main sends no tab commands.
+  - _Audit 2026-11-07: ADR-0012 changed this to last-used first; `pickTab` follows the ADR. This task and 6.2 conflict with the approved design._
   - _Verify:_ three scenarios produce three correct tabs.
 - [ ] **6.2 Priority** — *Depends on: 6.1.*
   - Both running → Timer wins.
+  - _Audit 2026-11-07: not implemented; ADR-0012 last-used wins instead. Decide whether to retire this task._
   - _Verify:_ start music and a timer, open panel → Timer tab.
 - [ ] **1.8 Global hotkey** — *Depends on: 1.6.*
   - `Alt+Space` registers; on failure try `Ctrl+Shift+Space` and tell the user. Rebindable in settings.
+  - _Audit 2026-11-07: registration and fallback are built and were proven with real keystrokes; the fallback user notice and rebinding are missing._
   - _Verify:_ hotkey toggles the panel from inside a maximized app.
 - [ ] **1.7 Startup toggle** — *Depends on: 1.4.*
   - `setLoginItemSettings` wired to one settings flag. Three surfaces, one flag: a one-time first-run ask in the panel (Turn on / Not now), the Settings switch, and a tray checkbox. Nothing is written to the registry until the user answers; default is off until then.
+  - _Audit 2026-11-07: not built._
   - _Verify:_ Turn on → registry Run entry exists; Turn off → gone; Not now leaves no entry; tray checkbox and Settings stay in sync; choice survives restart.
 - [ ] **7.1 Settings screen** — *Depends on: 1.7, 1.8, 1.6.*
   - Five rows: startup toggle, hotkey rebind, chime volume with −/+ and a test button, Dark theme switch, and Reset position.
+  - _Audit 2026-11-07: the panel and tray entry are dead placeholders; no control has a handler._
   - _Verify:_ each control saves, survives restart, and takes effect immediately.
 
 ## H. Proof
 
 - [ ] **8.1 `verify.ps1` full suite** — *Depends on: every task above.*
   - Typecheck, build, helper build, launch, window exists at correct height, hotkey registered, timer counts down, clipboard holds 3 files and still pastes after a forced helper restart, no outbound TCP from the app's PID, Electron under 130 MB, helper under 60 MB, total printed, CPU within budget.
+  - _Audit 2026-11-07: no hotkey check, no timer check in 8.1's sense, no forced helper-restart paste, no Electron/total/CPU budget check. The suite has 25 checks and no current green run._
   - _Verify:_ `.\verify.ps1` exits 0 and prints each check.
 - [ ] **8.2 Packaged build** — *Depends on: 8.1.*
   - Installer or portable exe launches on a clean profile.
+  - _Audit 2026-11-07: `npm run dist` only calls electron-builder; `release/win-unpacked` has no `app.asar`, helper, or icon. Nothing is publishable._
   - _Verify:_ installed app passes the manual PRD checklist.
 
 ---

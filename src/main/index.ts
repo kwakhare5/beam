@@ -203,6 +203,7 @@ if (!gotLock) {
   const musicTabTest = process.env.BEAM_MUSIC_TAB_TEST === '1';
   const musicSessionsTest = process.env.BEAM_MUSIC_SESSIONS_TEST === '1';
   const uiTest = process.env.BEAM_UI_TEST === '1';
+  const uiTestPhase = process.env.BEAM_UI_TEST_PHASE ?? 'all';
   let musicView: MusicState | null = null;
   let helperOk = true;
   let liveMusicApp = '';
@@ -523,7 +524,7 @@ if (!gotLock) {
     chevron: boolean;
   };
 
-  async function runUiTest(target: BrowserWindow): Promise<void> {
+  async function runUiTest(target: BrowserWindow, phase: string): Promise<void> {
     const ui = (tag: string, data: unknown): void => console.log(`[ui] ${tag} ${JSON.stringify(data)}`);
     const wait = (ms: number): Promise<void> => new Promise((resolve) => setTimeout(resolve, ms));
     const snap = async (): Promise<UiSnapshot> =>
@@ -601,8 +602,27 @@ if (!gotLock) {
 
     await wait(500);
     const start = await snap();
-    ui('start', { state: start.state, music: Boolean(musicView), chevron: start.chevron, w: start.w, h: start.h, viewport: start.viewport });
+    ui('start', { phase, state: start.state, music: Boolean(musicView), chevron: start.chevron, w: start.w, h: start.h, viewport: start.viewport });
     if (musicView) ui('quiet', { skipped: 'music' });
+
+    if (phase === 'chevron') {
+      const musicStop = Date.now() + 5000;
+      while (!musicView && Date.now() < musicStop) await wait(100);
+      if (!musicView) {
+        ui('chevron', { skipped: 'no-music' });
+        console.log('[ui] done');
+        return;
+      }
+      await park();
+      const pillAt = await point('.pill');
+      if (pillAt) target.webContents.sendInputEvent({ type: 'mouseMove', x: pillAt.x, y: pillAt.y });
+      await wait(260);
+      const clicked = await click('.pill [data-action="panel"]');
+      const chevron = await until((state) => state.open, 3000);
+      ui('chevron', { ok: clicked && chevron.ok, selected: chevron.snap.selected });
+      console.log('[ui] done');
+      return;
+    }
 
     const dir = join(tmpdir(), 'beam-uitest');
     mkdirSync(dir, { recursive: true });
@@ -672,7 +692,9 @@ if (!gotLock) {
     const closed = await until((state) => !state.open, 3000);
     ui('esc', { ok: closed.ok, open: closed.snap.open });
 
-    if (musicView) {
+    if (phase === 'quiet') {
+      ui('chevron', { skipped: 'quiet-phase' });
+    } else if (musicView) {
       await park();
       const pillAt = await point('.pill');
       if (pillAt) target.webContents.sendInputEvent({ type: 'mouseMove', x: pillAt.x, y: pillAt.y });
@@ -1372,63 +1394,23 @@ if (!gotLock) {
       if (uiTest) {
         setTimeout(() => {
           if (!window.isDestroyed()) {
-            void runUiTest(window).catch((error: unknown) => console.error('[ui] failed', error));
+            void runUiTest(window, uiTestPhase).catch((error: unknown) => console.error('[ui] failed', error));
           }
         }, 1200);
       }
     }
 
     async function runDropTest(target: BrowserWindow): Promise<void> {
-      const dir = join(tmpdir(), 'beam-droptest');
-      mkdirSync(dir, { recursive: true });
-      const write = (names: string[]): string[] => {
-        const paths = names.map((name) => join(dir, name));
-        for (const path of paths) writeFileSync(path, 'beam\n');
-        return paths;
-      };
-      const first = write(['one.txt', 'two.txt', 'three.txt']);
-      const many = write(Array.from({ length: 51 }, (_, index) => `extra-${String(index + 1).padStart(2, '0')}.txt`));
-
-      const probe = async (tag: string): Promise<void> => {
-        const dom = (await target.webContents.executeJavaScript(
-          `(() => { const pill = document.querySelector('.pill'); const title = pill?.querySelector('.title'); return { state: pill?.dataset.state ?? null, title: title?.textContent ?? null }; })()`
-        )) as { state: string | null; title: string | null };
-        console.log(`[drop] ${tag} state=${dom.state} title=${dom.title}`);
-      };
-
-      const point = (await target.webContents.executeJavaScript(
-        `(() => { const pill = document.querySelector('.pill'); if (!pill) return null; const rect = pill.getBoundingClientRect(); return { x: Math.round(rect.x + rect.width / 2), y: Math.round(rect.y + rect.height / 2) }; })()`
-      )) as { x: number; y: number } | null;
-      if (!point) {
-        console.error('[drop] pill missing');
-        return;
-      }
-
-      target.webContents.debugger.attach('1.3');
-      try {
-        const drag = async (paths: string[]): Promise<void> => {
-          const data = { items: [], files: paths, dragOperationsMask: 1 };
-          for (const type of ['dragEnter', 'dragOver', 'drop']) {
-            await target.webContents.debugger.sendCommand('Input.dispatchDragEvent', {
-              type,
-              x: point.x,
-              y: point.y,
-              data
-            });
-          }
-        };
-
-        await probe('start');
-        await drag(first);
-        await new Promise((resolve) => setTimeout(resolve, 400));
-        await probe('three');
-        await drag(many);
-        await new Promise((resolve) => setTimeout(resolve, 300));
-        await probe('capped');
-        await new Promise((resolve) => setTimeout(resolve, 2600));
-        await probe('settled');
-      } finally {
-        target.webContents.debugger.detach();
+      while (!target.isDestroyed()) {
+        try {
+          const dom = (await target.webContents.executeJavaScript(
+            `(() => { const pill = document.querySelector('.pill'); const title = pill?.querySelector('.title'); return { state: pill?.dataset.state ?? null, title: title?.textContent ?? null }; })()`
+          )) as { state: string | null; title: string | null };
+          console.log(`[drop] watch state=${dom.state} title=${dom.title}`);
+        } catch {
+          if (target.isDestroyed()) return;
+        }
+        await delay(500);
       }
     }
 
@@ -1704,6 +1686,12 @@ if (!gotLock) {
       const removed = await shelfSnapshot(target);
       console.log(
         `[clear] removed rows=${removed.rows} note=${removed.note} well=${removed.well} state=${removed.state} title=${removed.title}`
+      );
+
+      await new Promise((resolve) => setTimeout(resolve, 5600));
+      const warning = await shelfSnapshot(target);
+      console.log(
+        `[clear] warning rows=${warning.rows} note=${warning.note} well=${warning.well} state=${warning.state} title=${warning.title}`
       );
 
       await target.webContents.executeJavaScript(`document.querySelector('#panel-files .clear-all')?.click()`);
