@@ -54,6 +54,7 @@ internal sealed class MusicWatcher : IDisposable
         if (mgr is null) return list;
 
         var current = mgr.GetCurrentSession();
+        var index = 0;
         foreach (var candidate in mgr.GetSessions())
         {
             try
@@ -61,6 +62,7 @@ internal sealed class MusicWatcher : IDisposable
                 var props = await candidate.TryGetMediaPropertiesAsync();
                 list.Add(new JsonObject
                 {
+                    ["index"] = index,
                     ["app"] = candidate.SourceAppUserModelId ?? string.Empty,
                     ["title"] = props?.Title ?? string.Empty,
                     ["playing"] = candidate.GetPlaybackInfo()?.PlaybackStatus == GlobalSystemMediaTransportControlsSessionPlaybackStatus.Playing,
@@ -71,17 +73,46 @@ internal sealed class MusicWatcher : IDisposable
             {
                 Protocol.Log($"session list failed: {ex.Message}");
             }
+            index++;
         }
         return list;
     }
 
-    public async Task<(bool Ok, string? Error)> PickAsync(string app)
+    public async Task<(bool Ok, string? Error)> PickAsync(string app, string? title, int? index)
     {
         var mgr = manager;
         if (mgr is null) return (false, "no media manager");
 
-        var match = mgr.GetSessions()
-            .FirstOrDefault(candidate => string.Equals(candidate.SourceAppUserModelId, app, StringComparison.OrdinalIgnoreCase));
+        var sessions = mgr.GetSessions();
+        GlobalSystemMediaTransportControlsSession? match = null;
+        if (!string.IsNullOrWhiteSpace(title))
+        {
+            foreach (var candidate in sessions)
+            {
+                try
+                {
+                    var props = await candidate.TryGetMediaPropertiesAsync();
+                    if (string.Equals(props?.Title, title, StringComparison.Ordinal))
+                    {
+                        match = candidate;
+                        break;
+                    }
+                }
+                catch (Exception ex)
+                {
+                    Protocol.Log($"session title check failed: {ex.Message}");
+                }
+            }
+        }
+        else if (index is not null)
+        {
+            if (index < 0 || index >= sessions.Count) return (false, "index out of range");
+            match = sessions[index.Value];
+        }
+        else
+        {
+            match = sessions.FirstOrDefault(candidate => string.Equals(candidate.SourceAppUserModelId, app, StringComparison.OrdinalIgnoreCase));
+        }
         if (match is null) return (false, "no session for that app");
 
         try

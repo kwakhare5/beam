@@ -1,107 +1,27 @@
 import { app, BrowserWindow, dialog, globalShortcut, ipcMain, nativeImage, Notification, screen } from 'electron';
-import { existsSync, mkdirSync, statSync, unlinkSync, writeFileSync } from 'node:fs';
-import { tmpdir } from 'node:os';
-import { basename, join } from 'node:path';
+import { statSync } from 'node:fs';
+import { join } from 'node:path';
 import { Bridge, type HelperEvent } from './bridge';
 import { BeamTimer } from './timer';
-import { IPC, type AddResult, type CopyResult, type MusicState, type ShelfFile, type TimerSnapshot } from '../shared/ipc';
-import { getSettingsPath, loadSettings, saveSettings, type BeamSettings, type SavedPosition } from './settings';
+import { IPC, type AddResult, type CopyResult, type ShelfFile, type TimerSnapshot } from '../shared/ipc';
+import { getSettingsPath, loadSettings, saveSettings, type BeamSettings } from './settings';
 import { helperPath, trayIconPath } from './paths';
 import { createTray } from './tray';
-
-const WINDOW_WIDTH = 136;
-const WINDOW_HEIGHT = 42;
-const PILL_HEIGHT = 30;
-const PANEL_WIDTH = 452;
-const PANEL_HEIGHT = 316;
-const PILL_GAP = 12;
-const MAX_SHELF = 50;
-
-function placeWindow(window: BrowserWindow, resize: boolean): void {
-  if (resize) window.setContentSize(WINDOW_WIDTH, WINDOW_HEIGHT);
-  const { workArea } = screen.getPrimaryDisplay();
-  const bounds = window.getBounds();
-  const content = window.getContentBounds();
-  // anchor against the content rect: Windows pads the frame height at non-100% scale
-  const dx = Math.round(workArea.x + workArea.width / 2 - (content.x + content.width / 2));
-  const dy = Math.round(
-    workArea.y + workArea.height - PILL_GAP - (content.y + (content.height + PILL_HEIGHT) / 2)
-  );
-  window.setPosition(bounds.x + dx, bounds.y + dy);
-  const placed = window.getBounds();
-  const inner = window.getContentBounds();
-  console.log(
-    `[window] bounds=${placed.x},${placed.y},${placed.width},${placed.height}` +
-      ` content=${inner.x},${inner.y},${inner.width},${inner.height}` +
-      ` work=${workArea.x},${workArea.y},${workArea.width},${workArea.height}`
-  );
-}
-function anchorBounds(): Electron.Rectangle {
-  const { workArea } = screen.getPrimaryDisplay();
-  const inset = (WINDOW_HEIGHT - PILL_HEIGHT) / 2;
-  return {
-    x: Math.round(workArea.x + (workArea.width - WINDOW_WIDTH) / 2),
-    y: workArea.y + workArea.height - PILL_GAP - PILL_HEIGHT - inset,
-    width: WINDOW_WIDTH,
-    height: WINDOW_HEIGHT
-  };
-}
-
-function clampToWorkArea(bounds: Electron.Rectangle, workArea: Electron.Rectangle): Electron.Rectangle {
-  return {
-    x: Math.round(Math.min(Math.max(bounds.x, workArea.x), workArea.x + workArea.width - bounds.width)),
-    y: Math.round(Math.min(Math.max(bounds.y, workArea.y), workArea.y + workArea.height - bounds.height)),
-    width: bounds.width,
-    height: bounds.height
-  };
-}
-
-function savedPillBounds(saved: SavedPosition | null): Electron.Rectangle | null {
-  if (!saved) return null;
-  const bounds = { x: saved.x, y: saved.y, width: WINDOW_WIDTH, height: WINDOW_HEIGHT };
-  const display = screen.getAllDisplays().find(({ workArea }) => {
-    return (
-      bounds.x + bounds.width > workArea.x &&
-      bounds.x < workArea.x + workArea.width &&
-      bounds.y + bounds.height > workArea.y &&
-      bounds.y < workArea.y + workArea.height
-    );
-  });
-  if (!display) {
-    console.log('[settings] saved monitor is gone; anchoring on the primary display');
-    return null;
-  }
-  return clampToWorkArea(bounds, display.workArea);
-}
-
-function panelBounds(window: BrowserWindow): Electron.Rectangle {
-  const { workArea } = screen.getDisplayMatching(window.getBounds());
-  const pill = window.getBounds();
-  const center = pill.x + pill.width / 2;
-  const x = Math.round(
-    Math.min(
-      Math.max(center - PANEL_WIDTH / 2, workArea.x + 8),
-      workArea.x + workArea.width - PANEL_WIDTH - 8
-    )
-  );
-  const lowerHalf = pill.y + pill.height / 2 > workArea.y + workArea.height / 2;
-  const rawY = lowerHalf ? pill.y + pill.height - PANEL_HEIGHT : pill.y;
-  const y = Math.round(
-    Math.min(Math.max(rawY, workArea.y + 8), workArea.y + workArea.height - PANEL_HEIGHT - 8)
-  );
-  return { x, y, width: PANEL_WIDTH, height: PANEL_HEIGHT };
-}
-
-type MusicPayload = {
-  app: string;
-  title: string;
-  artist: string;
-  album: string;
-  art: string | null;
-  playing: boolean;
-  positionMs: number;
-  durationMs: number;
-};
+import {
+  anchorBounds,
+  clampToWorkArea,
+  PANEL_HEIGHT,
+  PANEL_WIDTH,
+  PILL_HEIGHT,
+  placeWindow,
+  savedPillBounds,
+  WINDOW_HEIGHT,
+  WINDOW_WIDTH
+} from './geometry';
+import { MAX_SHELF, Shelf } from './shelf';
+import { registerHotkey } from './hotkey';
+import { MusicService, type MusicPayload } from './music';
+import { PanelController } from './panel';
 
 function readPoint(x: unknown, y: unknown): { x: number; y: number } | null {
   if (typeof x !== 'number' || !Number.isFinite(x)) return null;
@@ -119,7 +39,6 @@ if (!gotLock) {
 } else {
   let win: BrowserWindow | null = null;
   let tray: ReturnType<typeof createTray> | null = null;
-  let panelOpen = false;
   let pickingFiles = false;
   let hiddenByFullscreen = false;
   let hiddenByUser = false;
@@ -129,7 +48,7 @@ if (!gotLock) {
   function applyWindowShape(target: BrowserWindow): void {
     if (target.isDestroyed()) return;
     try {
-      if (panelOpen) {
+      if (panel.open) {
         target.setShape([{ x: 0, y: 0, width: PANEL_WIDTH, height: PANEL_HEIGHT }]);
         return;
       }
@@ -152,36 +71,10 @@ if (!gotLock) {
     }
   }
   let fullscreenActive = false;
-  let shelf: string[] = [];
-  const shelfRows = (): ShelfFile[] =>
-    shelf.map((path) => {
-      try {
-        const stats = statSync(path);
-        return {
-          path,
-          name: basename(path),
-          sizeBytes: stats.size,
-          kind: stats.isDirectory() ? ('folder' as const) : ('file' as const),
-          missing: false
-        };
-      } catch {
-        return { path, name: basename(path), sizeBytes: 0, kind: 'file' as const, missing: true };
-      }
-    });
-  const addPaths = (paths: string[]): AddResult => {
-    let accepted = 0;
-    let truncated = false;
-    for (const path of paths) {
-      if (shelf.some((held) => held.toLowerCase() === path.toLowerCase())) continue;
-      if (shelf.length >= MAX_SHELF) {
-        truncated = true;
-        break;
-      }
-      shelf.push(path);
-      accepted++;
-    }
-    return { count: shelf.length, accepted, truncated, limit: MAX_SHELF, files: shelfRows() };
-  };
+  const shelf = new Shelf();
+  const panel = new PanelController(() => win, () => pillPosition, () => shelf.rows(), applyWindowShape);
+  const openPanel = (): void => panel.show();
+  const closePanel = (): void => panel.hide();
   let settings: BeamSettings = { version: 1, position: null };
   let pillPosition: Electron.Rectangle = {
     x: 0,
@@ -212,43 +105,16 @@ if (!gotLock) {
     const raw = Number(process.env.BEAM_TIMER_SCALE_MS ?? '');
     return Number.isFinite(raw) && raw > 0 ? raw : 60_000;
   })();
-  let musicView: MusicState | null = null;
   let helperOk = true;
   let liveMusicApp = '';
-  let musicRequest = 0;
   let musicCmdStarted = false;
   let musicSessionsStarted = false;
 
-  function probeMusic(started: number, attempt = 0): void {
+  const music = new MusicService((view) => {
     if (!win || win.isDestroyed()) return;
-    void win.webContents
-      .executeJavaScript(
-        `new Promise((resolve) => requestAnimationFrame(() => requestAnimationFrame(() => {
-          const pill = document.querySelector('.pill');
-          const title = pill?.querySelector('.title');
-          const mark = pill?.querySelector('.mascot');
-          const pip = pill?.querySelector('.media-pip');
-          resolve({
-            state: pill?.dataset.state ?? null,
-            label: title?.textContent ?? null,
-            art: (mark?.getAttribute('src') ?? '').startsWith('data:image/png'),
-            pip: pip ? (pip.classList.contains('paused') ? 'paused' : pip.classList.contains('danger') ? 'danger' : 'playing') : null
-          });
-        })))`
-      )
-      .then((probe: unknown) => {
-        console.log(`[music] probe ${JSON.stringify({ ...(probe as object), ms: Date.now() - started })}`);
-      })
-      .catch(() => {
-        if (attempt < 20) setTimeout(() => probeMusic(started, attempt + 1), 100);
-      });
-  }
-
-  function sendMusic(): void {
-    if (!win || win.isDestroyed()) return;
-    win.webContents.send(IPC.musicState, musicView);
-    if (musicTest && musicView) probeMusic(Date.now());
-  }
+    win.webContents.send(IPC.musicState, view);
+    if (musicTest && view) dev()?.probeMusic(win, Date.now());
+  });
 
   function sendHelperState(): void {
     if (!win || win.isDestroyed()) return;
@@ -295,686 +161,6 @@ if (!gotLock) {
     }
   );
 
-  async function applyMusic(payload: MusicPayload | null): Promise<void> {
-    const request = ++musicRequest;
-    if (!payload || (!payload.title && !payload.artist)) {
-      musicView = null;
-      if (musicTest) console.log('[music] input null');
-      sendMusic();
-      return;
-    }
-    const art = payload.art ? `data:image/png;base64,${payload.art}` : null;
-    if (request !== musicRequest) return;
-    musicView = {
-      title: payload.title,
-      artist: payload.artist,
-      playing: payload.playing,
-      art,
-      positionMs: payload.positionMs,
-      durationMs: payload.durationMs
-    };
-    if (musicTest) {
-      console.log(`[music] input ${JSON.stringify({ title: payload.title, playing: payload.playing, hasArt: Boolean(art) })}`);
-    }
-    sendMusic();
-    if (musicCmdTest && !musicCmdStarted) {
-      musicCmdStarted = true;
-      void runMusicCommandTest().catch((error: unknown) => {
-        console.error('[music] cmd error', error);
-        console.log('[music] cmd done');
-      });
-    }
-  }
-
-  const delay = (ms: number): Promise<void> => new Promise((resolve) => setTimeout(resolve, ms));
-
-  async function waitForMusic(check: () => boolean, ms: number): Promise<boolean> {
-    const deadline = Date.now() + ms;
-    while (Date.now() < deadline) {
-      if (check()) return true;
-      await delay(40);
-    }
-    return check();
-  }
-
-  async function clickTransport(action: 'prev' | 'toggle' | 'next'): Promise<boolean> {
-    if (!win || win.isDestroyed()) return false;
-    const point = (await win.webContents.executeJavaScript(
-      `(() => {
-        const button = document.querySelector('.controls [data-action="${action}"]');
-        if (!button) return null;
-        const rect = button.getBoundingClientRect();
-        return { x: Math.round(rect.left + rect.width / 2), y: Math.round(rect.top + rect.height / 2) };
-      })()`
-    )) as { x: number; y: number } | null;
-    if (!point) return false;
-    win.webContents.sendInputEvent({ type: 'mouseMove', x: point.x, y: point.y });
-    await delay(80);
-    win.webContents.sendInputEvent({
-      type: 'mouseDown',
-      x: point.x,
-      y: point.y,
-      button: 'left',
-      clickCount: 1
-    });
-    win.webContents.sendInputEvent({
-      type: 'mouseUp',
-      x: point.x,
-      y: point.y,
-      button: 'left',
-      clickCount: 1
-    });
-    return true;
-  }
-
-  async function runMusicCommandTest(): Promise<void> {
-    if (!win || win.isDestroyed()) return;
-    await delay(400);
-    const pillPoint = (await win.webContents.executeJavaScript(
-      `(() => {
-        const rect = document.querySelector('.pill')?.getBoundingClientRect();
-        return rect ? { x: Math.round(rect.left + rect.width / 2), y: Math.round(rect.top + rect.height / 2) } : null;
-      })()`
-    )) as { x: number; y: number } | null;
-    if (!pillPoint) {
-      console.log('[music] cmd skipped=no-pill');
-      return;
-    }
-    win.webContents.sendInputEvent({ type: 'mouseMove', x: pillPoint.x, y: pillPoint.y });
-    await delay(260);
-
-    const hover = (await win.webContents.executeJavaScript(
-      `(() => {
-        const pill = document.querySelector('.pill');
-        const controls = pill?.querySelector('.controls');
-        const meta = pill?.querySelector('.meta');
-        return {
-          hasControls: pill?.classList.contains('has-controls') ?? false,
-          opacity: controls ? getComputedStyle(controls).opacity : null,
-          metaOpacity: meta ? getComputedStyle(meta).opacity : null,
-          buttons: [...(pill?.querySelectorAll('.controls [data-action]') ?? [])].map((button) => ({
-            action: button.getAttribute('data-action'),
-            label: button.getAttribute('aria-label')
-          }))
-        };
-      })()`
-    )) as {
-      hasControls: boolean;
-      opacity: string | null;
-      metaOpacity: string | null;
-      buttons: { action: string | null; label: string | null }[];
-    };
-    console.log(`[music] hover ${JSON.stringify(hover)}`);
-
-    const start = musicView;
-    if (!start) {
-      console.log('[music] cmd skipped=no-session');
-      return;
-    }
-
-    let started = Date.now();
-    const fromPlaying = start.playing;
-    const clicked = await clickTransport('toggle');
-    const flipped = clicked && (await waitForMusic(() => musicView !== null && musicView.playing !== fromPlaying, 6000));
-    console.log(
-      `[music] toggle ${JSON.stringify({
-        from: fromPlaying,
-        to: musicView?.playing ?? null,
-        ok: flipped,
-        ms: Date.now() - started
-      })}`
-    );
-
-    if (musicView && !musicView.playing) {
-      started = Date.now();
-      const back = await clickTransport('toggle');
-      const resumed = back && (await waitForMusic(() => musicView?.playing === true, 6000));
-      console.log(
-        `[music] resume ${JSON.stringify({
-          from: false,
-          to: musicView?.playing ?? null,
-          ok: resumed,
-          ms: Date.now() - started
-        })}`
-      );
-    }
-
-    const beforeTitle = musicView?.title ?? '';
-    started = Date.now();
-    const nextClicked = await clickTransport('next');
-    const nextChanged =
-      nextClicked && (await waitForMusic(() => musicView !== null && musicView.title !== beforeTitle, 8000));
-    console.log(
-      `[music] next ${JSON.stringify({
-        from: beforeTitle,
-        to: musicView?.title ?? '',
-        ok: nextChanged,
-        ms: Date.now() - started
-      })}`
-    );
-
-    const afterTitle = musicView?.title ?? '';
-    started = Date.now();
-    const prevClicked = await clickTransport('prev');
-    const prevChanged =
-      prevClicked && (await waitForMusic(() => musicView !== null && musicView.title !== afterTitle, 8000));
-    console.log(
-      `[music] prev ${JSON.stringify({
-        from: afterTitle,
-        to: musicView?.title ?? '',
-        ok: prevChanged,
-        ms: Date.now() - started
-      })}`
-    );
-    console.log('[music] cmd done');
-  }
-
-  async function runMusicTabTest(target: BrowserWindow, openPanel: () => void): Promise<void> {
-    const deadline = Date.now() + 12000;
-    while (!musicView && Date.now() < deadline) {
-      await delay(200);
-    }
-    if (!musicView) {
-      console.log('[music] tab skipped=no-session');
-      return;
-    }
-    if (target.isDestroyed()) return;
-
-    const payload = { ...musicView };
-    console.log(`[music] tabpayload ${JSON.stringify({ ...payload, art: Boolean(payload.art) })}`);
-
-    const requests: string[] = [];
-    const onMessage = (_event: Electron.Event, method: string, params: Record<string, unknown>): void => {
-      if (method !== 'Network.requestWillBeSent') return;
-      const request = params.request as { url?: string } | undefined;
-      const url = request?.url ?? '';
-      if (/^https?:/i.test(url)) requests.push(url);
-    };
-
-    const probe = `(() => {
-      const panel = document.querySelector('#panel-music');
-      const art = panel?.querySelector('.art');
-      const bar = panel?.querySelector('[data-music-bar]');
-      const fill = panel?.querySelector('.track-fill');
-      const rect = art?.getBoundingClientRect();
-      return {
-        hidden: panel?.hidden ?? null,
-        selected: document.querySelector('#tab-music')?.getAttribute('aria-selected') ?? null,
-        title: panel?.querySelector('.panel-title')?.textContent ?? null,
-        subtitle: panel?.querySelector('.panel-sub')?.textContent ?? null,
-        art: (art?.getAttribute('src') ?? '').startsWith('data:image/png'),
-        artW: rect ? Math.round(rect.width) : 0,
-        artH: rect ? Math.round(rect.height) : 0,
-        bar: bar
-          ? {
-              tag: bar.tagName,
-              role: bar.getAttribute('role'),
-              now: Number(bar.getAttribute('aria-valuenow')),
-              max: Number(bar.getAttribute('aria-valuemax')),
-              tabIndex: bar.tabIndex,
-              fill: fill?.style.width ?? null
-            }
-          : null,
-        slider: Boolean(panel?.querySelector('input[type="range"], [role="slider"]')),
-        times: [...(panel?.querySelectorAll('.track-times span') ?? [])].map((span) => span.textContent),
-        controls: [...(panel?.querySelectorAll('.music-controls [data-action]') ?? [])].map((button) => ({
-          action: button.getAttribute('data-action'),
-          label: button.getAttribute('aria-label')
-        }))
-      };
-    })()`;
-
-    target.webContents.debugger.attach('1.3');
-    target.webContents.debugger.on('message', onMessage);
-    try {
-      await target.webContents.debugger.sendCommand('Network.enable');
-      openPanel();
-      await delay(400);
-      await target.webContents.executeJavaScript(`document.querySelector('#tab-music')?.click()`);
-      await delay(300);
-      const first = await target.webContents.executeJavaScript(probe);
-      console.log(`[music] tab ${JSON.stringify(first)}`);
-      await delay(3000);
-      const second = await target.webContents.executeJavaScript(probe);
-      console.log(`[music] tabtick ${JSON.stringify(second)}`);
-
-      const beforeToggle = musicView?.playing ?? false;
-      await target.webContents.executeJavaScript(`document.querySelector('#panel-music [data-action="toggle"]')?.click()`);
-      const flipped = await waitForMusic(() => musicView !== null && musicView.playing !== beforeToggle, 8000);
-      await target.webContents.executeJavaScript(`document.querySelector('#panel-music [data-action="toggle"]')?.click()`);
-      const restored = await waitForMusic(() => musicView !== null && musicView.playing === beforeToggle, 8000);
-      console.log(`[music] tabtoggle ${JSON.stringify({ from: beforeToggle, flipped, restored })}`);
-
-      console.log(`[music] net ${JSON.stringify({ requests })}`);
-    } finally {
-      target.webContents.debugger.removeListener('message', onMessage);
-      target.webContents.debugger.detach();
-      console.log('[music] tab done');
-    }
-  }
-
-  type UiSnapshot = {
-    viewport: number;
-    state: string | null;
-    label: string | null;
-    digits: string | null;
-    w: number;
-    h: number;
-    open: boolean;
-    selected: string[];
-    timerMode: string | null;
-    faceTop: number | null;
-    actionBottom: number | null;
-    rows: number;
-    undo: boolean;
-    status: string | null;
-    calTitle: string | null;
-    chevron: boolean;
-  };
-
-  async function runUiTest(target: BrowserWindow, phase: string): Promise<void> {
-    const ui = (tag: string, data: unknown): void => console.log(`[ui] ${tag} ${JSON.stringify(data)}`);
-    const wait = (ms: number): Promise<void> => new Promise((resolve) => setTimeout(resolve, ms));
-    const snap = async (): Promise<UiSnapshot> =>
-      (await target.webContents.executeJavaScript(
-        `(() => {
-          const pill = document.querySelector('.pill');
-          const rect = pill?.getBoundingClientRect();
-          const body = document.querySelector('#panel-timer');
-          const face = body?.querySelector('.timer-face');
-          const actions = body?.querySelector('.actions');
-          const bRect = body?.getBoundingClientRect();
-          const fRect = face?.getBoundingClientRect();
-          const aRect = actions?.getBoundingClientRect();
-          return {
-            viewport: window.innerHeight,
-            state: pill?.dataset.state ?? null,
-            label: pill?.querySelector('.title')?.textContent ?? null,
-            digits: document.querySelector('.pill .digits')?.textContent ?? null,
-            w: rect ? Math.round(rect.width) : 0,
-            h: rect ? Math.round(rect.height) : 0,
-            open: document.body.classList.contains('is-open'),
-            selected: [...document.querySelectorAll('[role="tab"][aria-selected="true"]')].map((tab) =>
-              tab.id.replace('tab-', '')
-            ),
-            timerMode: body?.className ?? null,
-            faceTop: bRect && fRect ? Math.round(fRect.top - bRect.top) : null,
-            actionBottom: bRect && aRect ? Math.round(bRect.bottom - aRect.bottom) : null,
-            rows: document.querySelectorAll('#panel-files .row').length,
-            undo: Boolean(document.querySelector('[data-files-undo]')),
-            status: document.querySelector('[data-files-status]')?.textContent ?? null,
-            calTitle: document.querySelector('#panel-calendar .cal-title')?.textContent ?? null,
-            chevron: Boolean(pill?.querySelector('[data-action="panel"]'))
-          };
-        })()`
-      )) as UiSnapshot;
-    const point = async (selector: string): Promise<{ x: number; y: number } | null> =>
-      (await target.webContents.executeJavaScript(
-        `(() => {
-          const rect = document.querySelector(${JSON.stringify(selector)})?.getBoundingClientRect();
-          return rect ? { x: Math.round(rect.left + rect.width / 2), y: Math.round(rect.top + rect.height / 2) } : null;
-        })()`
-      )) as { x: number; y: number } | null;
-    const clickAt = async (at: { x: number; y: number }): Promise<void> => {
-      target.webContents.sendInputEvent({ type: 'mouseMove', x: at.x, y: at.y });
-      await wait(60);
-      target.webContents.sendInputEvent({ type: 'mouseDown', x: at.x, y: at.y, button: 'left', clickCount: 1 });
-      target.webContents.sendInputEvent({ type: 'mouseUp', x: at.x, y: at.y, button: 'left', clickCount: 1 });
-    };
-    const click = async (selector: string): Promise<boolean> => {
-      const at = await point(selector);
-      if (!at) return false;
-      await clickAt(at);
-      return true;
-    };
-    const escape = (): void => {
-      target.webContents.sendInputEvent({ type: 'keyDown', keyCode: 'Escape' });
-      target.webContents.sendInputEvent({ type: 'keyUp', keyCode: 'Escape' });
-    };
-    const until = async (
-      want: (state: UiSnapshot) => boolean,
-      ms: number
-    ): Promise<{ ok: boolean; snap: UiSnapshot }> => {
-      const deadline = Date.now() + ms;
-      let current = await snap();
-      while (Date.now() < deadline && !want(current)) {
-        await wait(60);
-        current = await snap();
-      }
-      return { ok: want(current), snap: current };
-    };
-    const park = async (): Promise<void> => {
-      target.webContents.sendInputEvent({ type: 'mouseMove', x: 2, y: 2 });
-      await wait(320);
-    };
-
-    await wait(500);
-    const start = await snap();
-    ui('start', { phase, state: start.state, music: Boolean(musicView), chevron: start.chevron, w: start.w, h: start.h, viewport: start.viewport });
-    if (musicView) ui('quiet', { skipped: 'music' });
-
-    if (phase === 'chevron') {
-      const musicStop = Date.now() + 5000;
-      while (!musicView && Date.now() < musicStop) await wait(100);
-      if (!musicView) {
-        ui('chevron', { skipped: 'no-music' });
-        console.log('[ui] done');
-        return;
-      }
-      await park();
-      const pillAt = await point('.pill');
-      if (pillAt) target.webContents.sendInputEvent({ type: 'mouseMove', x: pillAt.x, y: pillAt.y });
-      await wait(260);
-      const clicked = await click('.pill [data-action="panel"]');
-      const chevron = await until((state) => state.open, 3000);
-      ui('chevron', { ok: clicked && chevron.ok, selected: chevron.snap.selected });
-      console.log('[ui] done');
-      return;
-    }
-
-    const dir = join(tmpdir(), 'beam-uitest');
-    mkdirSync(dir, { recursive: true });
-    const paths = ['ui-one.txt', 'ui-two.txt', 'ui-three.txt'].map((name) => join(dir, name));
-    paths.forEach((path, index) => writeFileSync(path, `beam ${index}\n`));
-    // CDP Input.dispatchDragEvent collapses every synthetic drag to dragenter in this Electron,
-    // so the shelf is filled through the same IPC the picker uses.
-    const added = (await target.webContents.executeJavaScript(
-      `window.beam.addFiles(${JSON.stringify(paths)}).then((result) => ({ accepted: result.accepted, count: result.count }))`
-    )) as { accepted: number; count: number };
-    const dropped = await until((state) => shelf.length === 3, 3000);
-    ui('add', { accepted: added.accepted, shelf: shelf.length, ok: dropped.ok, state: dropped.snap.state, label: dropped.snap.label });
-
-    await park();
-    await click('.pill');
-    const opened = await until((state) => state.open, 3000);
-    ui('open', { ok: opened.ok, selected: opened.snap.selected, chevron: opened.snap.chevron });
-
-    const removeAt = await point('#panel-files .row [data-remove-path]');
-    if (removeAt) {
-      await clickAt(removeAt);
-      const removed = await until((state) => state.rows === 2 && state.undo, 3000);
-      const undoAt = await point('[data-files-undo]');
-      if (undoAt) await clickAt(undoAt);
-      const restored = await until((state) => state.rows === 3, 3000);
-      ui('undo', {
-        afterRemove: removed.snap.rows,
-        afterUndo: restored.snap.rows,
-        undoVisible: removed.snap.undo,
-        status: restored.snap.status,
-        shelf: shelf.length
-      });
-    } else {
-      ui('undo', { ok: false, reason: 'no-remove-button' });
-    }
-
-    await click('#tab-timer');
-    await wait(150);
-    await click('#panel-timer [data-timer-preset="5"]');
-    await wait(150);
-    await click('#panel-timer [data-timer-start]');
-    const running = await until((state) => state.state === 'timer', 2500);
-    ui('timer', {
-      ok: running.ok,
-      state: running.snap.state,
-      digits: running.snap.digits,
-      mode: running.snap.timerMode,
-      faceTop: running.snap.faceTop,
-      actionBottom: running.snap.actionBottom
-    });
-    await click('#panel-timer [data-timer-cancel]');
-    const cancelled = await until((state) => state.state !== 'timer', 2500);
-    ui('timercancel', { ok: cancelled.ok, state: cancelled.snap.state, digits: cancelled.snap.digits });
-
-    await click('#tab-calendar');
-    await wait(150);
-    const calBefore = (await snap()).calTitle;
-    await click('#panel-calendar [data-cal-next]');
-    await wait(150);
-    const calNext = (await snap()).calTitle;
-    await click('#panel-calendar [data-cal-today]');
-    await wait(150);
-    const calBack = (await snap()).calTitle;
-    ui('calendar', { before: calBefore, next: calNext, back: calBack });
-
-    escape();
-    const closed = await until((state) => !state.open, 3000);
-    ui('esc', { ok: closed.ok, open: closed.snap.open });
-
-    if (phase === 'quiet') {
-      ui('chevron', { skipped: 'quiet-phase' });
-    } else if (musicView) {
-      await park();
-      const pillAt = await point('.pill');
-      if (pillAt) target.webContents.sendInputEvent({ type: 'mouseMove', x: pillAt.x, y: pillAt.y });
-      await wait(260);
-      const clicked = await click('.pill [data-action="panel"]');
-      const chevron = await until((state) => state.open, 3000);
-      ui('chevron', { ok: clicked && chevron.ok, selected: chevron.snap.selected });
-      escape();
-      await until((state) => !state.open, 3000);
-    } else {
-      ui('chevron', { skipped: 'no-music' });
-    }
-
-    await park();
-    await click('.pill');
-    const reopened = await until((state) => state.open, 3000);
-    ui('lastused', { ok: reopened.ok, selected: reopened.snap.selected });
-    escape();
-    await until((state) => !state.open, 3000);
-    await wait(250);
-
-    if (musicView) {
-      target.webContents.send(IPC.musicState, null);
-      const dropped2 = await until((state) => state.state !== 'playing' && state.state !== 'paused', 2000);
-      ui('nullstate', { ok: dropped2.ok, state: dropped2.snap.state });
-      sendMusic();
-      await wait(300);
-    } else {
-      ui('nullstate', { skipped: 'no-music' });
-    }
-
-    await park();
-    await click('.pill');
-    await until((state) => state.open, 3000);
-    await click('#tab-files');
-    await wait(200);
-    await click('#panel-files .clear-all');
-    await wait(150);
-    await click('#panel-files .clear-all');
-    const cleared = await until((state) => shelf.length === 0, 3000);
-    const clearSnap = await snap();
-    ui('clear', { ok: cleared.ok, shelf: shelf.length, rows: clearSnap.rows, state: clearSnap.state, label: clearSnap.label });
-    escape();
-    await until((state) => !state.open, 3000);
-    await wait(400);
-    await park();
-
-    if (!musicView) {
-      let quiet = await snap();
-      const quietDeadline = Date.now() + 24000;
-      while (Date.now() < quietDeadline && quiet.state !== 'quiet' && quiet.state !== 'playing' && quiet.state !== 'paused') {
-        await wait(200);
-        quiet = await snap();
-      }
-      if (quiet.state === 'quiet') {
-        await wait(250);
-        quiet = await snap();
-      }
-      const quietOk = quiet.state === 'quiet' && quiet.w === 30 && quiet.h === 30;
-      ui('quiet', { ok: quietOk, state: quiet.state, w: quiet.w, h: quiet.h, viewport: quiet.viewport });
-      if (quietOk) {
-        const at = await point('.pill');
-        if (at) target.webContents.sendInputEvent({ type: 'mouseMove', x: at.x, y: at.y });
-        const woke = await until((state) => state.state !== 'quiet', 3000);
-        ui('quietwake', { ok: woke.ok, state: woke.snap.state, w: woke.snap.w });
-      }
-    }
-    console.log('[ui] done');
-  }
-
-  async function runTimerTest(target: BrowserWindow, openPanel: () => void): Promise<void> {
-    const log = (tag: string, data: unknown): void => console.log(`[timer] ui ${tag} ${JSON.stringify(data)}`);
-    const wait = (ms: number): Promise<void> => new Promise((resolve) => setTimeout(resolve, ms));
-    const read = async (): Promise<{ state: string | null; digits: string | null; panel: string | null; done: boolean }> =>
-      (await target.webContents.executeJavaScript(
-        `(() => {
-          const pill = document.querySelector('.pill');
-          const body = document.querySelector('#panel-timer');
-          return {
-            state: pill?.dataset.state ?? null,
-            digits: pill?.querySelector('.digits')?.textContent ?? null,
-            panel: body?.className ?? null,
-            done: Boolean(body?.querySelector('.timer-done'))
-          };
-        })()`
-      )) as { state: string | null; digits: string | null; panel: string | null; done: boolean };
-    const until = async (
-      want: (view: { state: string | null; digits: string | null; panel: string | null; done: boolean }) => boolean,
-      ms: number
-    ): Promise<{ ok: boolean; view: Awaited<ReturnType<typeof read>> }> => {
-      const deadline = Date.now() + ms;
-      let view = await read();
-      while (Date.now() < deadline && !want(view)) {
-        await wait(100);
-        view = await read();
-      }
-      return { ok: want(view), view };
-    };
-
-    try {
-      openPanel();
-      await wait(500);
-      await target.webContents.executeJavaScript(`document.querySelector('#tab-timer')?.click()`);
-      await wait(200);
-      await target.webContents.executeJavaScript(`document.querySelector('#panel-timer [data-timer-preset="5"]')?.click()`);
-      await wait(150);
-      await target.webContents.executeJavaScript(`document.querySelector('#panel-timer [data-timer-start]')?.click()`);
-      const running = await until((view) => view.state === 'timer', 2500);
-      log('run', { ok: running.ok, state: running.view.state, digits: running.view.digits, panel: running.view.panel });
-
-      await target.webContents.executeJavaScript(`document.querySelector('#panel-timer [data-timer-cancel]')?.click()`);
-      const cancelled = await until((view) => view.state !== 'timer', 2500);
-      log('cancel', { ok: cancelled.ok, state: cancelled.view.state, digits: cancelled.view.digits });
-
-      await target.webContents.executeJavaScript(`window.beam.startTimer(5)`);
-      await wait(120);
-      const replacedAt = Date.now();
-      await target.webContents.executeJavaScript(`window.beam.startTimer(1)`);
-      const completed = await until((view) => view.done, 6000);
-      const elapsedMs = Date.now() - replacedAt;
-      log('done', {
-        ok: completed.ok,
-        state: completed.view.state,
-        digits: completed.view.digits,
-        panel: completed.view.panel,
-        elapsedMs
-      });
-      await wait(1200);
-
-      await target.webContents.executeJavaScript(`document.querySelector('#panel-timer [data-timer-dismiss]')?.click()`);
-      const dismissed = await until((view) => view.state !== 'done', 2500);
-      log('dismiss', { ok: dismissed.ok, state: dismissed.view.state, done: dismissed.view.done });
-    } catch (error) {
-      console.error('[timer] ui failed', error);
-    }
-    console.log('[timer] ui done');
-  }
-
-  async function pillSnapshot(): Promise<{ state: string | null; label: string | null }> {
-    if (!win || win.isDestroyed()) return { state: null, label: null };
-    try {
-      return (await win.webContents.executeJavaScript(
-        `(() => {
-          const pill = document.querySelector('.pill');
-          return {
-            state: pill?.dataset.state ?? null,
-            label: pill?.querySelector('.title')?.textContent ?? null
-          };
-        })()`
-      )) as { state: string | null; label: string | null };
-    } catch {
-      return { state: null, label: null };
-    }
-  }
-
-  async function pokeSession(
-    picked: string,
-    expect: { app: string; title: string | null },
-    tag: string
-  ): Promise<boolean> {
-    const started = Date.now();
-    await bridge.musicPick(picked);
-    const seen: string[] = [];
-    let matched = false;
-    // Windows takes ~6s to hand the current session over, so the budget is 12s.
-    while (Date.now() - started < 12000) {
-      const snap = await pillSnapshot();
-      if (snap.state) seen.push(snap.state);
-      if (liveMusicApp === expect.app && (expect.title === null || snap.label === expect.title)) {
-        matched = true;
-        break;
-      }
-      await new Promise((resolve) => setTimeout(resolve, 100));
-    }
-    const blank = seen.filter((state) => state === 'idle').length;
-    console.log(
-      `[sessions] ${tag} ${JSON.stringify({
-        app: expect.app,
-        title: expect.title ?? '',
-        picked,
-        matched,
-        blank,
-        ms: Date.now() - started
-      })}`
-    );
-    return matched;
-  }
-
-  async function waitForPlaying(app: string, want: boolean, ms: number): Promise<boolean> {
-    const deadline = Date.now() + ms;
-    while (Date.now() < deadline) {
-      const rows = await bridge.musicSessions();
-      const row = rows.find((entry) => entry.app === app);
-      if (row && row.playing === want) return true;
-      await new Promise((resolve) => setTimeout(resolve, 150));
-    }
-    return false;
-  }
-
-  async function ensurePlaying(app: string): Promise<void> {
-    const rows = await bridge.musicSessions();
-    if (rows.find((entry) => entry.app === app)?.playing) return;
-    await bridge.musicPick(app);
-    await waitForPlaying(app, true, 8000);
-  }
-
-  async function runMusicSessionsTest(): Promise<void> {
-    try {
-      const sessions = await bridge.musicSessions();
-      console.log(`[sessions] list ${JSON.stringify(sessions)}`);
-      const current = sessions.find((row) => row.current) ?? null;
-      const other = sessions.find((row) => !row.current) ?? null;
-      if (sessions.length < 2 || !current || !other) {
-        console.log(`[sessions] skip=one count=${sessions.length} other=${Boolean(other)}`);
-        return;
-      }
-      // Windows never promotes a player that is only paused; it hands the current session over
-      // when the player in front stops and another one is playing. So each leg starts the other
-      // player and then stops the one in front, and the pill must land on the other app.
-      await ensurePlaying(other.app);
-      await pokeSession(current.app, { app: other.app, title: other.title }, 'switched');
-      const fresh = await bridge.musicSessions();
-      const back = fresh.find((row) => row.app === current.app) ?? current;
-      await ensurePlaying(back.app);
-      await pokeSession(other.app, { app: back.app, title: back.title }, 'back');
-    } catch (error) {
-      console.error('[sessions] error', error);
-    } finally {
-      console.log('[sessions] done');
-    }
-  }
-
   let onFullscreen: (active: boolean) => void = () => {};
   const onHelperEvent = (event: HelperEvent): void => {
     if (event.evt === 'fullscreen.changed') {
@@ -984,21 +170,34 @@ if (!gotLock) {
       return;
     }
     if (event.evt !== 'music.changed') return;
-    const music = event.payload as MusicPayload | null;
-    liveMusicApp = music?.app ?? '';
+    const payload = event.payload as MusicPayload | null;
+    liveMusicApp = payload?.app ?? '';
     if (musicSessionsTest && !musicSessionsStarted) {
       musicSessionsStarted = true;
-      void runMusicSessionsTest().catch((error: unknown) => {
-        console.error('[sessions] error', error);
-      });
+      runDev((harness) => harness.runMusicSessionsTest(harnessCtx), 'sessions');
     }
-    if (!music) {
+    if (!payload) {
       console.log('[music] none');
     } else {
-      console.log(`[music] ${music.title} - ${music.artist} (${music.app})`);
-      console.log(`[music] art ${music.art ? 'yes' : 'none'}`);
+      console.log(`[music] ${payload.title} - ${payload.artist} (${payload.app})`);
+      console.log(`[music] art ${payload.art ? 'yes' : 'none'}`);
     }
-    void applyMusic(music);
+    if (musicTest) {
+      console.log(
+        payload
+          ? `[music] input ${JSON.stringify({
+              title: payload.title,
+              playing: payload.playing,
+              hasArt: Boolean(payload.art)
+            })}`
+          : '[music] input null'
+      );
+    }
+    music.apply(payload);
+    if (musicCmdTest && !musicCmdStarted && payload && (payload.title || payload.artist)) {
+      musicCmdStarted = true;
+      runDev((harness) => harness.runMusicCommandTest(harnessCtx), 'music');
+    }
   };
   const bridge = new Bridge(
     helperPath(),
@@ -1021,6 +220,35 @@ if (!gotLock) {
         });
     }
   );
+
+  type HarnessModule = typeof import('./dev/harness');
+  let harnessModule: HarnessModule | null = null;
+  const harnessCtx: import('./dev/harness').HarnessContext = {
+    window: () => win,
+    shelf,
+    bridge,
+    music: () => music.current,
+    liveApp: () => liveMusicApp,
+    sendMusic: () => music.sendCurrent()
+  };
+
+  function dev(): HarnessModule | null {
+    if (app.isPackaged) return null;
+    if (harnessModule) return harnessModule;
+    try {
+      harnessModule = require('./dev/harness') as HarnessModule;
+    } catch (error) {
+      console.error('[dev] harness unavailable', error);
+      return null;
+    }
+    return harnessModule;
+  }
+
+  function runDev(task: (harness: HarnessModule) => Promise<void>, label: string): void {
+    const harness = dev();
+    if (!harness) return;
+    void task(harness).catch((error: unknown) => console.error(`[${label}] error`, error));
+  }
 
   function createWindow(restored: boolean): void {
     win = new BrowserWindow({
@@ -1071,34 +299,13 @@ if (!gotLock) {
       }
       if (idleTest) {
         setTimeout(() => {
-          if (target.isDestroyed()) return;
-          void target.webContents
-            .executeJavaScript(
-              `(() => {
-                const pill = document.querySelector('.pill');
-                const mark = pill?.querySelector('.mascot');
-                const title = pill?.querySelector('.title');
-                if (!pill || !mark) return null;
-                return {
-                  state: pill.dataset.state,
-                  markOpacity: getComputedStyle(mark).opacity,
-                  shellOpacity: getComputedStyle(pill).opacity,
-                  label: title?.textContent ?? null,
-                  markMaster: (mark.getAttribute('src') ?? '').startsWith('data:image/svg+xml')
-                };
-              })()`
-            )
-            .then((probe: unknown) => console.log(`[idle] ${JSON.stringify(probe)}`))
-            .catch((error: unknown) => console.error('[idle] probe failed', error));
+          if (!target.isDestroyed()) dev()?.probeIdle(target);
         }, 800);
       }
     });
 
     win.on('blur', () => {
-      if (panelOpen && !pickingFiles && win && !win.isDestroyed()) {
-        panelOpen = false;
-        win.webContents.send(IPC.panelDismiss);
-      }
+      panel.dismissOnBlur(pickingFiles);
     });
 
     win.on('closed', () => {
@@ -1110,7 +317,7 @@ if (!gotLock) {
     });
 
     win.webContents.on('did-finish-load', () => {
-      sendMusic();
+      music.sendCurrent();
       sendHelperState();
       sendTimer();
     });
@@ -1149,26 +356,11 @@ if (!gotLock) {
     createWindow(restoredBounds !== null);
     if (win) {
       const window = win;
-      const openPanel = (): void => {
-        if (panelOpen || window.isDestroyed() || !window.isVisible()) return;
-        panelOpen = true;
-        const bounds = panelBounds(window);
-        window.setBounds(bounds);
-        applyWindowShape(window);
-        console.log(`[panel] bounds=${bounds.x},${bounds.y},${bounds.width},${bounds.height}`);
-        window.focus();
-        window.webContents.send(IPC.panelOpen, shelfRows());
-      };
-      const closePanel = (): void => {
-        if (!panelOpen || window.isDestroyed()) return;
-        panelOpen = false;
-        window.webContents.send(IPC.panelDismiss);
-      };
       const showPill = (source: string): void => {
         if (window.isDestroyed()) return;
         hiddenByFullscreen = false;
         hiddenByUser = false;
-        panelOpen = false;
+        panel.reset();
         window.showInactive();
         console.log(`[fullscreen] shown (${source})`);
       };
@@ -1176,7 +368,7 @@ if (!gotLock) {
         if (window.isDestroyed()) return;
         hiddenByUser = true;
         hiddenByFullscreen = false;
-        if (panelOpen) closePanel();
+        if (panel.open) closePanel();
         window.setBounds(pillPosition);
         window.hide();
         console.log('[window] hidden (tray)');
@@ -1186,7 +378,7 @@ if (!gotLock) {
           app.quit();
           return;
         }
-        const count = shelf.length;
+        const count = shelf.count;
         if (count === 0) {
           app.quit();
           return;
@@ -1209,10 +401,7 @@ if (!gotLock) {
       const hidePill = (): void => {
         if (window.isDestroyed()) return;
         windowDrag = null;
-        if (panelOpen) {
-          panelOpen = false;
-          window.webContents.send(IPC.panelDismiss);
-        }
+        if (panel.open) closePanel();
         window.setBounds(pillPosition);
         hiddenByFullscreen = true;
         window.hide();
@@ -1224,7 +413,7 @@ if (!gotLock) {
           showPill('tray');
           return;
         }
-        if (panelOpen) closePanel();
+        if (panel.open) closePanel();
         else openPanel();
       };
       onFullscreen = (active: boolean): void => {
@@ -1248,7 +437,7 @@ if (!gotLock) {
       };
       if (fullscreenActive) onFullscreen(true);
       const startDrag = (x: number, y: number): void => {
-        if (panelOpen || window.isDestroyed()) return;
+        if (panel.open || window.isDestroyed()) return;
         windowDrag = { pointerX: x, pointerY: y, bounds: window.getBounds() };
       };
       const moveDrag = (x: number, y: number): void => {
@@ -1272,7 +461,7 @@ if (!gotLock) {
         );
         window.setBounds(settled);
         pillPosition = settled;
-        settings.position = { x: settled.x, y: settled.y, displayId: display.id };
+        settings.position = { x: settled.x, y: settled.y };
         saveSettings(settings);
         console.log(
           `[move] end=${settled.x},${settled.y},${settled.width},${settled.height} display=${display.id}`
@@ -1287,7 +476,7 @@ if (!gotLock) {
         console.log(
           `[move] reset=${pillPosition.x},${pillPosition.y},${pillPosition.width},${pillPosition.height}`
         );
-        if (panelOpen) closePanel();
+        if (panel.open) closePanel();
         else if (!window.isDestroyed()) {
           window.setBounds(pillPosition);
           applyWindowShape(window);
@@ -1302,13 +491,10 @@ if (!gotLock) {
         () => quitWithConfirm()
       );
       console.log('[tray] ready');
-      if (globalShortcut.register('Alt+Space', trayToggle)) {
-        console.log('[hotkey] Alt+Space');
-      } else if (globalShortcut.register('Ctrl+Shift+Space', trayToggle)) {
-        console.log('[hotkey] Ctrl+Shift+Space (Alt+Space taken)');
-      } else {
-        console.error('[hotkey] registration failed');
-      }
+      const hotkey = registerHotkey(trayToggle);
+      if (hotkey === 'Alt+Space') console.log('[hotkey] Alt+Space');
+      else if (hotkey) console.log(`[hotkey] ${hotkey} (Alt+Space taken)`);
+      else console.error('[hotkey] registration failed');
 
       ipcMain.on(IPC.windowDragStart, (event, x: unknown, y: unknown) => {
         const point = readPoint(x, y);
@@ -1328,12 +514,12 @@ if (!gotLock) {
 
       ipcMain.handle(IPC.filesAdd, (event, paths: unknown): AddResult => {
         if (event.sender !== window.webContents) {
-          return { count: shelf.length, accepted: 0, truncated: false, limit: MAX_SHELF, files: shelfRows() };
+          return { count: shelf.count, accepted: 0, truncated: false, limit: MAX_SHELF, files: shelf.rows() };
         }
         const list = Array.isArray(paths)
           ? paths.filter((path): path is string => typeof path === 'string' && path.length > 0 && !path.includes('\0'))
           : [];
-        const result = addPaths(list);
+        const result = shelf.add(list);
         console.log(
           `[files] add=${list.length} accepted=${result.accepted} count=${result.count} truncated=${result.truncated}`
         );
@@ -1350,7 +536,7 @@ if (!gotLock) {
             properties: ['openFile', 'multiSelections']
           });
           if (selection.canceled || selection.filePaths.length === 0) return null;
-          const result = addPaths(selection.filePaths);
+          const result = shelf.add(selection.filePaths);
           console.log(
             `[files] pick=${selection.filePaths.length} accepted=${result.accepted} count=${result.count} truncated=${result.truncated}`
           );
@@ -1367,10 +553,8 @@ if (!gotLock) {
         const requested = Array.isArray(data?.paths)
           ? data.paths.filter((path): path is string => typeof path === 'string' && path.length > 0)
           : [];
-        const held = new Map(shelf.map((path) => [path.toLowerCase(), path]));
-        const canonical = requested.map((path) => held.get(path.toLowerCase()));
-        const paths = canonical.filter((path): path is string => path !== undefined);
-        if (!source || !requested.length || paths.length !== requested.length) {
+        const paths = shelf.canonical(requested);
+        if (!source || !paths) {
           console.error(`[files] copy rejected source=${source} requested=${requested.length}`);
           return { ok: false, count: 0, error: 'paths must come from the shelf' };
         }
@@ -1390,11 +574,9 @@ if (!gotLock) {
         const requested = Array.isArray(paths)
           ? paths.filter((path): path is string => typeof path === 'string' && path.length > 0)
           : [];
-        const held = new Map(shelf.map((path) => [path.toLowerCase(), path]));
-        const canonical = requested.map((path) => held.get(path.toLowerCase()));
-        const dragPaths = canonical.filter((path): path is string => path !== undefined);
-        if (!requested.length || dragPaths.length !== requested.length) {
-          console.error(`[files] drag rejected requested=${requested.length} inShelf=${dragPaths.length}`);
+        const dragPaths = shelf.canonical(requested);
+        if (!dragPaths) {
+          console.error(`[files] drag rejected requested=${requested.length}`);
           return;
         }
         const missing = dragPaths.filter((path) => {
@@ -1416,23 +598,19 @@ if (!gotLock) {
       });
 
       ipcMain.handle(IPC.filesRemove, (event, path: unknown): { ok: boolean; files: ShelfFile[] } => {
-        if (event.sender !== window.webContents) return { ok: false, files: shelfRows() };
-        const requested = typeof path === 'string' ? path.toLowerCase() : '';
-        const index = requested ? shelf.findIndex((held) => held.toLowerCase() === requested) : -1;
-        if (index === -1) {
+        if (event.sender !== window.webContents) return { ok: false, files: shelf.rows() };
+        const removed = typeof path === 'string' ? shelf.remove(path) : null;
+        if (!removed) {
           console.error(`[files] remove rejected path=${typeof path === 'string' ? path : 'invalid'}`);
-          return { ok: false, files: shelfRows() };
+          return { ok: false, files: shelf.rows() };
         }
-        const removed = shelf[index] ?? '';
-        shelf.splice(index, 1);
-        console.log(`[files] remove=${index} count=${shelf.length} path=${removed}`);
-        return { ok: true, files: shelfRows() };
+        console.log(`[files] remove=${removed.index} count=${shelf.count} path=${removed.path}`);
+        return { ok: true, files: shelf.rows() };
       });
 
       ipcMain.handle(IPC.filesClear, (event): { ok: boolean; files: ShelfFile[] } => {
-        if (event.sender !== window.webContents) return { ok: false, files: shelfRows() };
-        const count = shelf.length;
-        shelf = [];
+        if (event.sender !== window.webContents) return { ok: false, files: shelf.rows() };
+        const count = shelf.clear();
         console.log(`[files] clear=${count}`);
         return { ok: true, files: [] };
       });
@@ -1494,18 +672,12 @@ if (!gotLock) {
           width: Math.max(1, Math.min(WINDOW_WIDTH, Math.round(width))),
           height: Math.max(1, Math.min(WINDOW_HEIGHT, Math.round(height)))
         };
-        if (!panelOpen) applyWindowShape(window);
+        if (!panel.open) applyWindowShape(window);
       });
 
       ipcMain.on(IPC.panelRequestOpen, openPanel);
       ipcMain.on(IPC.panelCollapsed, () => {
-        if (window.isDestroyed()) return;
-        panelOpen = false;
-        window.setBounds(pillPosition);
-        applyWindowShape(window);
-        console.log(
-          `[window] pill=${pillPosition.x},${pillPosition.y},${pillPosition.width},${pillPosition.height}`
-        );
+        panel.collapsed();
       });
       ipcMain.on(IPC.panelTiming, (_event, ms: number, reduced: boolean) => {
         console.log(`[panel] open ${ms}ms reduced=${reduced}`);
@@ -1526,376 +698,40 @@ if (!gotLock) {
         }, 1200);
       }
       if (dropTest) {
-        setTimeout(() => {
-          void runDropTest(window).catch((error: unknown) => console.error('[drop] failed', error));
-        }, 1200);
+        setTimeout(() => runDev((harness) => harness.runDropTest(window), 'drop'), 1200);
       }
       if (copyTest) {
-        setTimeout(() => {
-          void runCopyTest(window, openPanel).catch((error: unknown) => console.error('[copy] failed', error));
-        }, 1200);
+        setTimeout(() => runDev((harness) => harness.runCopyTest(window, openPanel), 'copy'), 1200);
       }
       if (dragoutTest) {
-        setTimeout(() => {
-          void runDragoutTest(window, openPanel, closePanel).catch((error: unknown) =>
-            console.error('[dragout] failed', error)
-          );
-        }, 1200);
+        setTimeout(() => runDev((harness) => harness.runDragoutTest(window, openPanel, closePanel), 'dragout'), 1200);
       }
       if (missingTest) {
-        setTimeout(() => {
-          void runMissingTest(window, openPanel, closePanel).catch((error: unknown) =>
-            console.error('[missing] failed', error)
-          );
-        }, 1200);
+        setTimeout(() => runDev((harness) => harness.runMissingTest(window, openPanel, closePanel), 'missing'), 1200);
       }
       if (clearTest) {
-        setTimeout(() => {
-          void runClearTest(window, openPanel).catch((error: unknown) => console.error('[clear] failed', error));
-        }, 1200);
+        setTimeout(() => runDev((harness) => harness.runClearTest(window, openPanel), 'clear'), 1200);
       }
       if (emptyTest) {
-        setTimeout(() => {
-          void runEmptyTest(window, openPanel).catch((error: unknown) => console.error('[empty] failed', error));
-        }, 1200);
+        setTimeout(() => runDev((harness) => harness.runEmptyTest(window, openPanel), 'empty'), 1200);
       }
       if (musicTabTest) {
         setTimeout(() => {
-          if (!window.isDestroyed()) {
-            void runMusicTabTest(window, openPanel).catch((error: unknown) =>
-              console.error('[music] tab failed', error)
-            );
-          }
+          if (!window.isDestroyed()) runDev((harness) => harness.runMusicTabTest(harnessCtx, window, openPanel), 'music');
         }, 1200);
       }
       if (uiTest) {
         setTimeout(() => {
-          if (!window.isDestroyed()) {
-            void runUiTest(window, uiTestPhase).catch((error: unknown) => console.error('[ui] failed', error));
-          }
+          if (!window.isDestroyed()) runDev((harness) => harness.runUiTest(harnessCtx, window, uiTestPhase), 'ui');
         }, 1200);
       }
       if (timerTest) {
         setTimeout(() => {
-          if (!window.isDestroyed()) {
-            void runTimerTest(window, openPanel).catch((error: unknown) => console.error('[timer] ui failed', error));
-          }
+          if (!window.isDestroyed()) runDev((harness) => harness.runTimerTest(window, openPanel), 'timer');
         }, 1200);
       }
     }
 
-    async function runDropTest(target: BrowserWindow): Promise<void> {
-      while (!target.isDestroyed()) {
-        try {
-          const dom = (await target.webContents.executeJavaScript(
-            `(() => { const pill = document.querySelector('.pill'); const title = pill?.querySelector('.title'); return { state: pill?.dataset.state ?? null, title: title?.textContent ?? null }; })()`
-          )) as { state: string | null; title: string | null };
-          console.log(`[drop] watch state=${dom.state} title=${dom.title}`);
-        } catch {
-          if (target.isDestroyed()) return;
-        }
-        await delay(500);
-      }
-    }
-
-    async function runCopyTest(target: BrowserWindow, openPanel: () => void): Promise<void> {
-      const dir = join(tmpdir(), 'beam-copytest');
-      mkdirSync(dir, { recursive: true });
-      const paths = ['alpha.txt', 'beta.txt', 'gamma.txt'].map((name) => join(dir, name));
-      paths.forEach((path, index) => writeFileSync(path, `beam ${index}\n`));
-
-      const point = (await target.webContents.executeJavaScript(
-        `(() => { const pill = document.querySelector('.pill'); if (!pill) return null; const rect = pill.getBoundingClientRect(); return { x: Math.round(rect.x + rect.width / 2), y: Math.round(rect.y + rect.height / 2) }; })()`
-      )) as { x: number; y: number } | null;
-      if (!point) {
-        console.error('[copy] pill missing');
-        return;
-      }
-
-      target.webContents.debugger.attach('1.3');
-      try {
-        const data = { items: [], files: paths, dragOperationsMask: 1 };
-        for (const type of ['dragEnter', 'dragOver', 'drop']) {
-          await target.webContents.debugger.sendCommand('Input.dispatchDragEvent', {
-            type,
-            x: point.x,
-            y: point.y,
-            data
-          });
-        }
-      } finally {
-        target.webContents.debugger.detach();
-      }
-      await new Promise((resolve) => setTimeout(resolve, 500));
-
-      openPanel();
-      await new Promise((resolve) => setTimeout(resolve, 500));
-      await target.webContents.executeJavaScript(`document.querySelector('#tab-files')?.click()`);
-      await new Promise((resolve) => setTimeout(resolve, 300));
-      const panel = (await target.webContents.executeJavaScript(
-        `(() => {
-          const rows = [...document.querySelectorAll('#panel-files [data-copy-path]')];
-          return {
-            rows: rows.length,
-            all: !!document.querySelector('#panel-files [data-copy-all]'),
-            names: rows.map((button) => button.closest('.row')?.querySelector('.name')?.getAttribute('title')).join(','),
-            sizes: [...document.querySelectorAll('#panel-files .row-meta')].map((node) => node.textContent).join(',')
-          };
-        })()`
-      )) as { rows: number; all: boolean; names: string; sizes: string };
-      console.log(`[copy] panel rows=${panel.rows} all=${panel.all} names=${panel.names} sizes=${panel.sizes}`);
-
-      await target.webContents.executeJavaScript(`document.querySelector('#panel-files [data-copy-path]')?.click()`);
-      await new Promise((resolve) => setTimeout(resolve, 4000));
-
-      await target.webContents.executeJavaScript(`document.querySelector('#panel-files [data-copy-all]')?.click()`);
-      await new Promise((resolve) => setTimeout(resolve, 600));
-      console.log('[copy] done');
-    }
-
-    async function runDragoutTest(
-      target: BrowserWindow,
-      openPanel: () => void,
-      closePanel: () => void
-    ): Promise<void> {
-      const dir = join(tmpdir(), 'beam-dragout');
-      mkdirSync(dir, { recursive: true });
-      const paths = ['alpha.txt', 'beta.txt', 'gamma.txt'].map((name) => join(dir, name));
-      paths.forEach((path, index) => writeFileSync(path, `beam ${index}\n`));
-
-      const point = (await target.webContents.executeJavaScript(
-        `(() => { const pill = document.querySelector('.pill'); if (!pill) return null; const rect = pill.getBoundingClientRect(); return { x: Math.round(rect.x + rect.width / 2), y: Math.round(rect.y + rect.height / 2) }; })()`
-      )) as { x: number; y: number } | null;
-      if (!point) {
-        console.error('[dragout] pill missing');
-        return;
-      }
-
-      target.webContents.debugger.attach('1.3');
-      try {
-        const data = { items: [], files: paths, dragOperationsMask: 1 };
-        for (const type of ['dragEnter', 'dragOver', 'drop']) {
-          await target.webContents.debugger.sendCommand('Input.dispatchDragEvent', {
-            type,
-            x: point.x,
-            y: point.y,
-            data
-          });
-        }
-      } finally {
-        target.webContents.debugger.detach();
-      }
-      await new Promise((resolve) => setTimeout(resolve, 500));
-
-      openPanel();
-      await new Promise((resolve) => setTimeout(resolve, 500));
-      await target.webContents.executeJavaScript(`document.querySelector('#tab-files')?.click()`);
-      await new Promise((resolve) => setTimeout(resolve, 300));
-      const row = (await target.webContents.executeJavaScript(
-        `(() => {
-          const row = document.querySelector('#panel-files [data-drag-path]');
-          if (!row) return null;
-          const rect = row.getBoundingClientRect();
-          return { name: row.querySelector('.name')?.getAttribute('title') ?? '', x: rect.x + rect.width / 2, y: rect.y + rect.height / 2 };
-        })()`
-      )) as { name: string; x: number; y: number } | null;
-      if (!row) {
-        console.error('[dragout] row missing');
-        return;
-      }
-      const content = target.getContentBounds();
-      const scale = screen.getDisplayMatching(content).scaleFactor;
-      console.log(
-        `[dragout] row=${row.name} x=${Math.round(content.x + row.x)} y=${Math.round(content.y + row.y)} scale=${scale}`
-      );
-
-      const marker = join(tmpdir(), 'beam-dragout-continue');
-      for (let index = 0; index < 150; index++) {
-        if (existsSync(marker)) break;
-        await new Promise((resolve) => setTimeout(resolve, 200));
-      }
-
-      unlinkSync(paths[1]);
-      closePanel();
-      await new Promise((resolve) => setTimeout(resolve, 500));
-      openPanel();
-      await new Promise((resolve) => setTimeout(resolve, 500));
-      await target.webContents.executeJavaScript(`document.querySelector('#tab-files')?.click()`);
-      await new Promise((resolve) => setTimeout(resolve, 300));
-      const guard = (await target.webContents.executeJavaScript(
-        `(() => {
-          const rows = [...document.querySelectorAll('#panel-files .row')];
-          const names = (list) => list.map((row) => row.querySelector('.name')?.getAttribute('title')).join(',');
-          const missing = rows.filter((row) => row.classList.contains('missing'));
-          return {
-            draggable: names(rows.filter((row) => row.hasAttribute('data-drag-path'))),
-            missing: names(missing),
-            missingDraggable: missing.some((row) => row.hasAttribute('data-drag-path'))
-          };
-        })()`
-      )) as { draggable: string; missing: string; missingDraggable: boolean };
-      console.log(
-        `[dragout] guard draggable=${guard.draggable} missing=${guard.missing} missingDraggable=${guard.missingDraggable}`
-      );
-      await target.webContents.executeJavaScript(`window.beam.startFileDrag(['C:\\\\Windows\\\\not-on-the-shelf.txt'])`);
-      await new Promise((resolve) => setTimeout(resolve, 300));
-      console.log('[dragout] done');
-    }
-
-    async function runMissingTest(
-      target: BrowserWindow,
-      openPanel: () => void,
-      closePanel: () => void
-    ): Promise<void> {
-      const dir = join(tmpdir(), 'beam-missing');
-      mkdirSync(dir, { recursive: true });
-      const paths = ['alpha.txt', 'beta.txt', 'gamma.txt'].map((name) => join(dir, name));
-      paths.forEach((path, index) => writeFileSync(path, `beam ${index}\n`));
-
-      const point = (await target.webContents.executeJavaScript(
-        `(() => { const pill = document.querySelector('.pill'); if (!pill) return null; const rect = pill.getBoundingClientRect(); return { x: Math.round(rect.x + rect.width / 2), y: Math.round(rect.y + rect.height / 2) }; })()`
-      )) as { x: number; y: number } | null;
-      if (!point) {
-        console.error('[missing] pill missing');
-        return;
-      }
-
-      target.webContents.debugger.attach('1.3');
-      try {
-        const data = { items: [], files: paths, dragOperationsMask: 1 };
-        for (const type of ['dragEnter', 'dragOver', 'drop']) {
-          await target.webContents.debugger.sendCommand('Input.dispatchDragEvent', {
-            type,
-            x: point.x,
-            y: point.y,
-            data
-          });
-        }
-      } finally {
-        target.webContents.debugger.detach();
-      }
-      await new Promise((resolve) => setTimeout(resolve, 500));
-
-      openPanel();
-      await new Promise((resolve) => setTimeout(resolve, 500));
-      await target.webContents.executeJavaScript(`document.querySelector('#tab-files')?.click()`);
-      await new Promise((resolve) => setTimeout(resolve, 300));
-      const start = (await target.webContents.executeJavaScript(
-        `(() => ({ pip: !!document.querySelector('.pill .media-pip.danger'), rows: document.querySelectorAll('#panel-files .row').length }))()`
-      )) as { pip: boolean; rows: number };
-      console.log(`[missing] start pip=${start.pip} rows=${start.rows}`);
-
-      unlinkSync(paths[1]);
-      closePanel();
-      await new Promise((resolve) => setTimeout(resolve, 500));
-      openPanel();
-      await new Promise((resolve) => setTimeout(resolve, 500));
-      await target.webContents.executeJavaScript(`document.querySelector('#tab-files')?.click()`);
-      await new Promise((resolve) => setTimeout(resolve, 300));
-      const end = (await target.webContents.executeJavaScript(
-        `(() => {
-          const rows = [...document.querySelectorAll('#panel-files .row')];
-          const gone = rows.filter((row) => row.classList.contains('missing'));
-          return {
-            badge: gone.map((row) => row.querySelector('.row-meta')?.textContent).join(','),
-            title: gone.map((row) => row.querySelector('.row-meta')?.getAttribute('title')).join(','),
-            copies: gone.reduce((count, row) => count + row.querySelectorAll('[data-copy-path]').length, 0),
-            drags: rows.filter((row) => row.hasAttribute('data-drag-path')).length,
-            pip: !!document.querySelector('.pill .media-pip.danger')
-          };
-        })()`
-      )) as { badge: string; title: string; copies: number; drags: number; pip: boolean };
-      console.log(
-        `[missing] end badge=${end.badge} title=${end.title} copies=${end.copies} drags=${end.drags} pip=${end.pip}`
-      );
-      console.log('[missing] done');
-    }
-
-    type ShelfSnapshot = { rows: number; note: string; well: boolean; state: string; title: string };
-
-    const shelfSnapshot = async (target: BrowserWindow): Promise<ShelfSnapshot> =>
-      (await target.webContents.executeJavaScript(
-        `(() => {
-          const body = document.querySelector('#panel-files');
-          const pill = document.querySelector('.pill');
-          return {
-            rows: body ? body.querySelectorAll('.row').length : -1,
-            note: body?.querySelector('.shelf-note')?.textContent ?? '',
-            well: !!body?.querySelector('.drop-well'),
-            state: pill?.dataset.state ?? '',
-            title: pill?.querySelector('.title')?.textContent ?? ''
-          };
-        })()`
-      )) as ShelfSnapshot;
-
-    async function runClearTest(target: BrowserWindow, openPanel: () => void): Promise<void> {
-      const dir = join(tmpdir(), 'beam-clear');
-      mkdirSync(dir, { recursive: true });
-      const paths = ['alpha.txt', 'beta.txt', 'gamma.txt'].map((name) => join(dir, name));
-      paths.forEach((path, index) => writeFileSync(path, `beam ${index}\n`));
-
-      const point = (await target.webContents.executeJavaScript(
-        `(() => { const pill = document.querySelector('.pill'); if (!pill) return null; const rect = pill.getBoundingClientRect(); return { x: Math.round(rect.x + rect.width / 2), y: Math.round(rect.y + rect.height / 2) }; })()`
-      )) as { x: number; y: number } | null;
-      if (!point) {
-        console.error('[clear] pill missing');
-        return;
-      }
-
-      target.webContents.debugger.attach('1.3');
-      try {
-        const data = { items: [], files: paths, dragOperationsMask: 1 };
-        for (const type of ['dragEnter', 'dragOver', 'drop']) {
-          await target.webContents.debugger.sendCommand('Input.dispatchDragEvent', {
-            type,
-            x: point.x,
-            y: point.y,
-            data
-          });
-        }
-      } finally {
-        target.webContents.debugger.detach();
-      }
-      await new Promise((resolve) => setTimeout(resolve, 500));
-
-      openPanel();
-      await new Promise((resolve) => setTimeout(resolve, 500));
-      await target.webContents.executeJavaScript(`document.querySelector('#tab-files')?.click()`);
-      await new Promise((resolve) => setTimeout(resolve, 300));
-      const three = await shelfSnapshot(target);
-      console.log(`[clear] three rows=${three.rows} note=${three.note} well=${three.well} state=${three.state} title=${three.title}`);
-
-      await target.webContents.executeJavaScript(`document.querySelector('#panel-files [data-remove-path]')?.click()`);
-      await new Promise((resolve) => setTimeout(resolve, 600));
-      const removed = await shelfSnapshot(target);
-      console.log(
-        `[clear] removed rows=${removed.rows} note=${removed.note} well=${removed.well} state=${removed.state} title=${removed.title}`
-      );
-
-      await new Promise((resolve) => setTimeout(resolve, 5600));
-      const warning = await shelfSnapshot(target);
-      console.log(
-        `[clear] warning rows=${warning.rows} note=${warning.note} well=${warning.well} state=${warning.state} title=${warning.title}`
-      );
-
-      await target.webContents.executeJavaScript(`document.querySelector('#panel-files .clear-all')?.click()`);
-      await new Promise((resolve) => setTimeout(resolve, 300));
-      await target.webContents.executeJavaScript(`document.querySelector('#panel-files .clear-all')?.click()`);
-      await new Promise((resolve) => setTimeout(resolve, 600));
-      const empty = await shelfSnapshot(target);
-      console.log(`[clear] empty rows=${empty.rows} note=${empty.note} well=${empty.well} state=${empty.state} title=${empty.title}`);
-      console.log('[clear] done');
-    }
-
-    async function runEmptyTest(target: BrowserWindow, openPanel: () => void): Promise<void> {
-      openPanel();
-      await new Promise((resolve) => setTimeout(resolve, 500));
-      await target.webContents.executeJavaScript(`document.querySelector('#tab-files')?.click()`);
-      await new Promise((resolve) => setTimeout(resolve, 300));
-      const state = await shelfSnapshot(target);
-      console.log(`[empty] rows=${state.rows} well=${state.well} state=${state.state} title=${state.title}`);
-      console.log('[empty] done');
-    }
   });
 
   let quitting = false;

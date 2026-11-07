@@ -4,6 +4,7 @@ directories:
   output: release
 files:
   - dist/**/*
+  - '!dist/main/dev/**'
   - package.json
 extraResources:
   - from: native/BeamBridge/dist/BeamBridge.exe
