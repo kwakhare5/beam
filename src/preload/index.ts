@@ -6,6 +6,9 @@ import {
   type FileChange,
   type HelperState,
   type MusicState,
+  type SettingsPatch,
+  type SettingsResult,
+  type SettingsSnapshot,
   type ShelfFile,
   type TimerSnapshot
 } from '../shared/ipc';
@@ -25,8 +28,8 @@ contextBridge.exposeInMainWorld('beam', {
   beginWindowDrag: (x: number, y: number): void => ipcRenderer.send(IPC.windowDragStart, x, y),
   moveWindowDrag: (x: number, y: number): void => ipcRenderer.send(IPC.windowDragMove, x, y),
   endWindowDrag: (x: number, y: number): void => ipcRenderer.send(IPC.windowDragEnd, x, y),
-  onPanelOpen: (callback: (files: ShelfFile[]) => void): void => {
-    ipcRenderer.on(IPC.panelOpen, (_event, files: ShelfFile[]) => callback(files));
+  onPanelOpen: (callback: (files: ShelfFile[], tab?: 'settings') => void): void => {
+    ipcRenderer.on(IPC.panelOpen, (_event, files: ShelfFile[], tab?: 'settings') => callback(files, tab));
   },
   onPanelDismiss: (callback: () => void): void => {
     ipcRenderer.on(IPC.panelDismiss, () => callback());
@@ -43,6 +46,12 @@ contextBridge.exposeInMainWorld('beam', {
   timerChimed: (id: number, ok: boolean): void => ipcRenderer.send(IPC.timerChimed, id, ok),
   onTimerState: (callback: (state: TimerSnapshot) => void): void => {
     ipcRenderer.on(IPC.timerState, (_event, state: TimerSnapshot) => callback(state));
+  },
+  getSettings: (): Promise<SettingsSnapshot> => ipcRenderer.invoke(IPC.settingsGet),
+  setSettings: (patch: SettingsPatch): Promise<SettingsResult> => ipcRenderer.invoke(IPC.settingsSet, patch),
+  resetPosition: (): Promise<SettingsResult> => ipcRenderer.invoke(IPC.settingsResetPosition),
+  onSettingsState: (callback: (state: SettingsSnapshot) => void): void => {
+    ipcRenderer.on(IPC.settingsState, (_event, state: SettingsSnapshot) => callback(state));
   },
   reportPanelTiming: (ms: number, reduced: boolean): void => ipcRenderer.send(IPC.panelTiming, ms, reduced),
   musicCommand: (cmd: 'toggle' | 'next' | 'prev'): Promise<{ ok: boolean; error?: string }> =>

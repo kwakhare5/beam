@@ -29,11 +29,11 @@ No network. No database. No server. Four parts, three seams.
 
 ### Current vs target (2026-10-29)
 
-Implemented: Electron shell with single-instance lock, the 136×42 window anchored above the taskbar with the 94×30 idle capsule, tray, panel open/collapse at 452×316 with a ~150ms transform, pointer-captured window drag with a saved position (`settings.ts`), the idle star dim asserted from computed style, hide-on-fullscreen with tray restore, a file drop shelf (paths only, deduped, 50 cap, pill count), live Files rows with copy and drag-out, the live music pill with prev / play-pause / next transports, a live Music tab with 148px art and a read-only position bar, a main-owned timer (`timer.ts`) with a one-shot chime and Windows notification, the live Timer and Calendar tabs, split UI modules/styles, the canonical preview, twenty-nine `verify.ps1` checks (including a real-mouse window drag → restart → reset, a real copy paste and a real row drag-out into Explorer, a real borderless fullscreen window, and timer completion while hidden), and `measure.ps1`.
+Implemented: Electron shell with single-instance lock, the 136×42 window anchored above the taskbar with the 94×30 idle capsule, tray, panel open/collapse at 452×316 with a ~150ms transform, pointer-captured window drag with a saved position (`settings.ts`), the idle star dim asserted from computed style, hide-on-fullscreen with tray restore, a file drop shelf (paths only, deduped, 50 cap, pill count), live Files rows with copy and drag-out, the live music pill with prev / play-pause / next transports, a live Music tab with 148px art and a read-only position bar, a main-owned timer (`timer.ts`) with a one-shot chime and Windows notification, the live Timer and Calendar tabs, the live Settings tab (startup, shortcut, volume, theme, reset) with the tray opening it, a registry-backed startup toggle (`startup.ts`), hotkey rebinding with rollback (`hotkey.ts`), split UI modules/styles, the canonical preview, thirty `verify.ps1` checks (including a real-mouse window drag → restart → reset, a real copy paste and a real row drag-out into Explorer, a real borderless fullscreen window, timer completion while hidden, and a real-click Settings pass through a restart), and `measure.ps1`.
 
 Built in the helper: stdio client, SMTC read with PNG artwork, CF_HDROP clipboard, fullscreen detection, ping, and test-only session listing plus title/index picks (`music.sessions` / `music.pick`, behind the sessions test flag).
 
-Landed 2026-11-07 by R4: main is split into `geometry.ts`, `shelf.ts`, `panel.ts`, `music.ts`, `hotkey.ts`, `timer.ts`, and `dev/harness.ts` (excluded from packaged files); the renderer's shared core lives in `src/renderer/core/` and the site demo imports the same modules. Still target: the Settings screen with startup and hotkey rebind (R6), and the packaged build (R8).
+Landed 2026-11-07 by R4: main is split into `geometry.ts`, `shelf.ts`, `panel.ts`, `music.ts`, `hotkey.ts`, `timer.ts`, and `dev/harness.ts` (excluded from packaged files); the renderer's shared core lives in `src/renderer/core/` and the site demo imports the same modules. R6 added `startup.ts` and filled the Settings screen. Still target: the packaged build (R8).
 
 ---
 
@@ -75,9 +75,10 @@ D:\Beam
 │   │   ├── shelf.ts          MAX_SHELF + Shelf (add, canonical, remove, clear, rows)
 │   │   ├── panel.ts          PanelController (show/hide/collapse/blur/reset + shape)
 │   │   ├── music.ts          MusicService (current payload, last-session forwarding)
-│   │   ├── tray.ts           tray icon + menu (Settings stays disabled until 7.1)
-│   │   ├── hotkey.ts         Alt+Space register with the Ctrl+Shift+Space fallback
+│   │   ├── tray.ts           tray icon + menu (Settings, Reset Position, Hide, Quit)
+│   │   ├── hotkey.ts         default/fallback registration, chord validation, rebind with rollback
 │   │   ├── settings.ts       read/write settings.json, defaults, versioned shape
+│   │   ├── startup.ts        HKCU Run value read/write for Start with Windows
 │   │   ├── timer.ts          deadline, 200ms ticker, one-shot completion
 │   │   ├── dev/harness.ts    every BEAM_* probe (excluded from packaged files)
 │   │   └── bridge.ts         spawn helper + JSON-lines client (8s request timeout, 3/60s restart policy, 16M buffer cap)
@@ -162,7 +163,7 @@ Rules: helper never prints anything else to stdout (stderr is for logs). Any mal
 
 ## 5. Seam B — Main ⇄ Renderer (IPC)
 
-All channels prefixed `beam:`. Renderer can call, main can push. The 18 channel names and payload types (`ShelfFile`, `AddResult`, `CopyResult`, `FileChange`, `MusicState`, `HelperState`) live in `src/shared/ipc.ts`; `main/index.ts`, `preload/index.ts`, and the renderer import them, so a channel rename fails the typecheck instead of drifting.
+All channels prefixed `beam:`. Renderer can call, main can push. The 27 channel names and payload types (`ShelfFile`, `AddResult`, `CopyResult`, `FileChange`, `MusicState`, `HelperState`, `TimerSnapshot`, `SettingsSnapshot`, `SettingsPatch`, `SettingsResult`) live in `src/shared/ipc.ts`; `main/index.ts`, `preload/index.ts`, and the renderer import them, so a channel rename fails the typecheck instead of drifting.
 
 | Direction | Channel | Purpose | State |
 |---|---|---|---|
@@ -170,7 +171,7 @@ All channels prefixed `beam:`. Renderer can call, main can push. The 18 channel 
 | renderer → main | `beam:panel:collapsed` | panel finished closing; window returns to 136×42 | built |
 | renderer → main | `beam:panel:timing` | measured open duration + reduced-motion flag | built |
 | renderer → main | `beam:window:drag-start` / `drag-move` / `drag-end` | pointer-captured window drag; main moves the window with `setBounds`, clamps it to the display work area, and saves the position | built |
-| main → renderer | `beam:panel:open` | start the open animation, carrying the shelf rows stat'd from disk | built |
+| main → renderer | `beam:panel:open` | start the open animation, carrying the shelf rows stat'd from disk and an optional `settings` tab (tray Settings) | built |
 | main → renderer | `beam:panel:dismiss` | close on blur or tray toggle | built |
 | renderer → main | `beam:music:command` | toggle / next / prev; main validates the sender and command, calls the helper, and replies `{ ok, error }` | built |
 | renderer → main | `beam:files:add` | paths from a drop; main dedupes, caps at 50, replies `{ count, accepted, truncated, limit }` | built |
@@ -179,7 +180,9 @@ All channels prefixed `beam:`. Renderer can call, main can push. The 18 channel 
 | renderer → main | `beam:files:remove` | remove one shelf path; replies `{ ok, files }` with fresh stat rows | built |
 | renderer → main | `beam:files:clear` | wipe the shelf; replies `{ ok, files: [] }` | built |
 | renderer → main | `beam:timer:start` / `cancel` / `dismiss` | start a timer (minutes 1–999), cancel a running one, clear the done face; main owns the deadline and replies `TimerSnapshot` | built |
-| renderer → main | `beam:settings:get/set` | settings screen | planned |
+| renderer → main | `beam:settings:get/set` | read the snapshot (`startup` read from the registry, current shortcut, volume, theme, optional `error`) and apply a validated patch; startup writes/removes the HKCU Run value, a shortcut change rebinds with rollback | built |
+| renderer → main | `beam:settings:reset-position` | clear the saved position, re-anchor above the taskbar, close the panel first if open | built |
+| main → renderer | `beam:settings:state` | pushed after every accepted or rejected patch and on `did-finish-load`, so the rows re-render from main's truth | built |
 | main → renderer | `beam:music:state` | pushed on `music.changed` and again on `did-finish-load`; `{ title, artist, playing, positionMs, durationMs, art }` with `art` a PNG data URL or null | built |
 | main → renderer | `beam:timer:state` | pushed on start/cancel/dismiss, on `did-finish-load`, and when the displayed second changes; `{ phase, minutes, remainingMs, deadline, id, alert }`; `alert` is true only in the one completion push | built |
 | renderer → main | `beam:timer:chimed` | audio ack after the chime `play()` settles; `{ id, ok }`, logged by main | built |
@@ -326,19 +329,19 @@ UI decisions: ADR-0001 (component boundaries), ADR-0002 (original mascot), ADR-0
 
 Last status audit: 2026-11-07, read-only against the code and `verify.ps1`. The task-by-task notes live in `TASKS.md` under “Audit snapshot — 2026-11-07”; the evidence card is JOURNAL 114.
 
-**Built and previously proven:** shell anchor, no focus steal, tray, panel open/close, drag + position save/restore/reset (single display), idle dim, fullscreen detection and hide, single instance; the file shelf (drop, copy, drag-out, missing badge, remove, Clear All) and music pill/transports/Music tab.
+**Built and previously proven:** shell anchor, no focus steal, tray, panel open/close, drag + position save/restore/reset (single display), idle dim, fullscreen detection and hide, single instance; the file shelf (drop, copy, drag-out, missing badge, remove, Clear All), music pill/transports/Music tab, and the Settings screen with startup, hotkey rebind, volume, theme, and reset.
 
-**Built and working, not accepted by the gate:** 9.1, 9.2, 9.4, 9.7, 9.8, 9.9, the global hotkey, the calendar engine, Undo, the Add files picker, keyboard access, and the landing site. 2.4, 9.3, 9.5, 9.6, and timer 4.1–4.5 are accepted by the 2026-11-07 green runs.
+**Built and working, not accepted by the gate:** 9.1, 9.2, 9.4, 9.7, 9.8, 9.9, the calendar engine, Undo, the Add files picker, keyboard access, and the landing site. 2.4, 9.3, 9.5, 9.6, timer 4.1–4.5, and 1.7/1.8/7.1 are accepted by the 2026-11-07 green runs.
 
-**Partial:** 2.5 has a no-art fallback and null-session debounce; paused and closed-player cases are unproven. Quit confirm and the native Add files dialog have no verify check; the chime and toast are asserted by the audio ack and the main log path, not recorded.
+**Partial:** 2.5 has a no-art fallback and null-session debounce; paused and closed-player cases are unproven. Quit confirm and the native Add files dialog have no verify check; the chime and toast are asserted by the audio ack and the main log path, not recorded; the Settings chime test button is wired but no check clicks it.
 
-**Missing:** Settings (7.1), startup toggle (1.7), hotkey rebinding and fallback notice, midnight calendar refresh (5.3), multi-monitor/100–150% proof, and a publishable package.
+**Missing:** midnight calendar refresh (5.3), multi-monitor/100–150% proof, and a publishable package.
 
-**Verification:** 29 checks. The 2026-11-07 R3 run exits 0, 29/29, no skips. Check 16 is a real Explorer→pill drag; 17 retries the Explorer foreground; 24 proves playback-driven session switching; 25 runs separate quiet and chevron phases; 26 force-kills the helper and asserts a new pid plus a second pong; 27 proves a hung request rejects after 8s; 28 proves timer start/cancel/replace, the done face, one chime, one banner, and dismiss; 29 proves completion behind fullscreen with the pill hidden.
+**Verification:** 30 checks. The 2026-11-07 R6 run exits 0, 30/30, with five music-active skips. Check 16 is a real Explorer→pill drag; 17 retries the Explorer foreground; 24 proves playback-driven session switching; 25 runs separate quiet and chevron phases; 26 force-kills the helper and asserts a new pid plus a second pong; 27 proves a hung request rejects after 8s; 28 proves timer start/cancel/replace, the done face, one chime, one banner, and dismiss; 29 proves completion behind fullscreen with the pill hidden; 30 clicks the real Settings controls, presses the captured chord with SendKeys, writes/removes the Run entry, and proves the values survive a restart.
 
 **Packaging:** `extraResources` lists `BeamBridge.exe` and `tray.ico`, and `src/main/paths.ts` resolves them when packaged, but `npm run dist` only calls electron-builder and no package has been built. No exe or GitHub release is published.
 
-**Open conflicts:** TASKS 6.1/6.2 say timer/music priority while approved ADR-0012 says last used wins (the code follows the ADR); README and TASKS previously drifted from the code and now carry the 2026-11-07 audit notes.
+**Open conflicts:** resolved 2026-11-07 by R6: TASKS 6.2 is retired and ADR-0012 last-used wins in the code. README and TASKS previously drifted from the code and now carry the 2026-11-07 audit notes.
 
 ## 9. Known Risks
 

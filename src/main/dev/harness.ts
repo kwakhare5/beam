@@ -523,6 +523,42 @@ export async function runUiTest(ctx: HarnessContext, target: BrowserWindow, phas
   await wait(400);
   await park();
 
+  await openPanel();
+  await until((state) => state.open, 3000);
+  await click('#tab-settings');
+  await wait(200);
+  const settingsUi = (await target.webContents.executeJavaScript(
+    `(() => {
+      const body = document.querySelector('#panel-settings');
+      return {
+        rows: body ? body.querySelectorAll('.setting').length : 0,
+        startup: Boolean(body?.querySelector('[data-setting="startup"]')),
+        chord: Boolean(body?.querySelector('[data-setting="shortcut"]')),
+        volume: Boolean(body?.querySelector('[data-volume-step="10"]')),
+        theme: Boolean(body?.querySelector('[data-setting="theme"]')),
+        reset: Boolean(body?.querySelector('[data-setting="reset"]')),
+        themeName: document.documentElement.dataset.theme ?? null,
+        selected: [...document.querySelectorAll('[role="tab"][aria-selected="true"]')].map((tab) =>
+          tab.id.replace('tab-', '')
+        )
+      };
+    })()`
+  )) as {
+    rows: number;
+    startup: boolean;
+    chord: boolean;
+    volume: boolean;
+    theme: boolean;
+    reset: boolean;
+    themeName: string | null;
+    selected: string[];
+  };
+  ui('settings', settingsUi);
+  escape();
+  await until((state) => !state.open, 3000);
+  await wait(300);
+  await park();
+
   if (!ctx.music()) {
     let quiet = await snap();
     const quietDeadline = Date.now() + 24000;
@@ -1062,4 +1098,93 @@ export function probeIdle(target: BrowserWindow): void {
     )
     .then((probe: unknown) => console.log(`[idle] ${JSON.stringify(probe)}`))
     .catch((error: unknown) => console.error('[idle] probe failed', error));
+}
+
+export async function runSettingsTest(
+  target: BrowserWindow,
+  phase: string,
+  openPanel: (tab?: 'settings') => void
+): Promise<void> {
+  try {
+    const js = async <T>(code: string): Promise<T> => (await target.webContents.executeJavaScript(code)) as T;
+    const point = async (selector: string): Promise<{ x: number; y: number } | null> =>
+      (await js<{ x: number; y: number } | null>(`(() => {
+        const rect = document.querySelector(${JSON.stringify(selector)})?.getBoundingClientRect();
+        return rect ? { x: Math.round(rect.left + rect.width / 2), y: Math.round(rect.top + rect.height / 2) } : null;
+      })()`));
+    const click = async (selector: string): Promise<boolean> => {
+      const at = await point(selector);
+      if (!at) return false;
+      target.webContents.sendInputEvent({ type: 'mouseMove', x: at.x, y: at.y });
+      await delay(60);
+      target.webContents.sendInputEvent({ type: 'mouseDown', x: at.x, y: at.y, button: 'left', clickCount: 1 });
+      target.webContents.sendInputEvent({ type: 'mouseUp', x: at.x, y: at.y, button: 'left', clickCount: 1 });
+      return true;
+    };
+    const read = async (): Promise<{ startup: boolean; shortcut: string; volume: number; theme: string }> =>
+      js(`window.beam.getSettings()`);
+    const until = async <T>(get: () => Promise<T>, want: (value: T) => boolean, ms: number): Promise<T> => {
+      const deadline = Date.now() + ms;
+      let value = await get();
+      while (Date.now() < deadline && !want(value)) {
+        await delay(250);
+        value = await get();
+      }
+      return value;
+    };
+
+    openPanel('settings');
+    const rows = await until(
+      () => js<number>(`document.querySelectorAll('#panel-settings .setting').length`),
+      (count) => count === 5,
+      3000
+    );
+    if (rows !== 5) throw new Error(`the Settings tab did not open (rows=${rows})`);
+
+    if (phase === 'on') {
+      if (!(await click('[data-setting="theme"]'))) throw new Error('no theme switch');
+      const theme = await until(read, (value) => value.theme === 'light', 2000);
+      const applied = await js<string>(`document.documentElement.dataset.theme`);
+      if (theme.theme !== 'light' || applied !== 'light') throw new Error('the theme switch did not apply light');
+      console.log(`[settings] test theme ${JSON.stringify({ ok: true, theme: theme.theme, applied })}`);
+
+      await click('[data-volume-step="10"]');
+      await delay(300);
+      await click('[data-volume-step="10"]');
+      const volume = await until(read, (value) => value.volume === 80, 2000);
+      if (volume.volume !== 80) throw new Error(`the volume stepper left ${volume.volume}%`);
+      console.log(`[settings] test volume ${JSON.stringify({ ok: true, volume: volume.volume })}`);
+
+      if (!(await click('[data-setting="shortcut"]'))) throw new Error('no shortcut keycaps');
+      const capturing = await until(
+        () => js<boolean>(`Boolean(document.querySelector('.kbd.capturing'))`),
+        Boolean,
+        1500
+      );
+      if (!capturing) throw new Error('the shortcut did not enter capture');
+      target.webContents.sendInputEvent({ type: 'keyDown', keyCode: 'B', modifiers: ['control', 'alt'] });
+      target.webContents.sendInputEvent({ type: 'keyUp', keyCode: 'B', modifiers: ['control', 'alt'] });
+      const chord = await until(read, (value) => value.shortcut === 'Ctrl+Alt+B', 2500);
+      if (chord.shortcut !== 'Ctrl+Alt+B') throw new Error(`the chord stayed ${chord.shortcut}`);
+      console.log(`[settings] test chord ${JSON.stringify({ ok: true, shortcut: chord.shortcut })}`);
+
+      if (!(await click('[data-setting="startup"]'))) throw new Error('no startup switch');
+      const startup = await until(read, (value) => value.startup, 3000);
+      if (!startup.startup) throw new Error('the startup switch did not turn on');
+      console.log(`[settings] test startup ${JSON.stringify({ ok: true, startup: startup.startup })}`);
+
+      target.webContents.sendInputEvent({ type: 'keyDown', keyCode: 'Escape' });
+      target.webContents.sendInputEvent({ type: 'keyUp', keyCode: 'Escape' });
+      await delay(600);
+    } else {
+      if (!(await click('[data-setting="startup"]'))) throw new Error('no startup switch');
+      const startup = await until(read, (value) => !value.startup, 3000);
+      if (startup.startup) throw new Error('the startup switch did not turn off');
+      console.log(`[settings] test startup ${JSON.stringify({ ok: true, startup: startup.startup })}`);
+    }
+  } catch (error) {
+    console.error('[settings] test error', error);
+  } finally {
+    console.log('[settings] test done');
+  }
 }

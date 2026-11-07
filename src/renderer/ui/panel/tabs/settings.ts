@@ -8,21 +8,25 @@ export interface SettingsData {
   volume: number;
   theme: 'dark' | 'light';
   rebinding?: boolean;
+  error?: string;
 }
 
 export function settingsPanel(data: SettingsData, active = true): string {
   const keys = data.shortcut.split('+').map((key) => key.trim()).filter(Boolean);
   const shortcut = data.rebinding
-    ? '<button type="button" class="kbd capturing" aria-label="Press the new shortcut">Press keys…</button>'
-    : `<button type="button" class="kbd" aria-label="Change toggle shortcut (${esc(data.shortcut)})">${keys.map((key) => `<span class="keycap">${esc(key)}</span>`).join('')}</button>`;
+    ? '<button type="button" class="kbd capturing" data-setting="shortcut" aria-label="Press the new shortcut">Press keys…</button>'
+    : `<button type="button" class="kbd" data-setting="shortcut" aria-label="Change toggle shortcut (${esc(data.shortcut)})">${keys.map((key) => `<span class="keycap">${esc(key)}</span>`).join('')}</button>`;
 
   const volume = Math.min(100, Math.max(0, Math.round(data.volume)));
+  const shortcutHint = data.error
+    ? `<span class="hint error" role="status">${esc(data.error)}</span>`
+    : '<span class="hint">Click to rebind</span>';
 
-  const content = `<div class="setting"><div>Start with Windows<span class="hint">Starts Beam when you sign in</span></div><button type="button" class="switch" role="switch" aria-checked="${data.startup}" aria-label="Start with Windows"></button></div>
-    <div class="setting"><div>Toggle shortcut<span class="hint">Click to rebind</span></div>${shortcut}</div>
-    <div class="setting"><div>Chime volume<span class="hint">Plays once when the timer ends</span></div><div class="stepper"><button type="button" class="step" aria-label="Lower chime volume">−</button><span class="setting-value">${volume}%</span><button type="button" class="step" aria-label="Raise chime volume">+</button><button type="button" class="step" aria-label="Play chime">${icon('play')}</button></div></div>
-    <div class="setting"><div>Theme<span class="hint">Light or dark, remembered</span></div><div class="setting-inline"><span class="setting-value">${data.theme === 'dark' ? 'Dark' : 'Light'}</span><button type="button" class="switch" role="switch" aria-checked="${data.theme === 'dark'}" aria-label="Dark theme"></button></div></div>
-    <div class="setting"><div>Reset position<span class="hint">Move the capsule back to its default spot</span></div><button type="button" class="btn ghost">Reset</button></div>`;
+  const content = `<div class="setting"><div>Start with Windows<span class="hint">Starts Beam when you sign in</span></div><button type="button" class="switch" data-setting="startup" role="switch" aria-checked="${data.startup}" aria-label="Start with Windows"></button></div>
+    <div class="setting"><div>Toggle shortcut${shortcutHint}</div>${shortcut}</div>
+    <div class="setting"><div>Chime volume<span class="hint">Plays once when the timer ends</span></div><div class="stepper"><button type="button" class="step" data-volume-step="-10" aria-label="Lower chime volume">−</button><span class="setting-value">${volume}%</span><button type="button" class="step" data-volume-step="10" aria-label="Raise chime volume">+</button><button type="button" class="step" data-setting="volume-test" aria-label="Play chime">${icon('play')}</button></div></div>
+    <div class="setting"><div>Theme<span class="hint">Light or dark, remembered</span></div><div class="setting-inline"><span class="setting-value">${data.theme === 'dark' ? 'Dark' : 'Light'}</span><button type="button" class="switch" data-setting="theme" role="switch" aria-checked="${data.theme === 'dark'}" aria-label="Dark theme"></button></div></div>
+    <div class="setting"><div>Reset position<span class="hint">Move the capsule back to its default spot</span></div><button type="button" class="btn ghost" data-setting="reset">Reset</button></div>`;
 
   return panelBody('settings', content, 'panel-settings', active);
 }

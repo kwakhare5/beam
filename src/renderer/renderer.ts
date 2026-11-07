@@ -19,7 +19,7 @@ import { clampMinutes, clock, timerData as buildTimerData, type TimerPreset } fr
 import { ENABLED_TABS, pickTab, type LastUsed } from './core/tabs';
 import { shiftMonth } from './core/calendar';
 import { UndoSlot } from './core/undo';
-import type { AddResult, CopyResult, FileChange, HelperState, MusicState, ShelfFile, TimerSnapshot } from '../shared/ipc';
+import type { AddResult, CopyResult, FileChange, HelperState, MusicState, SettingsPatch, SettingsSnapshot, ShelfFile, TimerSnapshot } from '../shared/ipc';
 
 type BeamApi = {
   getPathForFile(file: File): string;
@@ -35,7 +35,7 @@ type BeamApi = {
   beginWindowDrag(x: number, y: number): void;
   moveWindowDrag(x: number, y: number): void;
   endWindowDrag(x: number, y: number): void;
-  onPanelOpen(callback: (files: ShelfFile[]) => void): void;
+  onPanelOpen(callback: (files: ShelfFile[], tab?: 'settings') => void): void;
   onPanelDismiss(callback: () => void): void;
   onMusicState(callback: (state: MusicState | null) => void): void;
   onHelperState(callback: (state: HelperState) => void): void;
@@ -44,6 +44,10 @@ type BeamApi = {
   dismissTimer(): Promise<TimerSnapshot | null>;
   timerChimed(id: number, ok: boolean): void;
   onTimerState(callback: (state: TimerSnapshot) => void): void;
+  getSettings(): Promise<SettingsSnapshot>;
+  setSettings(patch: SettingsPatch): Promise<{ ok: boolean; settings: SettingsSnapshot; error?: string }>;
+  resetPosition(): Promise<{ ok: boolean; settings: SettingsSnapshot; error?: string }>;
+  onSettingsState(callback: (state: SettingsSnapshot) => void): void;
   musicCommand(cmd: 'toggle' | 'next' | 'prev'): Promise<{ ok: boolean; error?: string }>;
   reportPanelTiming(ms: number, reduced: boolean): void;
 };
@@ -97,6 +101,8 @@ let timerCustom = '25';
 let timerSnapshot: TimerSnapshot = { phase: 'idle', minutes: 0, remainingMs: 0, deadline: 0, id: 0, alert: false };
 let chime: HTMLAudioElement | null = null;
 let chimedId = 0;
+let chimeVolume = 0.6;
+let rebinding = false;
 let calendarView = new Date();
 
 function stamp(tab: LastUsed): void {
@@ -121,13 +127,72 @@ function playChime(id: number): void {
   chimedId = id;
   chime ??= new Audio(chimeUrl);
   chime.currentTime = 0;
-  chime.volume = 0.7;
+  chime.volume = chimeVolume;
   void chime
     .play()
     .then(() => beam?.timerChimed(id, true))
     .catch((error: unknown) => {
       console.error('[timer] chime failed', error);
       beam?.timerChimed(id, false);
+    });
+}
+
+function applySettings(next: SettingsSnapshot): void {
+  const display = next.shortcut.replace(/\+/g, ' + ');
+  panelData.settings = {
+    startup: next.startup,
+    shortcut: display,
+    volume: next.volume,
+    theme: next.theme,
+    rebinding,
+    ...(next.error ? { error: next.error } : {})
+  };
+  chimeVolume = next.volume / 100;
+  document.documentElement.dataset.theme = next.theme;
+  if (panelEl) renderPanel();
+}
+
+function playTestChime(): void {
+  chime ??= new Audio(chimeUrl);
+  chime.currentTime = 0;
+  chime.volume = chimeVolume;
+  void chime.play().catch((error: unknown) => console.error('[settings] test chime failed', error));
+}
+
+function chordFromEvent(event: KeyboardEvent): string | null {
+  const mods: string[] = [];
+  if (event.ctrlKey) mods.push('Ctrl');
+  if (event.altKey) mods.push('Alt');
+  if (event.shiftKey) mods.push('Shift');
+  if (event.metaKey) mods.push('Command');
+  const key = event.key;
+  const name = /^[a-zA-Z]$/.test(key)
+    ? key.toUpperCase()
+    : /^[0-9]$/.test(key)
+      ? key
+      : key === ' ' || key === 'Spacebar'
+        ? 'Space'
+        : /^F([1-9]|1[0-9]|2[0-4])$/.test(key)
+          ? key
+          : null;
+  if (!name || mods.length === 0) return null;
+  return [...mods, name].join('+');
+}
+
+function submitChord(chord: string | null): void {
+  if (!chord) return;
+  rebinding = false;
+  if (!beam) {
+    renderPanel();
+    return;
+  }
+  void beam
+    .setSettings({ shortcut: chord })
+    .then((result) => applySettings(result.settings))
+    .catch((error: unknown) => {
+      rebinding = false;
+      renderPanel();
+      console.error('[settings] shortcut failed', error);
     });
 }
 
@@ -503,6 +568,7 @@ function renderPanel(): void {
   if (!app) return;
   panelData.timer = timerData();
   panelData.calendar = { view: calendarView, today: new Date() };
+  panelData.settings.rebinding = rebinding;
   if (!wrapEl) {
     wrapEl = document.createElement('div');
     wrapEl.className = 'panel-wrap';
@@ -515,7 +581,7 @@ function renderPanel(): void {
       const tab = target.closest<HTMLElement>('[role="tab"]');
       if (tab) {
         activeTab = tab.id.replace('tab-', '') as Tab;
-        if (ENABLED_TABS.includes(activeTab)) stamp(activeTab as LastUsed);
+        if (activeTab !== 'settings' && ENABLED_TABS.includes(activeTab)) stamp(activeTab as LastUsed);
       }
       const preset = target.closest<HTMLElement>('[data-timer-preset]')?.dataset.timerPreset;
       if (preset) {
@@ -561,6 +627,47 @@ function renderPanel(): void {
         stamp('calendar');
         renderPanel();
       }
+      if (!beam) return;
+      const setting = target.closest<HTMLElement>('[data-setting]')?.dataset.setting;
+      if (setting === 'startup') {
+        void beam
+          .setSettings({ startup: !panelData.settings.startup })
+          .then((result) => applySettings(result.settings))
+          .catch((error: unknown) => console.error('[settings] startup failed', error));
+        return;
+      }
+      if (setting === 'theme') {
+        void beam
+          .setSettings({ theme: panelData.settings.theme === 'dark' ? 'light' : 'dark' })
+          .then((result) => applySettings(result.settings))
+          .catch((error: unknown) => console.error('[settings] theme failed', error));
+        return;
+      }
+      if (setting === 'volume-test') {
+        playTestChime();
+        return;
+      }
+      if (setting === 'reset') {
+        void beam
+          .resetPosition()
+          .then((result) => applySettings(result.settings))
+          .catch((error: unknown) => console.error('[settings] reset failed', error));
+        return;
+      }
+      if (setting === 'shortcut') {
+        rebinding = true;
+        renderPanel();
+        return;
+      }
+      const step = target.closest<HTMLElement>('[data-volume-step]')?.dataset.volumeStep;
+      if (step) {
+        const delta = Number(step);
+        const next = Math.max(0, Math.min(100, panelData.settings.volume + (Number.isFinite(delta) ? delta : 0)));
+        void beam
+          .setSettings({ volume: next })
+          .then((result) => applySettings(result.settings))
+          .catch((error: unknown) => console.error('[settings] volume failed', error));
+      }
     });
     wrapEl.addEventListener('keydown', (event) => {
       if (event.key !== 'ArrowLeft' && event.key !== 'ArrowRight' && event.key !== 'Home' && event.key !== 'End') return;
@@ -569,7 +676,7 @@ function renderPanel(): void {
       const selected = root.querySelector<HTMLElement>('[role="tab"][aria-selected="true"]');
       if (selected) {
         activeTab = selected.id.replace('tab-', '') as Tab;
-        if (ENABLED_TABS.includes(activeTab)) stamp(activeTab as LastUsed);
+        if (activeTab !== 'settings' && ENABLED_TABS.includes(activeTab)) stamp(activeTab as LastUsed);
       }
     });
     bindClearAll(wrapEl);
@@ -832,9 +939,9 @@ if (app && beam) {
     pillEl.addEventListener('pointercancel', endPress);
   }
 
-  beam.onPanelOpen((files) => {
+  beam.onPanelOpen((files, tab) => {
     wakePill();
-    activeTab = openedTab(files.length);
+    activeTab = tab ?? openedTab(files.length);
     applyFiles(files);
     if (!panelEl) return;
     const el = panelEl;
@@ -888,6 +995,11 @@ if (app && beam) {
   });
 
   beam.onTimerState(applyTimer);
+  beam.onSettingsState((state) => applySettings(state));
+  void beam
+    .getSettings()
+    .then((state) => applySettings(state))
+    .catch((error: unknown) => console.error('[settings] load failed', error));
 
   beam.onMusicState((state) => {
     if (state) {
@@ -921,6 +1033,22 @@ if (app && beam) {
       if (wrapEl && document.body.classList.contains('is-open')) renderPanel();
     }, 500);
   });
+
+  window.addEventListener(
+    'keydown',
+    (event) => {
+      if (!rebinding) return;
+      event.preventDefault();
+      event.stopPropagation();
+      if (event.key === 'Escape') {
+        rebinding = false;
+        renderPanel();
+        return;
+      }
+      submitChord(chordFromEvent(event));
+    },
+    true
+  );
 
   window.addEventListener('keydown', (event) => {
     if (event.key === 'Escape') {

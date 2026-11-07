@@ -13,11 +13,11 @@
 The boxes were not changed by this audit. Read this with the notes on each task.
 
 - **Done and previously proven:** 1.1, 1.2, 1.3, 1.4 (single display), 1.5, 1.6, 0.5, 1.9, 3.1 (historical run), 3.2, 3.3, 3.4, 3.5, 2.1, 2.2, 2.3.
-- **Built and still unchecked:** 9.1, 9.2, 9.4, 9.7, 9.8, 9.9, 1.8, timer (4.1/4.2/4.4), calendar (5.1/5.2/5.4), and last-used tab notes. 2.4, 9.3, 9.5, and 9.6 are now ticked by R1.
+- **Built and still unchecked:** 9.1, 9.2, 9.4, 9.7, 9.8, 9.9, timer (4.1/4.2/4.4), calendar (5.1/5.2/5.4), and last-used tab notes. 2.4, 9.3, 9.5, and 9.6 are now ticked by R1; 1.7, 1.8, and 7.1 are ticked by R6.
 - **Partial:** 2.5 has a no-art fallback and null-session debounce; paused/closed-player states are unproven. 4.3 has the done face but no chime or Windows banner.
-- **Not built:** 1.7 startup toggle, 6.2 priority, 7.1 Settings screen, 4.5 hidden completion, 5.3 midnight drift, helper restart policy/timeouts, a complete packaged build.
+- **Not built:** 5.3 midnight drift and a complete packaged build; R7–R9 remain.
 - **Gate history:** before R1, check 16 was red (synthetic CDP drag), 17 depended on Explorer keeping the foreground, 24 needed two live players, and 25 could not cover quiet and chevron in one run. R1 resolved all four; see the result line above.
-- **Doc conflict:** TASKS 6.1/6.2 say timer then music; ADR-0012 (approved) says last used wins. The code follows the ADR. Decide whether 6.2 is obsolete before building it.
+- **Doc conflict:** resolved 2026-11-07 by R6: 6.2 is retired and ADR-0012 last-used wins in the code.
 - **R1 result (2026-11-07):** `.\verify.ps1` exits 0, 25/25, no SKIPs. 2.4, 9.3, 9.5, and 9.6 are ticked. The real drop exposed a pill title DOM-churn bug (fixed); checks 11 and 20 were stale (quit moved to main; the 5s Undo status precedes the warning) and are corrected.
 - **R2 result (2026-11-07):** `.\verify.ps1` exits 0, 27/27, no SKIPs (checks 26–27). R3 result (same day): exits 0, 29/29; 4.1–4.5 are ticked by checks 25, 28, and 29. The timer deadline, chime, notification, and hidden completion are no longer missing.
 
@@ -40,8 +40,9 @@ The boxes were not changed by this audit. Read this with the notes on each task.
 - [x] **R5 Verify harness refactor** — *Depends on: R4.*
   - Extract shared PowerShell helpers for launch/stop/CDP/wait/assert, remove duplicated drag/shutdown blocks, make skips explicit and cleanup `finally`-safe. Keep 27 checks and re-run.
   - _Proved 2026-11-07 (shared gate with R4):_ `.\verify.ps1` exit 0, 29/29, `ALL CHECKS PASSED`. `Wait-BeamLog`, `Start-BeamApp`, `Stop-BeamApp`, `Stop-BeamAll`, `Get-LeftoverHelper`, and `Write-BeamSkip` replace 14 duplicated launch/shutdown/catch blocks (186 insertions, 315 deletions at extraction); the run ends with an explicit `SKIP summary (N)`. Check 12's press is state-aware (7 DIP padding with live music, centre otherwise, one retry), checks 22/23 skip by name when a foreign player is live, and 24 addresses its own sessions by title/index. No assertion was removed.
-- [ ] **R6 Settings, startup, hotkey rebind** — *Depends on: R5.*
+- [x] **R6 Settings, startup, hotkey rebind** — *Depends on: R5.*
   - Wire 7.1's five rows, tray Settings, startup toggle, hotkey capture plus fallback notice, theme switch. Persist and prove save/restart, registry entry and cleanup, hotkey toggle. Ticks 1.7, 1.8, 7.1; retires 6.2 against ADR-0012.
+  - _Proved 2026-11-07:_ `.\verify.ps1` exit 0, 30/30, 5 music-active SKIPs, `ALL CHECKS PASSED`. Check 30 clicks the real controls: the theme switch logs `[settings] test theme {"ok":true,"theme":"light","applied":"light"}`, two + clicks reach 80%, the keycaps capture Ctrl+Alt+B and it opens the panel with real keystrokes, the startup switch writes and removes the HKCU `Run\Beam` value, and a restart loads `theme=light volume=80 shortcut=Ctrl+Alt+B startup=false` with `[hotkey] Ctrl+Alt+B`. Settings rows are live; tray Settings opens the tab. Two bugs found by the check are fixed: the delayed post-show re-anchor overwrote `pillPosition` with the panel rect when it fired after the panel opened (now skipped while the panel is open or dragging), and `rebinding` was not copied into the rendered settings data, so `Press keys…` never showed.
 - [ ] **R7 Remaining proofs** — *Depends on: R6.*
   - Calendar midnight drift (5.3), locale week start and year boundaries, multi-monitor and 100/150% if hardware allows (otherwise mark blocked, do not tick). Windows 10 stays unproven.
 - [ ] **R8 Packaging** — *Depends on: R7.*
@@ -195,22 +196,19 @@ These run before the phase tasks, as previous UI passes did. The canonical previ
   - Timer running → Timer. Else music playing → Music. Else last-used tab. The renderer decides from the state it already holds; main sends no tab commands.
   - _Audit 2026-11-07: ADR-0012 changed this to last-used first; `pickTab` follows the ADR. This task and 6.2 conflict with the approved design._
   - _Verify:_ three scenarios produce three correct tabs.
-- [ ] **6.2 Priority** — *Depends on: 6.1.*
+- [x] **6.2 Priority** — *Depends on: 6.1.*
   - Both running → Timer wins.
-  - _Audit 2026-11-07: not implemented; ADR-0012 last-used wins instead. Decide whether to retire this task._
-  - _Verify:_ start music and a timer, open panel → Timer tab.
-- [ ] **1.8 Global hotkey** — *Depends on: 1.6.*
+  - _Retired 2026-11-07 by R6 against ADR-0012:_ the panel opens to the last feature used; music and Timer do not preempt each other. The old audit note said this was unimplemented.
+- [x] **1.8 Global hotkey** — *Depends on: 1.6.*
   - `Alt+Space` registers; on failure try `Ctrl+Shift+Space` and tell the user. Rebindable in settings.
-  - _Audit 2026-11-07: registration and fallback are built and were proven with real keystrokes; the fallback user notice and rebinding are missing._
-  - _Verify:_ hotkey toggles the panel from inside a maximized app.
-- [ ] **1.7 Startup toggle** — *Depends on: 1.4.*
-  - `setLoginItemSettings` wired to one settings flag. Three surfaces, one flag: a one-time first-run ask in the panel (Turn on / Not now), the Settings switch, and a tray checkbox. Nothing is written to the registry until the user answers; default is off until then.
-  - _Audit 2026-11-07: not built._
-  - _Verify:_ Turn on → registry Run entry exists; Turn off → gone; Not now leaves no entry; tray checkbox and Settings stay in sync; choice survives restart.
-- [ ] **7.1 Settings screen** — *Depends on: 1.7, 1.8, 1.6.*
+  - _Built and proved 2026-11-07 (R6):_ default `Alt+Space`, `Ctrl+Shift+Space` fallback logged and shown as the active chord in Settings. A click on the keycaps captures the next chord, rejects chords without a modifier or with no key, registers it, and rolls back to the old chord with `In use` if Windows refuses. Check 30 clicked the keycaps, captured Ctrl+Alt+B, pressed it with real keystrokes, and the restart registered the saved chord.
+  - _Verify (proved):_ check 30's `^%b` opened the panel; the saved chord survives restart.
+- [x] **1.7 Startup toggle** — *Depends on: 1.4.*
+  - One settings flag owns the Windows login entry: HKCU `Software\Microsoft\Windows\CurrentVersion\Run` value `Beam`, written by the Settings switch and removed on toggle-off. The boot reads the registry as truth; the flag is persisted in settings.json. The switch lives in the Settings row and the tray opens that tab; the original first-run ask and tray checkbox are not built.
+  - _Proved 2026-11-07 (R6):_ check 30 turned startup on (Run entry present with a quoted command), turned it off (entry gone), and a restart loaded `startup=false`; the prior value is restored after the check and the dev entry is never left behind.
+- [x] **7.1 Settings screen** — *Depends on: 1.7, 1.8, 1.6.*
   - Five rows: startup toggle, hotkey rebind, chime volume with −/+ and a test button, Dark theme switch, and Reset position.
-  - _Audit 2026-11-07: the panel and tray entry are dead placeholders; no control has a handler._
-  - _Verify:_ each control saves, survives restart, and takes effect immediately.
+  - _Built and proved 2026-11-07 (R6):_ all five rows are live. Check 30 clicks the theme switch, the + stepper twice (60→80), the keycaps, and the startup switch, then restarts and reads the saved values back; check 12 proves Reset returns the pill to 700,768. The chime test button calls the local chime but no check clicks it.
 
 ## H. Proof
 

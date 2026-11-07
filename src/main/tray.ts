@@ -14,7 +14,7 @@ export function createTray(
   tray.on('click', onToggle);
   tray.setContextMenu(
     Menu.buildFromTemplate([
-      { label: 'Settings', enabled: false, click: onSettings },
+      { label: 'Settings', click: onSettings },
       { label: 'Reset Position', click: onReset },
       { label: 'Hide', click: onHide },
       { type: 'separator' },
