@@ -31,9 +31,9 @@ No network. No database. No server. Four parts, three seams.
 
 Implemented: Electron shell with single-instance lock, the 136×42 window anchored above the taskbar with the 94×30 idle capsule, tray, panel open/collapse at 452×316 with a ~150ms transform, pointer-captured window drag with a saved position (`settings.ts`), the idle star dim asserted from computed style, hide-on-fullscreen with tray restore, a file drop shelf (paths only, deduped, 50 cap, pill count), live Files rows with copy and drag-out, the live music pill with prev / play-pause / next transports, a live Music tab with 148px art and a read-only position bar, a main-owned timer (`timer.ts`) with a one-shot chime and Windows notification, the live Timer and Calendar tabs, split UI modules/styles, the canonical preview, twenty-nine `verify.ps1` checks (including a real-mouse window drag → restart → reset, a real copy paste and a real row drag-out into Explorer, a real borderless fullscreen window, and timer completion while hidden), and `measure.ps1`.
 
-Built in the helper: stdio client, SMTC read with PNG artwork, CF_HDROP clipboard, fullscreen detection, ping.
+Built in the helper: stdio client, SMTC read with PNG artwork, CF_HDROP clipboard, fullscreen detection, ping, and test-only session listing plus title/index picks (`music.sessions` / `music.pick`, behind the sessions test flag).
 
-Still target: `window.ts` (geometry refactor), main service modules, the `BEAM_*` harness moved out of shipped main code, the Settings screen and startup toggle, and the packaged build. Present-tense sections below describe that target until those tasks land.
+Landed 2026-11-07 by R4: main is split into `geometry.ts`, `shelf.ts`, `panel.ts`, `music.ts`, `hotkey.ts`, `timer.ts`, and `dev/harness.ts` (excluded from packaged files); the renderer's shared core lives in `src/renderer/core/` and the site demo imports the same modules. Still target: the Settings screen with startup and hotkey rebind (R6), and the packaged build (R8).
 
 ---
 
@@ -70,14 +70,20 @@ D:\Beam
 ├── scripts/generate-icons.mjs
 ├── src/
 │   ├── main/
-│   │   ├── index.ts          app lifecycle, single-instance lock, pill/panel geometry, window drag
-│   │   ├── window.ts         (planned) geometry refactor: pill/panel geometry, anchoring, drag, close rules
+│   │   ├── index.ts          app lifecycle, single-instance lock, wiring
+│   │   ├── geometry.ts       pill/panel sizes, anchoring, saved-bounds restore, clamping
+│   │   ├── shelf.ts          MAX_SHELF + Shelf (add, canonical, remove, clear, rows)
+│   │   ├── panel.ts          PanelController (show/hide/collapse/blur/reset + shape)
+│   │   ├── music.ts          MusicService (current payload, last-session forwarding)
 │   │   ├── tray.ts           tray icon + menu (Settings stays disabled until 7.1)
-│   │   ├── hotkey.ts         (planned) Alt+Space register, fallback, rebind
+│   │   ├── hotkey.ts         Alt+Space register with the Ctrl+Shift+Space fallback
 │   │   ├── settings.ts       read/write settings.json, defaults, versioned shape
+│   │   ├── timer.ts          deadline, 200ms ticker, one-shot completion
+│   │   ├── dev/harness.ts    every BEAM_* probe (excluded from packaged files)
 │   │   └── bridge.ts         spawn helper + JSON-lines client (8s request timeout, 3/60s restart policy, 16M buffer cap)
 │   ├── preload/index.ts      contextBridge surface (the only door)
 │   ├── renderer/
+│   │   ├── core/             tabs, timer view, calendar shift, undo slot (shared with the site demo)
 │   │   ├── ui/
 │   │   │   ├── index.ts      public view API
 │   │   │   ├── capsule/
