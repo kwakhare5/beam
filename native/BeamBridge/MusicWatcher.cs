@@ -110,15 +110,27 @@ internal sealed class MusicWatcher : IDisposable
     private void OnManagerChanged(GlobalSystemMediaTransportControlsSessionManager sender, CurrentSessionChangedEventArgs args)
     {
         if (disposed) return;
-        Attach(Resolve());
+        Reattach();
         _ = PublishAsync();
     }
 
     private void OnSessionsChanged(GlobalSystemMediaTransportControlsSessionManager sender, SessionsChangedEventArgs args)
     {
         if (disposed) return;
-        Attach(Resolve());
+        Reattach();
         _ = PublishAsync();
+    }
+
+    private void Reattach()
+    {
+        try
+        {
+            Attach(Resolve());
+        }
+        catch (Exception ex)
+        {
+            Protocol.Log($"session attach failed: {ex.Message}");
+        }
     }
 
     private void OnSessionChanged(GlobalSystemMediaTransportControlsSession sender, object args)

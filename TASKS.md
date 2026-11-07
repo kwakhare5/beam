@@ -27,22 +27,23 @@ The boxes were not changed by this audit. Read this with the notes on each task.
 - [x] **R1 Gate hardening** — *Depends on: nothing.*
   - Harden, do not weaken. Check 16 becomes a real Explorer→pill mouse drag using the check-18 harness; check 17 forces and verifies Explorer foreground before Ctrl+V with one retry; check 24 switches two real players with real playback instead of forced picks; check 25 splits into a no-session run (quiet) and a live-session run (chevron). Two failed attempts at the real drop stop the item and ask. Full suite exits 0; tick only what the checks prove.
   - _Proved 2026-11-07:_ `.\verify.ps1` exit 0, 25/25, no SKIPs. Check 16 is a real Explorer→pill drag (3 files, then 51 capped at 50); 17 pasted on the first foreground attempt; 20 proved row remove → 5s Undo status → warning return; 24 followed MSEdge in 107ms and Chrome in 106ms; 25 ran a no-media quiet phase (30x30 quiet + wake) and a live-media chevron phase. The real drop exposed a real bug: the pill replaced its title DOM node on every drag move, turning every `dragover` into a fresh `dragenter`; the title now updates in place.
-- [ ] **R2 Helper reliability** — *Depends on: R1.*
+- [x] **R2 Helper reliability** — *Depends on: R1.*
   - Bridge request timeout, stdout buffer cap, restart max 3 in 60s, spawn-error child reset; helper disposal, `RegisterClassEx` check, and uncaught `Attach` gaps; atomic settings write. Add a forced-kill check and a hung-request check.
+  - _Proved 2026-11-07:_ `.\verify.ps1` exit 0, 27/27, no SKIPs. Check 26 force-killed the helper and got pid 32444 → 31076 plus a second pong; check 27 rejected a hung ping after 8010ms. Requests reject at 8s, the stdout buffer caps at 16M chars, restarts cap at 3/60s, settings write via temp + rename, and the helper now checks `RegisterClassEx`, disposes its ready event, and catches `Attach` failures.
 - [ ] **R3 Timer completion** — *Depends on: R2.*
   - Move the deadline to main; push ticks; exactly-once completion; generate and bundle one chime WAV; Electron `Notification` with tray balloon fallback; prove hidden/fullscreen completion, done face, cancel/replace. Ticks 4.1–4.5 when proven.
 - [ ] **R4 Main/renderer/demo refactor** — *Depends on: R3.*
   - Extract main services (window/shape, shelf, panel, music, timer, hotkey) and move the `BEAM_*` harness to `src/main/dev`, excluded from packaged files. Extract renderer core (tab pick, timer, calendar, file actions/undo) and wire `renderer.ts` to it. Demo imports the same core with a browser adapter; delete duplicated behavior. Remove the dead guard, unused `displayId`, uncleared intervals/listeners, and CSS glitches. Re-run verify and `npm --prefix site run build`.
 - [ ] **R5 Verify harness refactor** — *Depends on: R4.*
-  - Extract shared PowerShell helpers for launch/stop/CDP/wait/assert, remove duplicated drag/shutdown blocks, make skips explicit and cleanup `finally`-safe. Keep 25 checks and re-run.
+  - Extract shared PowerShell helpers for launch/stop/CDP/wait/assert, remove duplicated drag/shutdown blocks, make skips explicit and cleanup `finally`-safe. Keep 27 checks and re-run.
 - [ ] **R6 Settings, startup, hotkey rebind** — *Depends on: R5.*
   - Wire 7.1's five rows, tray Settings, startup toggle, hotkey capture plus fallback notice, theme switch. Persist and prove save/restart, registry entry and cleanup, hotkey toggle. Ticks 1.7, 1.8, 7.1; retires 6.2 against ADR-0012.
 - [ ] **R7 Remaining proofs** — *Depends on: R6.*
   - Calendar midnight drift (5.3), locale week start and year boundaries, multi-monitor and 100/150% if hardware allows (otherwise mark blocked, do not tick). Windows 10 stays unproven.
 - [ ] **R8 Packaging** — *Depends on: R7.*
-  - `npm run dist` builds main, preload, renderer, and helper; outputs to `release/build`; verify asserts `app.asar`, helper, icon, and a portable launch; rename stale `release/` and `release-next/` to `*-old` after success. No publish until auth and a clean-profile checklist.
+  - `npm run dist` builds main, preload, renderer, and helper; outputs to `release/build`; verify asserts `app.asar`, helper, icon, and a portable launch. No publish until auth and a clean-profile checklist.
 - [ ] **R9 Docs and final gate** — *Depends on: R8.*
-  - Update ARCHITECTURE/PRD/DESIGN/AGENTS/README to code truth; add superseded banners to stale ADRs; retire timer-priority language; fix site copy claims; add `.perch/` to ignore; final `.\verify.ps1` exit 0 and site build.
+  - Update ARCHITECTURE/PRD/DESIGN/AGENTS/README to code truth; add superseded banners to stale ADRs; retire timer-priority language; fix site copy claims; final `.\verify.ps1` exit 0 and site build.
 
 ## I. UI trust pass (approved 2026-11-04)
 
@@ -210,7 +211,7 @@ These run before the phase tasks, as previous UI passes did. The canonical previ
 
 - [ ] **8.1 `verify.ps1` full suite** — *Depends on: every task above.*
   - Typecheck, build, helper build, launch, window exists at correct height, hotkey registered, timer counts down, clipboard holds 3 files and still pastes after a forced helper restart, no outbound TCP from the app's PID, Electron under 130 MB, helper under 60 MB, total printed, CPU within budget.
-  - _Audit 2026-11-07: no hotkey check, no timer check in 8.1's sense, no forced helper-restart paste, no Electron/total/CPU budget check. The suite has 25 checks and no current green run._
+  - _Audit 2026-11-07: no hotkey check, no timer check in 8.1's sense, no paste after a forced helper restart, no Electron/total/CPU budget check. The suite has 27 checks and the 2026-11-07 R2 run is green; check 26 only proves the restart and pong._
   - _Verify:_ `.\verify.ps1` exits 0 and prints each check.
 - [ ] **8.2 Packaged build** — *Depends on: 8.1.*
   - Installer or portable exe launches on a clean profile.

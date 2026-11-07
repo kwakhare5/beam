@@ -76,7 +76,11 @@ internal sealed class FullscreenWatcher : IDisposable
         if (disposed) return;
         disposed = true;
         var worker = thread;
-        if (worker is null || !worker.IsAlive) return;
+        if (worker is null || !worker.IsAlive)
+        {
+            ready.Dispose();
+            return;
+        }
 
         if (window != IntPtr.Zero)
         {
@@ -90,7 +94,9 @@ internal sealed class FullscreenWatcher : IDisposable
         if (!worker.Join(1500))
         {
             Protocol.Log("fullscreen thread did not exit");
+            return;
         }
+        ready.Dispose();
     }
 
     private void Run()
@@ -108,7 +114,11 @@ internal sealed class FullscreenWatcher : IDisposable
                 hInstance = GetModuleHandle(null),
                 lpszClassName = ClassName
             };
-            RegisterClassEx(ref wc);
+            if (RegisterClassEx(ref wc) == 0)
+            {
+                Protocol.Log($"fullscreen class failed: {Marshal.GetLastWin32Error()}");
+                return;
+            }
 
             window = CreateWindowEx(0, ClassName, string.Empty, 0, 0, 0, 0, 0, HwndMessage, IntPtr.Zero, wc.hInstance, IntPtr.Zero);
             if (window == IntPtr.Zero)

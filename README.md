@@ -19,14 +19,13 @@ Beam is an offline Windows 11 floating capsule for media controls, a file shelf,
 **Not built or incomplete**
 - Timer completion: no chime and no Windows notification. The deadline lives in the renderer, not main, so hidden completion is uncovered.
 - Settings screen (7.1), startup toggle (1.7), hotkey rebinding, and the light/dark switch.
-- Helper restart policy and request timeouts. A dead helper stays dead; a hung request can leave copy waiting.
 - Multi-monitor restore and 100/150% scaling proof.
-- Packaging: `electron-builder.yml` carries the helper and tray icon via `extraResources`, but `npm run dist` only runs electron-builder; the current release folder has no `app.asar`, helper, or icon, and no exe is published.
+- Packaging: `electron-builder.yml` carries the helper and tray icon via `extraResources`, but `npm run dist` only runs electron-builder; no package has been built and no exe is published.
 - Windows 10 is untested; Windows 11 is the supported claim.
 
 ## Verification
 
-`.\verify.ps1` has 25 checks. The 2026-11-07 run exits 0 with 25/25 and no skips: check 16 is a real Explorer→pill drag, check 17 retries the Explorer foreground, check 24 follows two live players, and check 25 runs separate quiet and chevron phases. Work card 114 in `JOURNAL.md` records the pre-fix audit; card 116 records the green run.
+`.\verify.ps1` has 27 checks. The 2026-11-07 run exits 0 with 27/27 and no skips: check 16 is a real Explorer→pill drag, check 17 retries the Explorer foreground, check 24 follows two live players, check 25 runs separate quiet and chevron phases, check 26 force-kills the helper and proves a new pid plus a second pong, and check 27 proves a hung request times out after 8s. Work card 114 in `JOURNAL.md` records the pre-fix audit; card 116 records the first green run; card 117 records the helper-reliability pass.
 
 ## Commands
 

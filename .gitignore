@@ -8,16 +8,12 @@ release/
 native/**/bin/
 native/**/obj/
 .scratch/
-.commandcode/
 .agents/
 *.log
 *.tsbuildinfo
-.freebuff/
 
 # local copyrighted rips — never commit
 /*.mp3
-
-release-next/
 
 .vercel
 .env*

@@ -1,5 +1,11 @@
 import { spawn, type ChildProcess } from 'node:child_process';
 
+const REQUEST_TIMEOUT_MS = 8000;
+const MAX_BUFFER_CHARS = 16 * 1024 * 1024;
+const MAX_RESTARTS = 3;
+const RESTART_WINDOW_MS = 60_000;
+const RESTART_DELAY_MS = 500;
+
 type HelperReply = {
   id: number;
   pong?: boolean;
@@ -16,6 +22,7 @@ export type HelperEvent = { evt: string; payload?: unknown };
 type Pending = {
   resolve: (reply: HelperReply) => void;
   reject: (error: Error) => void;
+  timer: NodeJS.Timeout;
 };
 
 export class Bridge {
@@ -23,17 +30,31 @@ export class Bridge {
   private buffer = '';
   private nextId = 1;
   private readonly pending = new Map<number, Pending>();
+  private restartTimes: number[] = [];
+  private restartTimer: NodeJS.Timeout | null = null;
+  private stopping = false;
 
   constructor(
     private readonly exePath: string,
     private readonly onEvent: (event: HelperEvent) => void = () => {},
-    private readonly onExit: () => void = () => {}
+    private readonly onExit: () => void = () => {},
+    private readonly onRestart: () => void = () => {}
   ) {}
 
   start(): void {
-    if (this.child) return;
+    if (this.child || this.restartTimer) return;
 
     const child = spawn(this.exePath, [], { stdio: ['pipe', 'pipe', 'pipe'], windowsHide: true });
+    let ended = false;
+    const end = (code: number | null): void => {
+      if (ended) return;
+      ended = true;
+      if (this.child === child) this.child = null;
+      this.rejectAll(new Error(`helper exited (${code ?? 'spawn error'})`));
+      this.buffer = '';
+      this.onExit();
+      if (!this.stopping) this.scheduleRestart();
+    };
 
     child.stdout?.setEncoding('utf8');
     child.stdout?.on('data', (chunk: string) => this.read(chunk));
@@ -47,17 +68,12 @@ export class Bridge {
 
     child.on('error', (error) => {
       console.error(`[bridge] spawn failed: ${error.message}`);
-      this.onExit();
+      end(null);
     });
 
     child.on('exit', (code) => {
-      if (this.child === child) this.child = null;
-      for (const pending of this.pending.values()) {
-        pending.reject(new Error(`helper exited (${code})`));
-      }
-      this.pending.clear();
       console.error(`[bridge] helper exited (${code})`);
-      this.onExit();
+      end(code);
     });
 
     this.child = child;
@@ -90,6 +106,13 @@ export class Bridge {
   }
 
   stop(): Promise<void> {
+    this.stopping = true;
+    if (this.restartTimer) {
+      clearTimeout(this.restartTimer);
+      this.restartTimer = null;
+    }
+    this.rejectAll(new Error('helper stopped'));
+
     const child = this.child;
     if (!child) return Promise.resolve();
     this.child = null;
@@ -113,13 +136,31 @@ export class Bridge {
 
     const id = this.nextId++;
     return new Promise((resolve, reject) => {
-      this.pending.set(id, { resolve, reject });
-      stdin.write(`${JSON.stringify({ id, cmd, ...payload })}\n`);
+      const timer = setTimeout(() => {
+        this.pending.delete(id);
+        reject(new Error(`helper timed out on ${cmd}`));
+      }, REQUEST_TIMEOUT_MS);
+      timer.unref();
+
+      this.pending.set(id, { resolve, reject, timer });
+      try {
+        stdin.write(`${JSON.stringify({ id, cmd, ...payload })}\n`);
+      } catch (error) {
+        this.pending.delete(id);
+        clearTimeout(timer);
+        reject(error instanceof Error ? error : new Error(String(error)));
+      }
     });
   }
 
   private read(chunk: string): void {
     this.buffer += chunk;
+    if (this.buffer.length > MAX_BUFFER_CHARS) {
+      this.buffer = '';
+      console.error('[bridge] dropped oversized stdout buffer');
+      return;
+    }
+
     let newline = this.buffer.indexOf('\n');
     while (newline >= 0) {
       const line = this.buffer.slice(0, newline).trim();
@@ -150,7 +191,37 @@ export class Bridge {
         continue;
       }
       this.pending.delete(message.id);
+      clearTimeout(pending.timer);
       pending.resolve(message);
     }
+  }
+
+  private rejectAll(error: Error): void {
+    for (const pending of this.pending.values()) {
+      clearTimeout(pending.timer);
+      pending.reject(error);
+    }
+    this.pending.clear();
+  }
+
+  private scheduleRestart(): void {
+    if (this.restartTimer || this.stopping) return;
+
+    const now = Date.now();
+    this.restartTimes = this.restartTimes.filter((time) => now - time < RESTART_WINDOW_MS);
+    if (this.restartTimes.length >= MAX_RESTARTS) {
+      console.error(`[bridge] restart limit reached (${MAX_RESTARTS} in ${RESTART_WINDOW_MS / 1000}s)`);
+      return;
+    }
+
+    this.restartTimes.push(now);
+    console.error(`[bridge] restarting helper (${this.restartTimes.length}/${MAX_RESTARTS})`);
+    this.restartTimer = setTimeout(() => {
+      this.restartTimer = null;
+      if (this.stopping) return;
+      this.start();
+      this.onRestart();
+    }, RESTART_DELAY_MS);
+    this.restartTimer.unref();
   }
 }
