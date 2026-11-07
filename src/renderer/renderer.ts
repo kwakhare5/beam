@@ -237,11 +237,14 @@ function renderPillSlot(state: string, label: string): void {
   } else if (state === 'done') {
     meta.innerHTML = `<span class="state-icon" aria-hidden="true"><svg aria-hidden="true" focusable="false"><use href="#i-check"/></svg></span>`;
   } else {
-    meta.innerHTML = '<div class="title"></div>';
-    const title = meta.querySelector<HTMLElement>('.title');
+    let title = meta.querySelector<HTMLElement>('.title');
+    if (!title) {
+      meta.innerHTML = '<div class="title"></div>';
+      title = meta.querySelector<HTMLElement>('.title');
+    }
     if (title) {
-      title.textContent = label;
-      title.title = label;
+      if (title.textContent !== label) title.textContent = label;
+      if (title.title !== label) title.title = label;
     }
   }
   const existing = slot.querySelector<HTMLElement>('.pill-action');
@@ -745,10 +748,18 @@ if (app && beam) {
   window.addEventListener('drop', (event) => {
     event.preventDefault();
     dragDepth = 0;
+    showShelf();
     const files = Array.from(event.dataTransfer?.files ?? []);
-    const paths = files.map((file) => beam.getPathForFile(file)).filter((path) => path.length > 0);
+    let paths: string[] = [];
+    let readFailed = false;
+    try {
+      paths = files.map((file) => beam.getPathForFile(file)).filter((path) => path.length > 0);
+    } catch (error) {
+      readFailed = true;
+      console.error('[files] path read failed', error);
+    }
     if (!paths.length) {
-      showShelf();
+      if (readFailed) setFilesStatus('Add failed');
       return;
     }
     void beam

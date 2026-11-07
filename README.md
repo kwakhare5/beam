@@ -2,11 +2,31 @@
 
 Beam is an offline Windows 11 floating capsule for media controls, a file shelf, a timer, and a calendar. No cloud, no accounts, no network.
 
-## Current state
+## Current state (2026-11-07)
 
-- **App:** one 136×42 transparent window holding a 94×30 capsule (a 30×30 quiet star after 20s idle), clipped with `setShape` to the pill plus a 6px halo so margin clicks reach the desktop. It uses `showInactive()` and never takes focus on show. The capsule drags anywhere on its body; the position persists in `%APPDATA%\Beam\settings.json`, survives restarts, and Reset Position returns it to the taskbar anchor.
-- **Live:** SMTC music (title, art, green/amber dot, hover Prev / play-pause / Next plus a chevron that opens the panel), the file shelf (drop or Add files, per-row copy, drag-out to Explorer, missing badge, 5s Undo, Clear All, quit guard), the Timer (5/10/25/custom, deadline countdown on the tab and the pill, cancel, done) and the Calendar (month arrows and Today), and the panel's four tabs at 452×316 (420×284 body) with last-used auto-pick and Esc / margin / tray dismissal. Settings stays out until 7.1.
-- **Not built:** the timer, the hotkey, a settings screen, the startup toggle, the chime, the helper restart policy, the trust-pass verify checks (9.9), and packaging (`electron-builder.yml` ships neither the helper exe nor the tray icon). Next task is 9.8; see `TASKS.md`.
+**Working**
+- **Shell:** one 136×42 transparent window holding a 94×30 capsule (30×30 quiet star after 20s idle), clipped with `setShape` to the pill plus a 6px halo. It uses `showInactive()`, never takes focus on show, drags with pointer capture, persists its position in `%APPDATA%\Beam\settings.json`, and hides on fullscreen. Tray: Hide, Reset Position, Quit; Quit confirms while the shelf holds files.
+- **Files:** drop or Add files, per-row copy, drag-out to Explorer, missing badge, row remove with 5s Undo, armed Clear All, 50-entry in-memory cap.
+- **Music:** live SMTC title, art, dot, hover Prev / play-pause / Next, chevron, and the Music tab with a read-only position bar. Sessions are picked automatically; last-touched switching is built but not proven.
+- **Timer and Calendar:** 5/10/25/custom deadline countdown on the tab and pill, cancel, done face, month grid with arrows and Today.
+- **Glue and access:** last-used tab on open, `Alt+Space` (fallback `Ctrl+Shift+Space`), keyboard pill control, focus ring, live region, reduced-motion support.
+- **Landing site:** live at `beamm.vercel.app`, running the real renderer as a browser demo.
+
+**Built, with proof gaps**
+- 2.4, 9.3, 9.5, and 9.6 are proven and ticked by the 2026-11-07 green run. 9.1, 9.2, 9.4, 9.7, 9.8, and 9.9 still have partial or outside-suite proof; 1.8 and the timer/calendar engines are built but their full checks are pending.
+- 2.5 has the no-art star fallback and a null-session debounce; paused and closed-player edge cases are unproven.
+
+**Not built or incomplete**
+- Timer completion: no chime and no Windows notification. The deadline lives in the renderer, not main, so hidden completion is uncovered.
+- Settings screen (7.1), startup toggle (1.7), hotkey rebinding, and the light/dark switch.
+- Helper restart policy and request timeouts. A dead helper stays dead; a hung request can leave copy waiting.
+- Multi-monitor restore and 100/150% scaling proof.
+- Packaging: `electron-builder.yml` carries the helper and tray icon via `extraResources`, but `npm run dist` only runs electron-builder; the current release folder has no `app.asar`, helper, or icon, and no exe is published.
+- Windows 10 is untested; Windows 11 is the supported claim.
+
+## Verification
+
+`.\verify.ps1` has 25 checks. The 2026-11-07 run exits 0 with 25/25 and no skips: check 16 is a real Explorer→pill drag, check 17 retries the Explorer foreground, check 24 follows two live players, and check 25 runs separate quiet and chevron phases. Work card 114 in `JOURNAL.md` records the pre-fix audit; card 116 records the green run.
 
 ## Commands
 
@@ -20,7 +40,7 @@ npm run typecheck
 npm run measure
 ```
 
-The app uses software rendering (`disableHardwareAcceleration`) to stay under the 130 MB private-byte gate. Measured 2026-10-29 at 136×42 with the panel and tray installed: 99 MB private across 5 processes and 0.2% CPU idle. BUDGET PASSED.
+Packaging still needs the helper publish and app build before `npm run dist`. The app uses software rendering to stay under the 130 MB private-byte gate; measured 2026-10-29 at 136×42 with the panel and tray installed: 99 MB private across 5 processes and 0.2% CPU idle.
 
 ## Preview
 
