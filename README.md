@@ -8,16 +8,15 @@ Beam is an offline Windows 11 floating capsule for media controls, a file shelf,
 - **Shell:** one 136×42 transparent window holding a 94×30 capsule (30×30 quiet star after 20s idle), clipped with `setShape` to the pill plus a 6px halo. It uses `showInactive()`, never takes focus on show, drags with pointer capture, persists its position in `%APPDATA%\Beam\settings.json`, and hides on fullscreen. Tray: Hide, Reset Position, Quit; Quit confirms while the shelf holds files.
 - **Files:** drop or Add files, per-row copy, drag-out to Explorer, missing badge, row remove with 5s Undo, armed Clear All, 50-entry in-memory cap.
 - **Music:** live SMTC title, art, dot, hover Prev / play-pause / Next, chevron, and the Music tab with a read-only position bar. Sessions are picked automatically; last-touched switching is built but not proven.
-- **Timer and Calendar:** 5/10/25/custom deadline countdown on the tab and pill, cancel, done face, month grid with arrows and Today.
+- **Timer and Calendar:** 5/10/25/custom countdown on the tab and pill with a main-owned deadline, cancel and replace, done face with one chime and one Windows notification (fires while the pill is hidden), month grid with arrows and Today. The deadline and alert path are proven by checks 28–29; calendar locale/midnight cases are still unproven.
 - **Glue and access:** last-used tab on open, `Alt+Space` (fallback `Ctrl+Shift+Space`), keyboard pill control, focus ring, live region, reduced-motion support.
 - **Landing site:** live at `beamm.vercel.app`, running the real renderer as a browser demo.
 
 **Built, with proof gaps**
-- 2.4, 9.3, 9.5, and 9.6 are proven and ticked by the 2026-11-07 green run. 9.1, 9.2, 9.4, 9.7, 9.8, and 9.9 still have partial or outside-suite proof; 1.8 and the timer/calendar engines are built but their full checks are pending.
+- 2.4, 9.3, 9.5, 9.6, and timer 4.1–4.5 are proven and ticked by the 2026-11-07 green runs. 9.1, 9.2, 9.4, 9.7, 9.8, and 9.9 still have partial or outside-suite proof; the calendar engine and hotkey are built but their full checks are pending.
 - 2.5 has the no-art star fallback and a null-session debounce; paused and closed-player edge cases are unproven.
 
 **Not built or incomplete**
-- Timer completion: no chime and no Windows notification. The deadline lives in the renderer, not main, so hidden completion is uncovered.
 - Settings screen (7.1), startup toggle (1.7), hotkey rebinding, and the light/dark switch.
 - Multi-monitor restore and 100/150% scaling proof.
 - Packaging: `electron-builder.yml` carries the helper and tray icon via `extraResources`, but `npm run dist` only runs electron-builder; no package has been built and no exe is published.
@@ -25,7 +24,7 @@ Beam is an offline Windows 11 floating capsule for media controls, a file shelf,
 
 ## Verification
 
-`.\verify.ps1` has 27 checks. The 2026-11-07 run exits 0 with 27/27 and no skips: check 16 is a real Explorer→pill drag, check 17 retries the Explorer foreground, check 24 follows two live players, check 25 runs separate quiet and chevron phases, check 26 force-kills the helper and proves a new pid plus a second pong, and check 27 proves a hung request times out after 8s. Work card 114 in `JOURNAL.md` records the pre-fix audit; card 116 records the first green run; card 117 records the helper-reliability pass.
+`.\verify.ps1` has 29 checks. The 2026-11-07 run exits 0 with 29/29 and no skips: check 16 is a real Explorer→pill drag, check 17 retries the Explorer foreground, check 24 follows two live players, check 25 runs separate quiet and chevron phases, check 26 force-kills the helper and proves a new pid plus a second pong, check 27 proves a hung request times out after 8s, check 28 proves timer start/cancel/replace with one chime, one banner, and the done face, and check 29 proves completion behind a real fullscreen window. Work card 114 in `JOURNAL.md` records the pre-fix audit; card 116 records the first green run; card 117 records the helper-reliability pass; card 118 records timer completion.
 
 ## Commands
 

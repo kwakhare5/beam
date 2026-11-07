@@ -1,5 +1,14 @@
 import { contextBridge, ipcRenderer, webUtils } from 'electron';
-import { IPC, type AddResult, type CopyResult, type FileChange, type HelperState, type MusicState, type ShelfFile } from '../shared/ipc';
+import {
+  IPC,
+  type AddResult,
+  type CopyResult,
+  type FileChange,
+  type HelperState,
+  type MusicState,
+  type ShelfFile,
+  type TimerSnapshot
+} from '../shared/ipc';
 
 contextBridge.exposeInMainWorld('beam', {
   getPathForFile: (file: File): string => webUtils.getPathForFile(file),
@@ -27,6 +36,13 @@ contextBridge.exposeInMainWorld('beam', {
   },
   onHelperState: (callback: (state: HelperState) => void): void => {
     ipcRenderer.on(IPC.helperState, (_event, state: HelperState) => callback(state));
+  },
+  startTimer: (minutes: number): Promise<TimerSnapshot | null> => ipcRenderer.invoke(IPC.timerStart, minutes),
+  cancelTimer: (): Promise<TimerSnapshot | null> => ipcRenderer.invoke(IPC.timerCancel),
+  dismissTimer: (): Promise<TimerSnapshot | null> => ipcRenderer.invoke(IPC.timerDismiss),
+  timerChimed: (id: number, ok: boolean): void => ipcRenderer.send(IPC.timerChimed, id, ok),
+  onTimerState: (callback: (state: TimerSnapshot) => void): void => {
+    ipcRenderer.on(IPC.timerState, (_event, state: TimerSnapshot) => callback(state));
   },
   reportPanelTiming: (ms: number, reduced: boolean): void => ipcRenderer.send(IPC.panelTiming, ms, reduced),
   musicCommand: (cmd: 'toggle' | 'next' | 'prev'): Promise<{ ok: boolean; error?: string }> =>

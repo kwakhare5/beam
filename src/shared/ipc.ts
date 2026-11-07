@@ -29,6 +29,15 @@ export type MusicState = {
 
 export type HelperState = { ok: boolean };
 
+export type TimerSnapshot = {
+  phase: 'idle' | 'running' | 'done';
+  minutes: number;
+  remainingMs: number;
+  deadline: number;
+  id: number;
+  alert: boolean;
+};
+
 export const IPC = {
   filesAdd: 'beam:files:add',
   filesPick: 'beam:files:pick',
@@ -39,6 +48,11 @@ export const IPC = {
   musicCommand: 'beam:music:command',
   musicState: 'beam:music:state',
   helperState: 'beam:helper:state',
+  timerStart: 'beam:timer:start',
+  timerCancel: 'beam:timer:cancel',
+  timerDismiss: 'beam:timer:dismiss',
+  timerState: 'beam:timer:state',
+  timerChimed: 'beam:timer:chimed',
   panelOpen: 'beam:panel:open',
   panelDismiss: 'beam:panel:dismiss',
   panelRequestOpen: 'beam:panel:request-open',

@@ -1,9 +1,10 @@
-import { app, BrowserWindow, dialog, globalShortcut, ipcMain, nativeImage, screen } from 'electron';
+import { app, BrowserWindow, dialog, globalShortcut, ipcMain, nativeImage, Notification, screen } from 'electron';
 import { existsSync, mkdirSync, statSync, unlinkSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { basename, join } from 'node:path';
 import { Bridge, type HelperEvent } from './bridge';
-import { IPC, type AddResult, type CopyResult, type MusicState, type ShelfFile } from '../shared/ipc';
+import { BeamTimer } from './timer';
+import { IPC, type AddResult, type CopyResult, type MusicState, type ShelfFile, type TimerSnapshot } from '../shared/ipc';
 import { getSettingsPath, loadSettings, saveSettings, type BeamSettings, type SavedPosition } from './settings';
 import { helperPath, trayIconPath } from './paths';
 import { createTray } from './tray';
@@ -109,6 +110,7 @@ function readPoint(x: unknown, y: unknown): { x: number; y: number } | null {
 }
 
 app.disableHardwareAcceleration();
+app.setAppUserModelId('com.beam.app');
 
 const gotLock = app.requestSingleInstanceLock();
 
@@ -204,6 +206,12 @@ if (!gotLock) {
   const musicSessionsTest = process.env.BEAM_MUSIC_SESSIONS_TEST === '1';
   const uiTest = process.env.BEAM_UI_TEST === '1';
   const uiTestPhase = process.env.BEAM_UI_TEST_PHASE ?? 'all';
+  const timerTest = process.env.BEAM_TIMER_TEST === '1';
+  const timerHiddenTest = process.env.BEAM_TIMER_HIDDEN_TEST === '1';
+  const timerScale = ((): number => {
+    const raw = Number(process.env.BEAM_TIMER_SCALE_MS ?? '');
+    return Number.isFinite(raw) && raw > 0 ? raw : 60_000;
+  })();
   let musicView: MusicState | null = null;
   let helperOk = true;
   let liveMusicApp = '';
@@ -246,6 +254,46 @@ if (!gotLock) {
     if (!win || win.isDestroyed()) return;
     win.webContents.send(IPC.helperState, { ok: helperOk });
   }
+
+  function sendTimer(snapshot: TimerSnapshot = timer.snapshot()): void {
+    if (!win || win.isDestroyed()) return;
+    win.webContents.send(IPC.timerState, snapshot);
+  }
+
+  function showTimerAlert(): void {
+    if (Notification.isSupported()) {
+      const notice = new Notification({ title: 'Beam', body: 'Timer finished', silent: true });
+      notice.on('click', () => {
+        if (!win || win.isDestroyed()) return;
+        hiddenByFullscreen = false;
+        hiddenByUser = false;
+        win.showInactive();
+      });
+      notice.show();
+      console.log('[timer] notify shown=notification');
+      return;
+    }
+    if (tray) {
+      tray.displayBalloon({
+        title: 'Beam',
+        content: 'Timer finished',
+        icon: nativeImage.createFromPath(trayIconPath()),
+        noSound: true
+      });
+      console.log('[timer] notify shown=balloon');
+      return;
+    }
+    console.log('[timer] notify shown=none');
+  }
+
+  const timer = new BeamTimer(
+    timerScale,
+    (snapshot) => sendTimer(snapshot),
+    (alert) => {
+      console.log(`[timer] done id=${alert.id} minutes=${alert.minutes} hidden=${hiddenByFullscreen}`);
+      showTimerAlert();
+    }
+  );
 
   async function applyMusic(payload: MusicPayload | null): Promise<void> {
     const request = ++musicRequest;
@@ -765,6 +813,74 @@ if (!gotLock) {
     console.log('[ui] done');
   }
 
+  async function runTimerTest(target: BrowserWindow, openPanel: () => void): Promise<void> {
+    const log = (tag: string, data: unknown): void => console.log(`[timer] ui ${tag} ${JSON.stringify(data)}`);
+    const wait = (ms: number): Promise<void> => new Promise((resolve) => setTimeout(resolve, ms));
+    const read = async (): Promise<{ state: string | null; digits: string | null; panel: string | null; done: boolean }> =>
+      (await target.webContents.executeJavaScript(
+        `(() => {
+          const pill = document.querySelector('.pill');
+          const body = document.querySelector('#panel-timer');
+          return {
+            state: pill?.dataset.state ?? null,
+            digits: pill?.querySelector('.digits')?.textContent ?? null,
+            panel: body?.className ?? null,
+            done: Boolean(body?.querySelector('.timer-done'))
+          };
+        })()`
+      )) as { state: string | null; digits: string | null; panel: string | null; done: boolean };
+    const until = async (
+      want: (view: { state: string | null; digits: string | null; panel: string | null; done: boolean }) => boolean,
+      ms: number
+    ): Promise<{ ok: boolean; view: Awaited<ReturnType<typeof read>> }> => {
+      const deadline = Date.now() + ms;
+      let view = await read();
+      while (Date.now() < deadline && !want(view)) {
+        await wait(100);
+        view = await read();
+      }
+      return { ok: want(view), view };
+    };
+
+    try {
+      openPanel();
+      await wait(500);
+      await target.webContents.executeJavaScript(`document.querySelector('#tab-timer')?.click()`);
+      await wait(200);
+      await target.webContents.executeJavaScript(`document.querySelector('#panel-timer [data-timer-preset="5"]')?.click()`);
+      await wait(150);
+      await target.webContents.executeJavaScript(`document.querySelector('#panel-timer [data-timer-start]')?.click()`);
+      const running = await until((view) => view.state === 'timer', 2500);
+      log('run', { ok: running.ok, state: running.view.state, digits: running.view.digits, panel: running.view.panel });
+
+      await target.webContents.executeJavaScript(`document.querySelector('#panel-timer [data-timer-cancel]')?.click()`);
+      const cancelled = await until((view) => view.state !== 'timer', 2500);
+      log('cancel', { ok: cancelled.ok, state: cancelled.view.state, digits: cancelled.view.digits });
+
+      await target.webContents.executeJavaScript(`window.beam.startTimer(5)`);
+      await wait(120);
+      const replacedAt = Date.now();
+      await target.webContents.executeJavaScript(`window.beam.startTimer(1)`);
+      const completed = await until((view) => view.done, 6000);
+      const elapsedMs = Date.now() - replacedAt;
+      log('done', {
+        ok: completed.ok,
+        state: completed.view.state,
+        digits: completed.view.digits,
+        panel: completed.view.panel,
+        elapsedMs
+      });
+      await wait(1200);
+
+      await target.webContents.executeJavaScript(`document.querySelector('#panel-timer [data-timer-dismiss]')?.click()`);
+      const dismissed = await until((view) => view.state !== 'done', 2500);
+      log('dismiss', { ok: dismissed.ok, state: dismissed.view.state, done: dismissed.view.done });
+    } catch (error) {
+      console.error('[timer] ui failed', error);
+    }
+    console.log('[timer] ui done');
+  }
+
   async function pillSnapshot(): Promise<{ state: string | null; label: string | null }> {
     if (!win || win.isDestroyed()) return { state: null, label: null };
     try {
@@ -946,6 +1062,13 @@ if (!gotLock) {
           pillPosition = target.getBounds();
         }, 500);
       }
+      if (timerHiddenTest) {
+        setTimeout(() => {
+          if (target.isDestroyed()) return;
+          const snapshot = timer.start(4);
+          console.log(`[timer] hidden start id=${snapshot.id} minutes=4`);
+        }, 1500);
+      }
       if (idleTest) {
         setTimeout(() => {
           if (target.isDestroyed()) return;
@@ -989,6 +1112,7 @@ if (!gotLock) {
     win.webContents.on('did-finish-load', () => {
       sendMusic();
       sendHelperState();
+      sendTimer();
     });
 
     void win.loadFile(join(__dirname, '../renderer/index.html'));
@@ -1112,6 +1236,15 @@ if (!gotLock) {
           return;
         }
         if (hiddenByFullscreen) showPill('fullscreen exit');
+        if (timerHiddenTest && timer.snapshot().phase === 'done') {
+          setTimeout(() => {
+            if (window.isDestroyed()) return;
+            void window.webContents
+              .executeJavaScript(`document.querySelector('.pill')?.dataset.state ?? null`)
+              .then((state: unknown) => console.log(`[timer] hidden shown state=${String(state)}`))
+              .catch(() => {});
+          }, 700);
+        }
       };
       if (fullscreenActive) onFullscreen(true);
       const startDrag = (x: number, y: number): void => {
@@ -1322,6 +1455,37 @@ if (!gotLock) {
         }
       });
 
+      ipcMain.handle(IPC.timerStart, (event, minutes: unknown): TimerSnapshot | null => {
+        if (event.sender !== window.webContents) return null;
+        const value = typeof minutes === 'number' && Number.isFinite(minutes) ? Math.round(minutes) : 0;
+        if (value < 1 || value > 999) {
+          console.error(`[timer] start rejected minutes=${String(minutes)}`);
+          return null;
+        }
+        const snapshot = timer.start(value);
+        console.log(`[timer] start id=${snapshot.id} minutes=${value} scale=${timerScale}`);
+        return snapshot;
+      });
+
+      ipcMain.handle(IPC.timerCancel, (event): TimerSnapshot | null => {
+        if (event.sender !== window.webContents) return null;
+        const snapshot = timer.cancel();
+        console.log(`[timer] cancel id=${snapshot.id} phase=${snapshot.phase}`);
+        return snapshot;
+      });
+
+      ipcMain.handle(IPC.timerDismiss, (event): TimerSnapshot | null => {
+        if (event.sender !== window.webContents) return null;
+        const snapshot = timer.dismiss();
+        console.log(`[timer] dismiss id=${snapshot.id} phase=${snapshot.phase}`);
+        return snapshot;
+      });
+
+      ipcMain.on(IPC.timerChimed, (event, id: unknown, ok: unknown) => {
+        if (event.sender !== window.webContents) return;
+        console.log(`[timer] chime id=${typeof id === 'number' ? id : 0} ok=${ok === true}`);
+      });
+
       ipcMain.on(IPC.pillSize, (event, width: unknown, height: unknown) => {
         if (event.sender !== window.webContents) return;
         if (typeof width !== 'number' || !Number.isFinite(width)) return;
@@ -1408,6 +1572,13 @@ if (!gotLock) {
         setTimeout(() => {
           if (!window.isDestroyed()) {
             void runUiTest(window, uiTestPhase).catch((error: unknown) => console.error('[ui] failed', error));
+          }
+        }, 1200);
+      }
+      if (timerTest) {
+        setTimeout(() => {
+          if (!window.isDestroyed()) {
+            void runTimerTest(window, openPanel).catch((error: unknown) => console.error('[timer] ui failed', error));
           }
         }, 1200);
       }
@@ -1733,6 +1904,7 @@ if (!gotLock) {
     if (quitting) return;
     quitting = true;
     globalShortcut.unregisterAll();
+    timer.dispose();
     event.preventDefault();
     void bridge.stop().finally(() => app.quit());
   });

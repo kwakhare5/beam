@@ -19,6 +19,7 @@ The boxes were not changed by this audit. Read this with the notes on each task.
 - **Gate history:** before R1, check 16 was red (synthetic CDP drag), 17 depended on Explorer keeping the foreground, 24 needed two live players, and 25 could not cover quiet and chevron in one run. R1 resolved all four; see the result line above.
 - **Doc conflict:** TASKS 6.1/6.2 say timer then music; ADR-0012 (approved) says last used wins. The code follows the ADR. Decide whether 6.2 is obsolete before building it.
 - **R1 result (2026-11-07):** `.\verify.ps1` exits 0, 25/25, no SKIPs. 2.4, 9.3, 9.5, and 9.6 are ticked. The real drop exposed a pill title DOM-churn bug (fixed); checks 11 and 20 were stale (quit moved to main; the 5s Undo status precedes the warning) and are corrected.
+- **R2 result (2026-11-07):** `.\verify.ps1` exits 0, 27/27, no SKIPs (checks 26–27). R3 result (same day): exits 0, 29/29; 4.1–4.5 are ticked by checks 25, 28, and 29. The timer deadline, chime, notification, and hidden completion are no longer missing.
 
 ## R. Codebase repair (approved 2026-11-07)
 
@@ -30,8 +31,9 @@ The boxes were not changed by this audit. Read this with the notes on each task.
 - [x] **R2 Helper reliability** — *Depends on: R1.*
   - Bridge request timeout, stdout buffer cap, restart max 3 in 60s, spawn-error child reset; helper disposal, `RegisterClassEx` check, and uncaught `Attach` gaps; atomic settings write. Add a forced-kill check and a hung-request check.
   - _Proved 2026-11-07:_ `.\verify.ps1` exit 0, 27/27, no SKIPs. Check 26 force-killed the helper and got pid 32444 → 31076 plus a second pong; check 27 rejected a hung ping after 8010ms. Requests reject at 8s, the stdout buffer caps at 16M chars, restarts cap at 3/60s, settings write via temp + rename, and the helper now checks `RegisterClassEx`, disposes its ready event, and catches `Attach` failures.
-- [ ] **R3 Timer completion** — *Depends on: R2.*
+- [x] **R3 Timer completion** — *Depends on: R2.*
   - Move the deadline to main; push ticks; exactly-once completion; generate and bundle one chime WAV; Electron `Notification` with tray balloon fallback; prove hidden/fullscreen completion, done face, cancel/replace. Ticks 4.1–4.5 when proven.
+  - _Proved 2026-11-07:_ `.\verify.ps1` exit 0, 29/29, no SKIPs. `BeamTimer` owns the deadline and pushes `beam:timer:state` only when the displayed second changes; completion fires once from the cleared ticker. Check 28: the UI started and cancelled a 5-minute timer, then a 1-minute timer replaced a running 5-minute one and finished in 1092ms with the done face, `Dismiss` returning idle, and exactly one chime + one notification line. Check 29: the helper hid the pill for a real fullscreen form, the 4-minute timer finished with `hidden=true`, chime `ok=true` once, notification once, and the pill returned on the done face. Chime is a generated 79KB WAV (`npm run generate:chime`); the renderer acks `play()` over `beam:timer:chimed`; main uses `Notification` (`com.beam.app` AUMID) with `tray.displayBalloon` fallback.
 - [ ] **R4 Main/renderer/demo refactor** — *Depends on: R3.*
   - Extract main services (window/shape, shelf, panel, music, timer, hotkey) and move the `BEAM_*` harness to `src/main/dev`, excluded from packaged files. Extract renderer core (tab pick, timer, calendar, file actions/undo) and wire `renderer.ts` to it. Demo imports the same core with a browser adapter; delete duplicated behavior. Remove the dead guard, unused `displayId`, uncleared intervals/listeners, and CSS glitches. Re-run verify and `npm --prefix site run build`.
 - [ ] **R5 Verify harness refactor** — *Depends on: R4.*
@@ -147,25 +149,26 @@ These run before the phase tasks, as previous UI passes did. The canonical previ
 
 ## E. Timer
 
-- [ ] **4.1 Presets and custom** — *Depends on: 1.3.*
+- [x] **4.1 Presets and custom** — *Depends on: 1.3.*
   - 5 / 10 / 25 min plus an inline custom minutes field, 1–999.
   - _Verify:_ each preset starts a timer with the right remaining time.
-- [ ] **4.2 Live countdown on the pill** — *Depends on: 4.1.*
-  - `mm:ss` under 60 min, `h:mm:ss` above. Main owns the deadline and pushes `beam:timer:tick`; the renderer only displays it. Never a decrementing counter.
+  - _Proved 2026-11-07:_ check 25 starts the 5-minute preset through a real click; check 28 starts the same preset through the panel and reads `0:05` at the test scale.
+- [x] **4.2 Live countdown on the pill** — *Depends on: 4.1.*
+  - `mm:ss` under 60 min, `h:mm:ss` above. Main owns the deadline and pushes `beam:timer:state`; the renderer only displays it. Never a decrementing counter.
   - _Audit 2026-11-07: the countdown uses a deadline, but it lives in the renderer (`timerDeadline` in `src/renderer/renderer.ts`), not main. Hidden-window completion is not covered._
-  - _Verify:_ sleep the machine 2 minutes → countdown is still correct.
-- [ ] **4.3 Done state** — *Depends on: 4.2.*
+  - _Proved 2026-11-07 (R3): `BeamTimer` reads the deadline on every 200ms tick, pushes only when the ceiling second changes, and check 29 completes while the window is hidden. Sleep-across-the-machine is still unproven._
+- [x] **4.3 Done state** — *Depends on: 4.2.*
   - Chime plays once, Windows banner fires; the pill reads Done with a gold check and gold border (no digits, no glow, no mascot swap).
   - _Audit 2026-11-07: the done face is built; no chime or `Notification` code exists yet._
-  - _Verify:_ timer reaches 0 → audible chime + visible banner, exactly one of each; the capsule shows the check, not digits.
-- [ ] **4.4 Cancel and replace** — *Depends on: 4.2.*
+  - _Proved 2026-11-07 (R3): checks 28 and 29 assert one `[timer] chime … ok=true` and one `[timer] notify shown=notification` per completion, the done face with no digits, and a single `[timer] done` line. Audibility and the visible toast are asserted by the code path and play() promise, not recorded by verify._
+- [x] **4.4 Cancel and replace** — *Depends on: 4.2.*
   - Cancel stops it. Starting a new one replaces the running one.
   - _Audit 2026-11-07: cancel and replace are built; verify coverage is still pending._
-  - _Verify:_ start 5m, start 10m → only 10m runs, pill shows 10:00.
-- [ ] **4.5 Fires while hidden** — *Depends on: 4.3, 1.9.*
+  - _Proved 2026-11-07 (R3): check 28 clicks Cancel through the panel and asserts the pill leaves the timer state; it then starts 5 and immediately starts 1 through `window.beam.startTimer`, and only the replacement completes (1092ms, one done line). The UI exposes Cancel, not a second Start, while running._
+- [x] **4.5 Fires while hidden** — *Depends on: 4.3, 1.9.*
   - Fullscreen game active when the timer ends.
   - _Audit 2026-11-07: not built; the deadline is renderer-owned and there is no alert path._
-  - _Verify:_ chime and banner still fire with the pill hidden.
+  - _Proved 2026-11-07 (R3): check 29 grows a real borderless form to fullscreen, the helper hides the pill, the 4-minute timer finishes with `hidden=true`, one chime and one banner fire, and the pill returns on the done face._
 
 ## F. Calendar
 

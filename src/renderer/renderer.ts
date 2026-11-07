@@ -14,7 +14,8 @@ import {
   type Tab
 } from './ui';
 import { MASCOTS } from './ui/shared/mascots';
-import type { AddResult, CopyResult, FileChange, HelperState, MusicState, ShelfFile } from '../shared/ipc';
+import chimeUrl from './assets/beam-chime.wav';
+import type { AddResult, CopyResult, FileChange, HelperState, MusicState, ShelfFile, TimerSnapshot } from '../shared/ipc';
 
 type BeamApi = {
   getPathForFile(file: File): string;
@@ -34,6 +35,11 @@ type BeamApi = {
   onPanelDismiss(callback: () => void): void;
   onMusicState(callback: (state: MusicState | null) => void): void;
   onHelperState(callback: (state: HelperState) => void): void;
+  startTimer(minutes: number): Promise<TimerSnapshot | null>;
+  cancelTimer(): Promise<TimerSnapshot | null>;
+  dismissTimer(): Promise<TimerSnapshot | null>;
+  timerChimed(id: number, ok: boolean): void;
+  onTimerState(callback: (state: TimerSnapshot) => void): void;
   musicCommand(cmd: 'toggle' | 'next' | 'prev'): Promise<{ ok: boolean; error?: string }>;
   reportPanelTiming(ms: number, reduced: boolean): void;
 };
@@ -84,11 +90,11 @@ let pillHovered = false;
 type LastUsed = 'music' | 'files' | 'timer' | 'calendar';
 const ENABLED_TABS: ReadonlyArray<Tab> = ['music', 'files', 'timer', 'calendar'];
 let lastUsed: LastUsed | null = null;
-let timerMode: 'idle' | 'custom' | 'running' | 'done' = 'idle';
 let timerPreset: '5' | '10' | '25' | 'custom' = '25';
 let timerCustom = '25';
-let timerDeadline = 0;
-let timerTick: number | undefined;
+let timerSnapshot: TimerSnapshot = { phase: 'idle', minutes: 0, remainingMs: 0, deadline: 0, id: 0, alert: false };
+let chime: HTMLAudioElement | null = null;
+let chimedId = 0;
 let calendarView = new Date();
 
 function stamp(tab: LastUsed): void {
@@ -105,10 +111,10 @@ function customMinutes(): number {
 }
 
 function timerData(): PanelData['timer'] {
-  if (timerMode === 'running') {
-    return { mode: 'running', digits: clock(timerDeadline - Date.now()), note: 'Focus', preset: timerPreset };
+  if (timerSnapshot.phase === 'running') {
+    return { mode: 'running', digits: clock(timerSnapshot.remainingMs), note: 'Focus', preset: timerPreset };
   }
-  if (timerMode === 'done') {
+  if (timerSnapshot.phase === 'done') {
     return { mode: 'done', digits: '0:00', note: 'Timer finished', preset: timerPreset };
   }
   const minutes = timerPreset === 'custom' ? customMinutes() : Number(timerPreset);
@@ -118,62 +124,89 @@ function timerData(): PanelData['timer'] {
   return { mode: 'idle', digits: `${minutes}:00`, note: 'Press start', preset: timerPreset };
 }
 
-function stopTimerTick(): void {
-  if (timerTick !== undefined) {
-    window.clearInterval(timerTick);
-    timerTick = undefined;
-  }
-}
-
-function finishTimer(): void {
-  stopTimerTick();
-  timerMode = 'done';
-  timerDeadline = 0;
-  renderPill();
-  renderPanel();
-  announce('Timer finished');
-}
-
-function tickTimer(): void {
-  if (timerMode !== 'running') return;
-  const left = timerDeadline - Date.now();
-  if (left <= 0) {
-    finishTimer();
-    return;
-  }
-  const digits = clock(left);
+function patchTimerDigits(): void {
+  const digits = clock(timerSnapshot.remainingMs);
   const pillDigits = pillEl?.querySelector<HTMLElement>('[data-pill-digits]');
   if (pillDigits) pillDigits.textContent = digits;
   const panelDigits = wrapEl?.querySelector<HTMLElement>('.panel-timer [data-timer-digits]');
   if (panelDigits) panelDigits.textContent = digits;
-  panelData.timer.digits = digits;
+  pillEl?.setAttribute('aria-label', `Timer ${digits}, open panel`);
+}
+
+function playChime(id: number): void {
+  if (id === chimedId) return;
+  chimedId = id;
+  chime ??= new Audio(chimeUrl);
+  chime.currentTime = 0;
+  chime.volume = 0.7;
+  void chime
+    .play()
+    .then(() => beam?.timerChimed(id, true))
+    .catch((error: unknown) => {
+      console.error('[timer] chime failed', error);
+      beam?.timerChimed(id, false);
+    });
+}
+
+function applyTimer(next: TimerSnapshot): void {
+  const previous = timerSnapshot;
+  const phaseChanged = next.phase !== previous.phase;
+  timerSnapshot = next;
+  if (next.phase === 'running') {
+    if (!phaseChanged) {
+      patchTimerDigits();
+      return;
+    }
+    wakePill();
+    renderPill();
+    if (document.body.classList.contains('is-open')) renderPanel();
+    announce(`Timer started for ${next.minutes} ${next.minutes === 1 ? 'minute' : 'minutes'}`);
+    return;
+  }
+  if (next.phase === 'done') {
+    renderPill();
+    if (document.body.classList.contains('is-open')) renderPanel();
+    if (next.alert) {
+      playChime(next.id);
+      announce('Timer finished');
+    }
+    return;
+  }
+  if (phaseChanged) {
+    renderPill();
+    if (document.body.classList.contains('is-open')) renderPanel();
+  }
 }
 
 function startTimer(minutes: number): void {
-  const mins = Math.max(1, Math.min(999, Math.round(minutes)));
-  timerDeadline = Date.now() + mins * 60000;
-  timerMode = 'running';
+  if (!beam) return;
   stamp('timer');
-  stopTimerTick();
-  timerTick = window.setInterval(tickTimer, 250);
-  renderPill();
-  renderPanel();
-  announce(`Timer started for ${mins} ${mins === 1 ? 'minute' : 'minutes'}`);
+  void beam
+    .startTimer(minutes)
+    .then((snapshot) => {
+      if (snapshot) applyTimer(snapshot);
+    })
+    .catch((error: unknown) => console.error('[timer] start failed', error));
 }
 
 function cancelTimer(): void {
-  stopTimerTick();
-  timerMode = 'idle';
-  timerDeadline = 0;
-  renderPill();
-  renderPanel();
+  if (!beam) return;
+  void beam
+    .cancelTimer()
+    .then((snapshot) => {
+      if (snapshot) applyTimer(snapshot);
+    })
+    .catch((error: unknown) => console.error('[timer] cancel failed', error));
 }
 
 function dismissTimer(): void {
-  timerMode = 'idle';
-  timerDeadline = 0;
-  renderPill();
-  renderPanel();
+  if (!beam) return;
+  void beam
+    .dismissTimer()
+    .then((snapshot) => {
+      if (snapshot) applyTimer(snapshot);
+    })
+    .catch((error: unknown) => console.error('[timer] dismiss failed', error));
 }
 
 function pickTab(rows: number): Tab {
@@ -233,7 +266,7 @@ function renderPillSlot(state: string, label: string): void {
   const meta = slot?.querySelector<HTMLElement>('.meta');
   if (!slot || !meta) return;
   if (state === 'timer') {
-    meta.innerHTML = `<div class="digits" data-pill-digits>${clock(timerDeadline - Date.now())}</div>`;
+    meta.innerHTML = `<div class="digits" data-pill-digits>${clock(timerSnapshot.remainingMs)}</div>`;
   } else if (state === 'done') {
     meta.innerHTML = `<span class="state-icon" aria-hidden="true"><svg aria-hidden="true" focusable="false"><use href="#i-check"/></svg></span>`;
   } else {
@@ -273,7 +306,7 @@ function renderPillSlot(state: string, label: string): void {
 
 function renderPill(): void {
   if (!pillEl) return;
-  const timerState = timerMode === 'running' ? 'timer' : timerMode === 'done' ? 'done' : null;
+  const timerState = timerSnapshot.phase === 'running' ? 'timer' : timerSnapshot.phase === 'done' ? 'done' : null;
   const idle = !override && !music && shelfCount === 0 && !timerState;
   const quietState = helperOk && idle && quiet && !pillHovered;
   const state = helperOk
@@ -283,9 +316,9 @@ function renderPill(): void {
     : 'error';
   const label = helperOk
     ? override?.label ??
-      (timerMode === 'done'
+      (timerSnapshot.phase === 'done'
         ? 'Done'
-        : timerMode === 'running'
+        : timerSnapshot.phase === 'running'
           ? ''
           : music
             ? music.title
@@ -324,7 +357,7 @@ function renderPill(): void {
       : state === 'playing' || state === 'paused'
         ? `${music!.playing ? 'Playing' : 'Paused'} ${music!.title}`
         : state === 'timer'
-          ? `Timer ${clock(timerDeadline - Date.now())}, open panel`
+          ? `Timer ${clock(timerSnapshot.remainingMs)}, open panel`
           : state === 'done'
             ? 'Timer finished — open panel'
             : state === 'files'
@@ -360,7 +393,7 @@ function idleEligible(): boolean {
     helperOk &&
     !music &&
     shelfCount === 0 &&
-    timerMode === 'idle' &&
+    timerSnapshot.phase === 'idle' &&
     !override &&
     !pillHovered &&
     !pillEl?.matches(':hover') &&
@@ -522,7 +555,6 @@ function renderPanel(): void {
       const preset = target.closest<HTMLElement>('[data-timer-preset]')?.dataset.timerPreset;
       if (preset) {
         timerPreset = preset as '5' | '10' | '25' | 'custom';
-        timerMode = preset === 'custom' ? 'custom' : 'idle';
         stamp('timer');
         renderPanel();
         return;
@@ -531,7 +563,6 @@ function renderPanel(): void {
         const input = root.querySelector<HTMLInputElement>('[data-timer-minutes]');
         timerCustom = String(Math.max(1, Math.min(999, Math.round(Number(input?.value) || 25))));
         timerPreset = 'custom';
-        timerMode = 'idle';
         stamp('timer');
         renderPanel();
         return;
@@ -887,6 +918,8 @@ if (app && beam) {
     }
     renderPill();
   });
+
+  beam.onTimerState(applyTimer);
 
   beam.onMusicState((state) => {
     if (state) {
