@@ -15,6 +15,10 @@ import {
 } from './ui';
 import { MASCOTS } from './ui/shared/mascots';
 import chimeUrl from './assets/beam-chime.wav';
+import { clampMinutes, clock, timerData as buildTimerData, type TimerPreset } from './core/timer';
+import { ENABLED_TABS, pickTab, type LastUsed } from './core/tabs';
+import { shiftMonth } from './core/calendar';
+import { UndoSlot } from './core/undo';
 import type { AddResult, CopyResult, FileChange, HelperState, MusicState, ShelfFile, TimerSnapshot } from '../shared/ipc';
 
 type BeamApi = {
@@ -87,10 +91,8 @@ let quiet = false;
 let quietTimer: number | undefined;
 let pillHovered = false;
 
-type LastUsed = 'music' | 'files' | 'timer' | 'calendar';
-const ENABLED_TABS: ReadonlyArray<Tab> = ['music', 'files', 'timer', 'calendar'];
 let lastUsed: LastUsed | null = null;
-let timerPreset: '5' | '10' | '25' | 'custom' = '25';
+let timerPreset: TimerPreset = '25';
 let timerCustom = '25';
 let timerSnapshot: TimerSnapshot = { phase: 'idle', minutes: 0, remainingMs: 0, deadline: 0, id: 0, alert: false };
 let chime: HTMLAudioElement | null = null;
@@ -101,27 +103,8 @@ function stamp(tab: LastUsed): void {
   lastUsed = tab;
 }
 
-function clock(ms: number): string {
-  const total = Math.max(0, Math.ceil(ms / 1000));
-  return `${Math.floor(total / 60)}:${String(total % 60).padStart(2, '0')}`;
-}
-
-function customMinutes(): number {
-  return Math.max(1, Math.min(999, Math.round(Number(timerCustom) || 25)));
-}
-
 function timerData(): PanelData['timer'] {
-  if (timerSnapshot.phase === 'running') {
-    return { mode: 'running', digits: clock(timerSnapshot.remainingMs), note: 'Focus', preset: timerPreset };
-  }
-  if (timerSnapshot.phase === 'done') {
-    return { mode: 'done', digits: '0:00', note: 'Timer finished', preset: timerPreset };
-  }
-  const minutes = timerPreset === 'custom' ? customMinutes() : Number(timerPreset);
-  if (timerPreset === 'custom') {
-    return { mode: 'custom', digits: `${minutes}:00`, note: 'Set a length', preset: 'custom', customMinutes: timerCustom };
-  }
-  return { mode: 'idle', digits: `${minutes}:00`, note: 'Press start', preset: timerPreset };
+  return buildTimerData(timerSnapshot.phase, timerSnapshot.remainingMs, timerPreset, timerCustom);
 }
 
 function patchTimerDigits(): void {
@@ -209,9 +192,8 @@ function dismissTimer(): void {
     .catch((error: unknown) => console.error('[timer] dismiss failed', error));
 }
 
-function pickTab(rows: number): Tab {
-  if (lastUsed && ENABLED_TABS.includes(lastUsed)) return lastUsed;
-  return music ? 'music' : rows > 0 ? 'files' : 'music';
+function openedTab(rows: number): Tab {
+  return pickTab(lastUsed, Boolean(music), rows);
 }
 
 function fileLabel(count: number): string {
@@ -478,8 +460,7 @@ function applyAddResult(result: AddResult): void {
   }
 }
 
-let undoPath: string | null = null;
-let undoTimer: number | undefined;
+const undo = new UndoSlot(renderUndo);
 
 function setFilesStatus(text: string): void {
   const node = wrapEl?.querySelector<HTMLElement>('[data-files-status]');
@@ -492,17 +473,8 @@ function renderUndo(): void {
   const button = wrapEl.querySelector<HTMLElement>('[data-files-undo]');
   if (!note || !button) return;
   const empty = Boolean(wrapEl.querySelector('.drop-well'));
-  note.textContent = undoPath ? 'Removed' : empty ? '' : 'Files clear on quit';
-  button.hidden = undoPath === null;
-}
-
-function clearUndo(): void {
-  undoPath = null;
-  if (undoTimer !== undefined) {
-    window.clearTimeout(undoTimer);
-    undoTimer = undefined;
-  }
-  renderUndo();
+  note.textContent = undo.value ? 'Removed' : empty ? '' : 'Files clear on quit';
+  button.hidden = undo.value === null;
 }
 
 async function removeRow(path: string): Promise<void> {
@@ -513,14 +485,7 @@ async function removeRow(path: string): Promise<void> {
     return;
   }
   applyFiles(result.files);
-  clearUndo();
-  undoPath = path;
-  renderUndo();
-  undoTimer = window.setTimeout(() => {
-    undoPath = null;
-    undoTimer = undefined;
-    renderUndo();
-  }, 5000);
+  undo.arm(path);
 }
 
 async function clearShelf(): Promise<void> {
@@ -530,7 +495,7 @@ async function clearShelf(): Promise<void> {
     setFilesStatus('Clear failed');
     return;
   }
-  clearUndo();
+  undo.clear();
   applyFiles(result.files);
 }
 
@@ -568,7 +533,7 @@ function renderPanel(): void {
         return;
       }
       if (target.closest('[data-timer-start]')) {
-        startTimer(timerPreset === 'custom' ? customMinutes() : Number(timerPreset));
+        startTimer(timerPreset === 'custom' ? clampMinutes(timerCustom) : Number(timerPreset));
         return;
       }
       if (target.closest('[data-timer-cancel]')) {
@@ -580,13 +545,13 @@ function renderPanel(): void {
         return;
       }
       if (target.closest('[data-cal-prev]')) {
-        calendarView = new Date(calendarView.getFullYear(), calendarView.getMonth() - 1, 1);
+        calendarView = shiftMonth(calendarView, -1);
         stamp('calendar');
         renderPanel();
         return;
       }
       if (target.closest('[data-cal-next]')) {
-        calendarView = new Date(calendarView.getFullYear(), calendarView.getMonth() + 1, 1);
+        calendarView = shiftMonth(calendarView, 1);
         stamp('calendar');
         renderPanel();
         return;
@@ -625,9 +590,9 @@ function renderPanel(): void {
         const target = event.target;
         if (!(target instanceof Element)) return;
         if (target.closest('[data-files-undo]')) {
-          const path = undoPath;
+          const path = undo.value;
           if (!path) return;
-          clearUndo();
+          undo.clear();
           void beam
             .addFiles([path])
             .then((result) => {
@@ -869,7 +834,7 @@ if (app && beam) {
 
   beam.onPanelOpen((files) => {
     wakePill();
-    activeTab = pickTab(files.length);
+    activeTab = openedTab(files.length);
     applyFiles(files);
     if (!panelEl) return;
     const el = panelEl;
@@ -880,22 +845,25 @@ if (app && beam) {
       const report = (): void => {
         if (reported) return;
         reported = true;
+        el.removeEventListener('transitionrun', begin);
+        el.removeEventListener('transitionend', done);
         beam.reportPanelTiming(
           started ? Math.round(performance.now() - started) : 260,
           window.matchMedia('(prefers-reduced-motion: reduce)').matches
         );
       };
-      el.addEventListener('transitionrun', function begin(event) {
+      const begin = (event: TransitionEvent): void => {
         if (event.target !== el || event.propertyName !== 'transform' || started) return;
         started = performance.now();
-      });
+      };
+      const done = (event: TransitionEvent): void => {
+        if (event.target !== el || event.propertyName !== 'transform') return;
+        report();
+      };
+      el.addEventListener('transitionrun', begin);
       document.body.classList.add('is-open');
       el.focus({ preventScroll: true });
-      el.addEventListener('transitionend', function done(event) {
-        if (event.target !== el || event.propertyName !== 'transform') return;
-        el.removeEventListener('transitionend', done);
-        report();
-      });
+      el.addEventListener('transitionend', done);
       setTimeout(report, 260);
     });
   });

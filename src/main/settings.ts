@@ -5,7 +5,6 @@ import { dirname, join } from 'node:path';
 export interface SavedPosition {
   x: number;
   y: number;
-  displayId: number;
 }
 
 export interface BeamSettings {
@@ -27,9 +26,7 @@ function isSavedPosition(value: unknown): value is SavedPosition {
     typeof position.x === 'number' &&
     Number.isFinite(position.x) &&
     typeof position.y === 'number' &&
-    Number.isFinite(position.y) &&
-    typeof position.displayId === 'number' &&
-    Number.isFinite(position.displayId)
+    Number.isFinite(position.y)
   );
 }
 
@@ -37,11 +34,7 @@ export function loadSettings(): BeamSettings {
   try {
     const raw = JSON.parse(readFileSync(getSettingsPath(), 'utf8')) as Record<string, unknown>;
     const position = isSavedPosition(raw.position)
-      ? {
-          x: Math.round(raw.position.x),
-          y: Math.round(raw.position.y),
-          displayId: raw.position.displayId
-        }
+      ? { x: Math.round(raw.position.x), y: Math.round(raw.position.y) }
       : null;
     if (raw.position != null && !position) console.log('[settings] dropped an invalid position');
     return { ...raw, version: 1, position };

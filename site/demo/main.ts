@@ -12,6 +12,9 @@ import {
 import type { PanelData, Tab } from '../../src/renderer/ui';
 import type { FileRow } from '../../src/renderer/ui/panel/tabs/files';
 import type { TimerMode } from '../../src/renderer/ui/panel/tabs/timer';
+import { clampMinutes, clock, timerData as buildTimerData, type TimerPreset } from '../../src/renderer/core/timer';
+import { pickTab } from '../../src/renderer/core/tabs';
+import { shiftMonth } from '../../src/renderer/core/calendar';
 
 document.body.insertAdjacentHTML('afterbegin', iconSprite());
 
@@ -51,7 +54,7 @@ let files: FileRow[] = [];
 let activeTab: Tab = 'music';
 let opened = false;
 let timerMode: TimerMode = 'idle';
-let timerPreset = '25';
+let timerPreset: TimerPreset = '25';
 let timerCustom = '25';
 let timerDeadline = 0;
 let calendarView = new Date();
@@ -60,27 +63,8 @@ const panelWrap = document.createElement('div');
 panelWrap.className = 'panel-wrap';
 app.appendChild(panelWrap);
 
-function clock(ms: number): string {
-  const total = Math.max(0, Math.ceil(ms / 1000));
-  return `${Math.floor(total / 60)}:${String(total % 60).padStart(2, '0')}`;
-}
-
-function customMinutes(): number {
-  return Math.max(1, Math.min(999, Math.round(Number(timerCustom) || 25)));
-}
-
 function timerData(): PanelData['timer'] {
-  if (timerMode === 'running') {
-    return { mode: 'running', digits: clock(timerDeadline - Date.now()), note: 'Focus', preset: timerPreset as PanelData['timer']['preset'] };
-  }
-  if (timerMode === 'done') {
-    return { mode: 'done', digits: '0:00', note: 'Timer finished', preset: timerPreset as PanelData['timer']['preset'] };
-  }
-  if (timerPreset === 'custom') {
-    const minutes = customMinutes();
-    return { mode: 'custom', digits: `${minutes}:00`, note: 'Set a length', preset: 'custom', customMinutes: timerCustom };
-  }
-  return { mode: 'idle', digits: `${Number(timerPreset)}:00`, note: 'Press start', preset: timerPreset as PanelData['timer']['preset'] };
+  return buildTimerData(timerMode, timerDeadline - Date.now(), timerPreset, timerCustom);
 }
 
 function panelData(): PanelData {
@@ -150,7 +134,7 @@ function notifyParent(open: boolean): void {
 function openPanel(): void {
   if (opened) return;
   opened = true;
-  activeTab = 'music';
+  activeTab = pickTab(null, true, files.length);
   renderPanel();
   void panelWrap.offsetWidth;
   requestAnimationFrame(() => {
@@ -202,7 +186,7 @@ function toggleAudio(): void {
 }
 
 function startTimer(minutes: number): void {
-  const mins = Math.max(1, Math.min(999, Math.round(minutes)));
+  const mins = clampMinutes(minutes);
   timerDeadline = Date.now() + mins * 60000;
   timerMode = 'running';
   renderPill();
@@ -275,21 +259,21 @@ panelWrap.addEventListener('click', (event) => {
 
   const preset = target.closest<HTMLElement>('[data-timer-preset]')?.dataset.timerPreset;
   if (preset) {
-    timerPreset = preset;
+    timerPreset = preset as TimerPreset;
     timerMode = preset === 'custom' ? 'custom' : 'idle';
     renderPanel();
     return;
   }
   if (target.closest('[data-timer-set]')) {
     const input = panelWrap.querySelector<HTMLInputElement>('[data-timer-minutes]');
-    timerCustom = String(Math.max(1, Math.min(999, Math.round(Number(input?.value) || 25))));
+    timerCustom = String(clampMinutes(input?.value));
     timerPreset = 'custom';
     timerMode = 'idle';
     renderPanel();
     return;
   }
   if (target.closest('[data-timer-start]')) {
-    startTimer(timerPreset === 'custom' ? customMinutes() : Number(timerPreset));
+    startTimer(timerPreset === 'custom' ? Number(timerCustom) : Number(timerPreset));
     return;
   }
   if (target.closest('[data-timer-cancel]')) {
@@ -301,12 +285,12 @@ panelWrap.addEventListener('click', (event) => {
     return;
   }
   if (target.closest('[data-cal-prev]')) {
-    calendarView = new Date(calendarView.getFullYear(), calendarView.getMonth() - 1, 1);
+    calendarView = shiftMonth(calendarView, -1);
     renderPanel();
     return;
   }
   if (target.closest('[data-cal-next]')) {
-    calendarView = new Date(calendarView.getFullYear(), calendarView.getMonth() + 1, 1);
+    calendarView = shiftMonth(calendarView, 1);
     renderPanel();
     return;
   }

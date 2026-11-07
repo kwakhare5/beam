@@ -184,18 +184,33 @@ internal static class Program
     private static void PickMusic(JsonObject request, MusicWatcher watcher)
     {
         var id = request["id"]?.DeepClone();
-        if (request["app"] is not JsonValue value || !value.TryGetValue<string>(out var app) || string.IsNullOrWhiteSpace(app))
+        int? index = null;
+        if (request["index"] is JsonValue indexValue && indexValue.TryGetValue<int>(out var parsedIndex))
+        {
+            index = parsedIndex;
+        }
+        var app = string.Empty;
+        if (request["app"] is JsonValue value && value.TryGetValue<string>(out var appValue))
+        {
+            app = appValue ?? string.Empty;
+        }
+        var title = string.Empty;
+        if (request["title"] is JsonValue titleValue && titleValue.TryGetValue<string>(out var titleText))
+        {
+            title = titleText ?? string.Empty;
+        }
+        if (string.IsNullOrWhiteSpace(app) && string.IsNullOrWhiteSpace(title) && index is null)
         {
             Protocol.Emit(new JsonObject
             {
                 ["id"] = id,
                 ["ok"] = false,
-                ["error"] = "app must be a non-empty string"
+                ["error"] = "app, title, or index must be provided"
             });
             return;
         }
 
-        var (ok, error) = watcher.PickAsync(app).GetAwaiter().GetResult();
+        var (ok, error) = watcher.PickAsync(app, title, index).GetAwaiter().GetResult();
         if (!ok)
         {
             Protocol.Log($"music.pick failed: {error}");

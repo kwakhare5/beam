@@ -15,7 +15,7 @@ type HelperReply = {
   sessions?: MusicSessionRow[];
 };
 
-export type MusicSessionRow = { app: string; title: string; playing: boolean; current: boolean };
+export type MusicSessionRow = { index: number; app: string; title: string; playing: boolean; current: boolean };
 
 export type HelperEvent = { evt: string; payload?: unknown };
 
@@ -100,8 +100,9 @@ export class Bridge {
     return Array.isArray(reply.sessions) ? reply.sessions : [];
   }
 
-  async musicPick(app: string): Promise<void> {
-    const reply = await this.send('music.pick', { app });
+  async musicPick(app: string, index?: number, title?: string): Promise<void> {
+    const request = { app, ...(index === undefined ? {} : { index }), ...(title === undefined ? {} : { title }) };
+    const reply = await this.send('music.pick', request);
     if (reply.ok !== true) throw new Error(reply.error ?? 'helper refused to pick that session');
   }
 
