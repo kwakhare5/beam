@@ -3,7 +3,9 @@
   justify-content: center;
   align-items: center;
   gap: var(--space-4);
-}.music-controls .icon-btn {
+}
+
+.music-controls .icon-btn {
   width: 30px;
   height: 30px;
   border-radius: var(--r-pill);
@@ -50,7 +52,7 @@
   display: block;
   height: 100%;
   border-radius: inherit;
-  background: var(--primary);
+  background: var(--primary-text);
 }
 
 .track-times {

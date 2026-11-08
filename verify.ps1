@@ -553,6 +553,8 @@ $timerCss = Get-Content (Join-Path $PSScriptRoot 'src\renderer\styles\tabs\timer
 $calendarCss = Get-Content (Join-Path $PSScriptRoot 'src\renderer\styles\tabs\calendar.css') -Raw
 $settingsCss = Get-Content (Join-Path $PSScriptRoot 'src\renderer\styles\tabs\settings.css') -Raw
 $preview = Get-Content (Join-Path $PSScriptRoot 'showcase\app-preview.html') -Raw
+$rendererTs = Get-Content (Join-Path $PSScriptRoot 'src\renderer\renderer.ts') -Raw
+$preloadTs = Get-Content (Join-Path $PSScriptRoot 'src\preload\index.ts') -Raw
 $music = Get-Content (Join-Path $PSScriptRoot 'src\renderer\ui\panel\tabs\music.ts') -Raw
 $timer = Get-Content (Join-Path $PSScriptRoot 'src\renderer\ui\panel\tabs\timer.ts') -Raw
 $calendarTs = Get-Content (Join-Path $PSScriptRoot 'src\renderer\ui\panel\tabs\calendar.ts') -Raw
@@ -581,12 +583,24 @@ if ($base -notmatch 'padding: 6px 4px') {
   Write-Host 'FAIL UI spec: body padding must be 6px 4px for the 30px capsule'
   $uiFail = $true
 }
-if ($pill -notmatch 'width: 94px' -or $pill -notmatch 'width: 128px' -or $pill -notmatch '\.pill\.expands:hover' -or $pill -notmatch "data-state='drag'\] \{[^}]*width: 128px") {
-  Write-Host 'FAIL UI spec: capsule must rest at 94, drag at 128, and grow to 128 on hover for music/timer/done'
+if ($pill -notmatch 'width: 94px' -or $pill -notmatch 'width: 108px' -or $pill -notmatch 'width: 128px' -or $pill -notmatch '\.pill\.expands:hover' -or $pill -notmatch "data-state='drag'\] \{[^}]*width: 128px") {
+  Write-Host 'FAIL UI spec: capsule must rest at 94 (music 108), drag at 128, and grow to 128 on hover for music/timer/done'
+  $uiFail = $true
+}
+if ($pill -notmatch "data-state='quiet'\] \{[^}]*width: 26px" -or $pill -notmatch "data-state='quiet'\] \{[^}]*height: 26px" -or $pill -notmatch "data-state='quiet'\] \.mascot \{[^}]*width: 18px") {
+  Write-Host 'FAIL UI spec: quiet must shrink to a 26px capsule around an 18px star'
+  $uiFail = $true
+}
+if ($geometry -notmatch 'NEAR_RADIUS = 37' -or $main -notmatch 'isCursorNear' -or $main -notmatch 'IPC\.pillNear' -or $rendererTs -notmatch 'onPillNear' -or $preloadTs -notmatch 'pillNear') {
+  Write-Host 'FAIL UI spec: the cursor within 37px of the pill must wake it'
+  $uiFail = $true
+}
+if ($rendererTs -notmatch 'QUIET_RETURN = 2000' -or $rendererTs -notmatch '!cursorNear') {
+  Write-Host 'FAIL UI spec: quiet must wait 2s after the cursor leaves'
   $uiFail = $true
 }
 if ($pill -match 'width: (100|104|132|136|140|176|216)px') {
-  Write-Host 'FAIL UI spec: capsule uses only 94 rest and 128 hover'
+  Write-Host 'FAIL UI spec: capsule uses only 94 rest, 108 music rest, 128 hover, and 26 quiet'
   $uiFail = $true
 }
 if ($pill -match "data-state='(idle|files)'\]:hover[^{]*\{[^}]*width") {
@@ -633,7 +647,7 @@ if ($musicCss -notmatch 'grid-template-columns: 148px' -or $musicCss -notmatch '
   Write-Host 'FAIL UI spec: the music track and controls must span the panel width'
   $uiFail = $true
 }
-if ($shellCss -notmatch 'tab:not\(\.settings\)' -or $shellCss -notmatch 'bottom: -6px') {
+if ($shellCss -notmatch "tab\[aria-selected='true'\]::after" -or $shellCss -notmatch 'bottom: -6px') {
   Write-Host 'FAIL UI spec: the selected content tab needs a 2px gold underline'
   $uiFail = $true
 }
@@ -794,8 +808,8 @@ if ($preview -notmatch 'bindPanelTabs') {
   Write-Host 'FAIL UI spec: preview tabs must be wired'
   $uiFail = $true
 }
-if ($preview -notmatch '\.f-pill \{ width: 94px' -or $preview -notmatch '\.f-pill\.is-expanded \{ width: 128px') {
-  Write-Host 'FAIL UI spec: preview capsule frames must be 94 rest and 128 hover'
+if ($preview -notmatch '\.f-pill \{ width: 94px' -or $preview -notmatch '\.f-pill\.is-music \{ width: 108px' -or $preview -notmatch '\.f-pill\.is-quiet \{ width: 26px' -or $preview -notmatch '\.f-pill\.is-expanded \{ width: 128px') {
+  Write-Host 'FAIL UI spec: preview capsule frames must be 94 rest, 108 music rest, 26 quiet, and 128 hover'
   $uiFail = $true
 }
 if ($preview -notmatch 'data-pill="timerRest"' -or $preview -notmatch 'data-pill="doneRest"' -or $preview -notmatch 'data-pill="timer"' -or $preview -notmatch 'data-pill="done"') {
@@ -2156,7 +2170,7 @@ try {
     -not [string]::IsNullOrWhiteSpace($clear.label) -and $clear.label -notmatch '^\d+ files?$|^Max 50$'
   }
   if ([int]$clear.shelf -ne 0 -or [int]$clear.rows -ne 0 -or -not $clearLabelOk) {
-    throw "Clear All left $($clear.shelf) paths, $($clear.rows) rows, label '$($clear.label)'"
+    throw "Clear all left $($clear.shelf) paths, $($clear.rows) rows, label '$($clear.label)'"
   }
   $settingsUi = Get-UiLog $uiOut 'settings'
   if ([int]$settingsUi.rows -ne 5 -or -not $settingsUi.startup -or -not $settingsUi.chord -or -not $settingsUi.volume -or -not $settingsUi.theme -or -not $settingsUi.reset -or @($settingsUi.selected) -notcontains 'settings') {
@@ -2170,8 +2184,18 @@ try {
   if ($null -ne $quiet.skipped) {
     Write-BeamSkip "quiet (a media session was live: $($quiet.skipped))"
   } else {
-    if (-not $quiet.ok -or [int]$quiet.w -ne 30 -or [int]$quiet.h -ne 30) {
-      throw "quiet read $($quiet.state) $($quiet.w)x$($quiet.h), expected 30x30"
+    if (-not $quiet.ok -or [int]$quiet.w -ne 26 -or [int]$quiet.h -ne 26) {
+      throw "quiet read $($quiet.state) $($quiet.w)x$($quiet.h), expected 26x26"
+    }
+    $near = Get-UiLog $uiOut 'near'
+    if (-not $near.ok -or $near.state -ne 'idle') { throw "the cursor 32px from the centre left the pill '$($near.state)'" }
+    if ([int]$near.w -ne 94) { throw "the near wake left the pill at $($near.w)px, expected 94" }
+    $nearleave = Get-UiLog $uiOut 'nearleave'
+    if (-not $nearleave.ok -or [int]$nearleave.w -ne 26) {
+      throw "the pill did not return to quiet after the cursor left ($($nearleave.state), $($nearleave.w)px)"
+    }
+    if ([int]$nearleave.ms -lt 1800 -or [int]$nearleave.ms -gt 4500) {
+      throw "quiet returned after $($nearleave.ms)ms, expected about 2000ms"
     }
     $quietwake = Get-UiLog $uiOut 'quietwake'
     if (-not $quietwake.ok) { throw 'the quiet pill did not wake on hover' }
@@ -2227,7 +2251,7 @@ try {
 Remove-Item Env:BEAM_UI_TEST -ErrorAction SilentlyContinue
 Remove-Item Env:BEAM_UI_TEST_PHASE -ErrorAction SilentlyContinue
 Remove-Item -LiteralPath $uiQuietOut, $uiQuietErr, $uiChevronOut, $uiChevronErr -ErrorAction SilentlyContinue
-Write-Host 'PASS UI pass (quiet phase: 94x30 rest, shelf add/undo, last-used tab, centered running timer, calendar nav, Esc, 30x30 quiet + wake; chevron phase: live-music chevron opened the panel; margin click-through)'
+Write-Host 'PASS UI pass (quiet phase: 94x30 rest, shelf add/undo, last-used tab, centered running timer, calendar nav, Esc, 26x26 quiet + near wake + 2s return; chevron phase: live-music chevron opened the panel; margin click-through)'
 
 Write-Host '[26/30] helper restart'
 $restartOut = Join-Path $env:TEMP 'beam-restart.out.log'

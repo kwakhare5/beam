@@ -33,8 +33,8 @@
 }
 
 .icon-btn:focus-visible {
-  outline: none;
-  box-shadow: inset 0 0 0 1px var(--ring);
+  outline: 2px solid var(--ring);
+  outline-offset: 2px;
 }
 
 .icon-btn:disabled {

@@ -59,7 +59,8 @@
   .g-label code { font-size: 11px; color: #6f6f6f; }
 
   .f-pill { width: 94px; height: 30px; }
-  .f-pill.is-quiet { width: 30px; }
+  .f-pill.is-music { width: 108px; }
+  .f-pill.is-quiet { width: 26px; height: 26px; }
   .f-pill.is-expanded { width: 128px; }
   .f-open { width: 452px; height: 316px; padding: 16px; box-sizing: border-box; }
 
@@ -322,17 +323,17 @@
       <div class="g-head">
         <h2>2 · Capsule</h2>
         <p class="g-help">
-          One <code>136×42</code> window. Idle starts at <code>94×30</code> and quiets to a <code>30×30</code> star after 20s; hovering the nub brings the label back. Music, timer, and done grow to <code>128×30</code> on hover or focus and reveal their actions; files stay <code>94×30</code> and only brighten. Music swaps the star for the album thumbnail; paused adds an amber dot. Long names ellipsize, nothing spills.
+          One <code>136×42</code> window. Idle starts at <code>94×30</code> and quiets to a <code>26×26</code> star after 20s; the cursor within 24px of the nub (or a hover) brings the label back, and it quiets again 2s after the cursor leaves. Music and paused rest at <code>108×30</code>; music, timer, and done grow to <code>128×30</code> on hover or focus and reveal their actions; files stay <code>94×30</code> and only brighten. Music swaps the star for the album thumbnail; paused adds an amber dot. Long names ellipsize, nothing spills.
         </p>
       </div>
 
       <div class="g-grid">
         <div class="g-row">
-          <div class="g-label"><b>Quiet · after 20s</b><span>star only; no label, no growth</span><code>30×30 · star 60%</code></div>
+          <div class="g-label"><b>Quiet · after 20s</b><span>star only; wakes when the cursor comes near or hovers the nub</span><code>26×26 · star 18px at 60%</code></div>
           <div class="f-pill is-quiet"><div data-pill="quiet"></div></div>
         </div>
         <div class="g-row">
-          <div class="g-label"><b>Idle · rest</b><span>no music, no timer; star at 70%</span><code>94 · muted label</code></div>
+          <div class="g-label"><b>Idle · rest (or near)</b><span>no music, no timer; star at 70%</span><code>94 · muted label</code></div>
           <div class="f-pill"><div data-pill="idle"></div></div>
         </div>
         <div class="g-row">
@@ -340,20 +341,20 @@
           <div class="f-pill"><div data-pill="idleHover"></div></div>
         </div>
         <div class="g-row">
-          <div class="g-label"><b>Playing · rest</b><span>album thumbnail + title, clipped</span><code>94 · 46px title slot</code></div>
-          <div class="f-pill"><div data-pill="playingRest"></div></div>
+          <div class="g-label"><b>Playing · rest</b><span>album thumbnail + title, clipped</span><code>108 · 62px title slot</code></div>
+          <div class="f-pill is-music"><div data-pill="playingRest"></div></div>
         </div>
         <div class="g-row">
-          <div class="g-label"><b>Playing · no artwork</b><span>falls back to the star</span><code>94 · star + title</code></div>
-          <div class="f-pill"><div data-pill="playingNoArt"></div></div>
+          <div class="g-label"><b>Playing · no artwork</b><span>falls back to the star</span><code>108 · star + title</code></div>
+          <div class="f-pill is-music"><div data-pill="playingNoArt"></div></div>
         </div>
         <div class="g-row">
           <div class="g-label"><b>Playing · hover</b><span>thumbnail fades, transport fades in</span><code>128 · 3×28px controls</code></div>
           <div class="f-pill is-expanded"><div data-pill="playing"></div></div>
         </div>
         <div class="g-row">
-          <div class="g-label"><b>Paused · rest</b><span>thumbnail + amber dot, muted title</span><code>94 · 46px title slot</code></div>
-          <div class="f-pill"><div data-pill="pausedRest"></div></div>
+          <div class="g-label"><b>Paused · rest</b><span>thumbnail + amber dot, muted title</span><code>108 · 62px title slot</code></div>
+          <div class="f-pill is-music"><div data-pill="pausedRest"></div></div>
         </div>
         <div class="g-row">
           <div class="g-label"><b>Paused · hover</b><span>transport with play</span><code>128 · 3×28px controls</code></div>
@@ -445,8 +446,9 @@
         <div class="g-card">
           <h3>Sizes</h3>
           <ul>
-            <li>Capsule <code>30×30 quiet</code> · <code>94×30 rest</code> · <code>128×30 hover</code> for music, timer, done · drag <code>128</code> · error <code>128</code></li>
+            <li>Capsule <code>26×26 quiet</code> · <code>94×30 rest</code> · <code>108×30 music rest</code> · <code>128×30 hover</code> for music, timer, done · drag <code>128</code> · error <code>128</code></li>
             <li>Window <code>136×42</code> for every state</li>
+            <li>Near wake <code>37px from the centre</code> (~24px off the nub); quiet returns <code>2s</code> after the cursor leaves</li>
             <li>Panel <code>420×284</code></li>
             <li>Open window <code>452×316</code> · 16px shadow margin</li>
             <li>Radii <code>6 / 8 / 12 / 16</code>; hit <code>24 / 28 / 32</code></li>

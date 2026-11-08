@@ -39,6 +39,7 @@ type BeamApi = {
   onPanelDismiss(callback: () => void): void;
   onMusicState(callback: (state: MusicState | null) => void): void;
   onHelperState(callback: (state: HelperState) => void): void;
+  onPillNear(callback: (near: boolean) => void): void;
   startTimer(minutes: number): Promise<TimerSnapshot | null>;
   cancelTimer(): Promise<TimerSnapshot | null>;
   dismissTimer(): Promise<TimerSnapshot | null>;
@@ -94,6 +95,7 @@ const QUIET_RETURN = 2000;
 let quiet = false;
 let quietTimer: number | undefined;
 let pillHovered = false;
+let cursorNear = false;
 
 let lastUsed: LastUsed | null = null;
 let timerPreset: TimerPreset = '25';
@@ -443,6 +445,7 @@ function idleEligible(): boolean {
     timerSnapshot.phase === 'idle' &&
     !override &&
     !pillHovered &&
+    !cursorNear &&
     !pillEl?.matches(':hover') &&
     !document.body.classList.contains('is-open')
   );
@@ -992,6 +995,15 @@ if (app && beam) {
       scheduleQuiet();
     }
     renderPill();
+  });
+
+  beam.onPillNear((near) => {
+    cursorNear = near;
+    if (near) {
+      wakePill();
+      return;
+    }
+    scheduleQuiet(QUIET_RETURN);
   });
 
   beam.onTimerState(applyTimer);

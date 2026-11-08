@@ -1,4 +1,5 @@
 import { existsSync, mkdirSync, unlinkSync, writeFileSync } from 'node:fs';
+import { spawnSync } from 'node:child_process';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { screen, type BrowserWindow } from 'electron';
@@ -41,6 +42,11 @@ export function probeMusic(target: BrowserWindow, started: number, attempt = 0):
 }
 
 const delay = (ms: number): Promise<void> => new Promise((resolve) => setTimeout(resolve, ms));
+
+function moveCursor(x: number, y: number): void {
+  const script = `Add-Type -TypeDefinition 'using System;using System.Runtime.InteropServices;public static class BeamNear{[DllImport("user32.dll")]public static extern bool SetCursorPos(int x,int y);}';[BeamNear]::SetCursorPos(${Math.round(x)},${Math.round(y)}) | Out-Null`;
+  spawnSync('powershell.exe', ['-NoProfile', '-NonInteractive', '-Command', script], { windowsHide: true, timeout: 5000 });
+}
 
 export async function waitForMusic(check: () => boolean, ms: number): Promise<boolean> {
   const deadline = Date.now() + ms;
@@ -560,8 +566,10 @@ export async function runUiTest(ctx: HarnessContext, target: BrowserWindow, phas
   await park();
 
   if (!ctx.music()) {
+    const workArea = screen.getPrimaryDisplay().workArea;
+    moveCursor(workArea.x + 8, workArea.y + 8);
     let quiet = await snap();
-    const quietDeadline = Date.now() + 24000;
+    const quietDeadline = Date.now() + 30000;
     while (Date.now() < quietDeadline && quiet.state !== 'quiet' && quiet.state !== 'playing' && quiet.state !== 'paused') {
       await wait(200);
       quiet = await snap();
@@ -570,13 +578,25 @@ export async function runUiTest(ctx: HarnessContext, target: BrowserWindow, phas
       await wait(250);
       quiet = await snap();
     }
-    const quietOk = quiet.state === 'quiet' && quiet.w === 30 && quiet.h === 30;
+    const quietOk = quiet.state === 'quiet' && quiet.w === 26 && quiet.h === 26;
     ui('quiet', { ok: quietOk, state: quiet.state, w: quiet.w, h: quiet.h, viewport: quiet.viewport });
     if (quietOk) {
-      const at = await point('.pill');
-      if (at) target.webContents.sendInputEvent({ type: 'mouseMove', x: at.x, y: at.y });
-      const woke = await until((state) => state.state !== 'quiet', 3000);
-      ui('quietwake', { ok: woke.ok, state: woke.snap.state, w: woke.snap.w });
+      const bounds = target.getBounds();
+      const centerX = Math.round(bounds.x + bounds.width / 2);
+      const centerY = Math.round(bounds.y + bounds.height / 2);
+      moveCursor(centerX + 32, centerY);
+      const near = await until((state) => state.state !== 'quiet' && state.w === 94, 3000);
+      ui('near', { ok: near.ok, state: near.snap.state, w: near.snap.w });
+      moveCursor(workArea.x + 8, workArea.y + 8);
+      const leftAt = Date.now();
+      const away = await until((state) => state.state === 'quiet' && state.w === 26, 4500);
+      ui('nearleave', { ok: away.ok, state: away.snap.state, w: away.snap.w, ms: Date.now() - leftAt });
+      if (away.ok) {
+        const at = await point('.pill');
+        if (at) target.webContents.sendInputEvent({ type: 'mouseMove', x: at.x, y: at.y });
+        const woke = await until((state) => state.state !== 'quiet' && state.w === 94, 3000);
+        ui('quietwake', { ok: woke.ok, state: woke.snap.state, w: woke.snap.w });
+      }
     }
   }
   console.log('[ui] done');

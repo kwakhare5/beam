@@ -82,6 +82,7 @@ export const IPC = {
   panelCollapsed: 'beam:panel:collapsed',
   panelTiming: 'beam:panel:timing',
   pillSize: 'beam:pill:size',
+  pillNear: 'beam:pill:near',
   windowDragStart: 'beam:window:drag-start',
   windowDragMove: 'beam:window:drag-move',
   windowDragEnd: 'beam:window:drag-end'

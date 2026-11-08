@@ -1,4 +1,4 @@
-import { screen, type BrowserWindow, type Rectangle } from 'electron';
+import { screen, type BrowserWindow, type Point, type Rectangle } from 'electron';
 import type { SavedPosition } from './settings';
 
 export const WINDOW_WIDTH = 136;
@@ -7,6 +7,13 @@ export const PILL_HEIGHT = 30;
 export const PANEL_WIDTH = 452;
 export const PANEL_HEIGHT = 316;
 export const PILL_GAP = 12;
+export const NEAR_RADIUS = 37;
+
+export function isCursorNear(cursor: Point, pill: Rectangle): boolean {
+  const dx = cursor.x - (pill.x + pill.width / 2);
+  const dy = cursor.y - (pill.y + pill.height / 2);
+  return Math.hypot(dx, dy) <= NEAR_RADIUS;
+}
 
 export function placeWindow(window: BrowserWindow, resize: boolean): void {
   if (resize) window.setContentSize(WINDOW_WIDTH, WINDOW_HEIGHT);
