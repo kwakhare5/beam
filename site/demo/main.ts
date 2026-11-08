@@ -2,6 +2,7 @@ import '../../src/renderer/styles.css';
 import {
   bindArtFallback,
   bindClearAll,
+  bindMusicSeek,
   bindPanelTabs,
   formatSize,
   iconSprite,
@@ -225,6 +226,12 @@ document.addEventListener('keydown', (event) => {
 bindPanelTabs(document);
 bindArtFallback(document);
 bindClearAll(document);
+bindMusicSeek(document, (positionMs) => {
+  if (Number.isFinite(audioEl.duration) && audioEl.duration > 0) {
+    audioEl.currentTime = Math.min(positionMs, audioEl.duration * 1000) / 1000;
+  }
+  if (opened) renderPanel();
+});
 
 window.addEventListener('dragover', (event) => {
   if (!event.dataTransfer?.types.includes('Files')) return;

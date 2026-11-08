@@ -643,8 +643,12 @@ if ($music -notmatch 'track-bar' -or $musicCss -notmatch 'width: 148px' -or $mus
   Write-Host 'FAIL UI spec: music needs square 148px art and a position bar'
   $uiFail = $true
 }
-if ($musicCss -notmatch 'grid-template-columns: 148px' -or $musicCss -notmatch 'grid-column: 1 / -1') {
-  Write-Host 'FAIL UI spec: the music track and controls must span the panel width'
+if ($musicCss -notmatch 'grid-template-columns: 148px' -or $musicCss -notmatch '\.panel-music \.panel-music-content \{[^}]*grid-column: 2') {
+  Write-Host 'FAIL UI spec: the music art must sit left and the player column right'
+  $uiFail = $true
+}
+if ($music -notmatch 'role="slider"' -or $music -notmatch 'tabindex="0"' -or $music -notmatch 'data-duration-ms' -or $music -notmatch 'bindMusicSeek' -or $music -notmatch 'pointerdown' -or $music -notmatch "keydown") {
+  Write-Host 'FAIL UI spec: the seek bar must be a focusable slider with pointer and keyboard seek'
   $uiFail = $true
 }
 if ($shellCss -notmatch "tab\[aria-selected='true'\]::after" -or $shellCss -notmatch 'bottom: -6px') {
@@ -1925,17 +1929,20 @@ try {
   $firstMatch = [regex]::Match($tabLog, '\[music\] tab (\{.+\})')
   $secondMatch = [regex]::Match($tabLog, '\[music\] tabtick (\{.+\})')
   $tabToggleMatch = [regex]::Match($tabLog, '\[music\] tabtoggle (\{.+\})')
+  $seekMatch = [regex]::Match($tabLog, '\[music\] tabseek (\{.+\})')
   $netMatch = [regex]::Match($tabLog, '\[music\] net (\{.+\})')
   if (-not $payloadMatch.Success) { throw 'the music tab probe never reported its payload' }
   if (-not $firstMatch.Success) { throw 'the music tab never reported its first state' }
   if (-not $secondMatch.Success) { throw 'the music tab never reported its second state' }
   if (-not $tabToggleMatch.Success) { throw 'the music tab toggle never reported' }
+  if (-not $seekMatch.Success) { throw 'the music tab seek never reported' }
   if (-not $netMatch.Success) { throw 'the music tab probe never reported its network requests' }
 
   $payload = $payloadMatch.Groups[1].Value | ConvertFrom-Json
   $first = $firstMatch.Groups[1].Value | ConvertFrom-Json
   $second = $secondMatch.Groups[1].Value | ConvertFrom-Json
   $tabToggleResult = $tabToggleMatch.Groups[1].Value | ConvertFrom-Json
+  $seek = $seekMatch.Groups[1].Value | ConvertFrom-Json
   $net = $netMatch.Groups[1].Value | ConvertFrom-Json
   if ([string]::IsNullOrWhiteSpace($payload.title)) { throw 'the SMTC session has no title' }
   if ($payload.durationMs -le 0) { throw 'the SMTC session has no duration' }
@@ -1947,8 +1954,8 @@ try {
   if (-not $first.art) { throw 'the Music tab did not render the art as a data URL' }
   if ([int]$first.artW -ne 148 -or [int]$first.artH -ne 148) { throw "the Music tab art is $($first.artW)x$($first.artH), expected 148x148" }
   if (-not $first.bar) { throw 'the Music tab has no position bar' }
-  if ($first.bar.tag -ne 'DIV' -or $first.bar.role -ne 'progressbar') { throw "the position bar is a $($first.bar.tag) with role '$($first.bar.role)', expected a DIV progressbar" }
-  if ([int]$first.bar.tabIndex -ne -1 -or $first.slider) { throw 'the position bar is interactive (slider or focusable)' }
+  if ($first.bar.tag -ne 'DIV' -or $first.bar.role -ne 'slider') { throw "the position bar is a $($first.bar.tag) with role '$($first.bar.role)', expected a DIV slider" }
+  if ([int]$first.bar.tabIndex -ne 0 -or -not $first.slider) { throw 'the position bar is not keyboard-focusable as a slider' }
 
   $wantMax = [int][math]::Round($payload.durationMs / 1000)
   if ([int]$first.bar.max -ne $wantMax) { throw "the bar max is $($first.bar.max)s, expected $wantMax" }
@@ -1961,6 +1968,10 @@ try {
   $wantElapsed = Format-BeamClock $now
   $wantTotal = Format-BeamClock $wantMax
   if ($times[0] -ne $wantElapsed -or $times[1] -ne $wantTotal) { throw "the bar times read $($times[0]) / $($times[1]), expected $wantElapsed / $wantTotal" }
+
+  if (-not $seek.ok) { throw "the bar seek missed its target (bar $($seek.dom)s, player $($seek.player)s, expected about $($seek.target)s)" }
+  if ([int]$seek.max -ne $wantMax) { throw "the seek bar max is $($seek.max)s, expected $wantMax" }
+  if ([string]::IsNullOrWhiteSpace($seek.fill)) { throw 'the seek bar did not repaint its fill' }
 
   $actions = @($first.controls | ForEach-Object { $_.action })
   if ($actions.Count -ne 3 -or $actions -notcontains 'prev' -or $actions -notcontains 'toggle' -or $actions -notcontains 'next') {
@@ -1982,7 +1993,7 @@ try {
   if (@($net.requests).Count -ne 0) { throw "the Music tab made network requests: $($net.requests -join ', ')" }
 
   Stop-BeamApp -App $tabApp -What 'the pill after the music tab check'
-  $tabResult = "'$($payload.title)' art $($first.artW)x$($first.artH), bar $($first.bar.now)/$($first.bar.max)s advancing $advance in 3s, controls prev/toggle/next, tab play/pause changed and restored, 0 network requests"
+  $tabResult = "'$($payload.title)' art $($first.artW)x$($first.artH), slider seek 70% -> bar $($seek.dom)s / player $($seek.player)s of $($seek.max)s, bar advancing $advance in 3s, controls prev/toggle/next, tab play/pause changed and restored, 0 network requests"
 } catch {
   Stop-BeamAll -App $tabApp
   Clear-BeamPlayers

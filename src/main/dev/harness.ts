@@ -224,7 +224,7 @@ export async function runMusicTabTest(ctx: HarnessContext, target: BrowserWindow
       hidden: panel?.hidden ?? null,
       selected: document.querySelector('#tab-music')?.getAttribute('aria-selected') ?? null,
       title: panel?.querySelector('.panel-title')?.textContent ?? null,
-      subtitle: panel?.querySelector('.panel-sub')?.textContent ?? null,
+      subtitle: panel?.querySelector('.music-artist-name')?.textContent ?? null,
       art: (art?.getAttribute('src') ?? '').startsWith('data:image/png'),
       artW: rect ? Math.round(rect.width) : 0,
       artH: rect ? Math.round(rect.height) : 0,
@@ -258,15 +258,65 @@ export async function runMusicTabTest(ctx: HarnessContext, target: BrowserWindow
     const first = await target.webContents.executeJavaScript(probe);
     console.log(`[music] tab ${JSON.stringify(first)}`);
     await delay(3000);
-    const second = await target.webContents.executeJavaScript(probe);
+    const second = (await target.webContents.executeJavaScript(probe)) as {
+      bar?: { now: number; max: number; fill: string | null };
+    };
     console.log(`[music] tabtick ${JSON.stringify(second)}`);
 
+    const seekBar = (await target.webContents.executeJavaScript(
+      `(() => {
+        const rect = document.querySelector('#panel-music [data-music-bar]')?.getBoundingClientRect();
+        return rect ? { x: rect.x, y: rect.y, w: rect.width, h: rect.height } : null;
+      })()`
+    )) as { x: number; y: number; w: number; h: number } | null;
+    let seekTarget = -1;
+    let seekDom = -1;
+    let seekMax = -1;
+    let seekFill: string | null = null;
+    if (seekBar) {
+      seekTarget = Math.round((Number(second.bar?.max ?? 0) || 0) * 0.7);
+      const x = Math.round(seekBar.x + seekBar.w * 0.7);
+      const y = Math.round(seekBar.y + seekBar.h / 2);
+      target.webContents.sendInputEvent({ type: 'mouseMove', x, y });
+      await delay(60);
+      target.webContents.sendInputEvent({ type: 'mouseDown', x, y, button: 'left', clickCount: 1 });
+      await delay(80);
+      target.webContents.sendInputEvent({ type: 'mouseUp', x, y, button: 'left', clickCount: 1 });
+      await delay(900);
+      const afterSeek = (await target.webContents.executeJavaScript(probe)) as {
+        bar?: { now: number; max: number; fill: string | null };
+      };
+      seekDom = Number(afterSeek.bar?.now ?? -1);
+      seekMax = Number(afterSeek.bar?.max ?? -1);
+      seekFill = afterSeek.bar?.fill ?? null;
+    }
+
     const beforeToggle = ctx.music()?.playing ?? false;
-    await target.webContents.executeJavaScript(`document.querySelector('#panel-music [data-action="toggle"]')?.click()`);
-    const flipped = await waitForMusic(() => { const view = ctx.music(); return view !== null && view.playing !== beforeToggle; }, 8000);
-    await target.webContents.executeJavaScript(`document.querySelector('#panel-music [data-action="toggle"]')?.click()`);
-    const restored = await waitForMusic(() => { const view = ctx.music(); return view !== null && view.playing === beforeToggle; }, 8000);
+    const toggleTo = async (want: boolean): Promise<boolean> => {
+      await target.webContents.executeJavaScript(`document.querySelector('#panel-music [data-action="toggle"]')?.click()`);
+      return waitForMusic(() => {
+        const view = ctx.music();
+        return view !== null && view.playing === want;
+      }, 8000);
+    };
+    const flipped = await toggleTo(!beforeToggle);
+    const playerAfterSeek = ctx.music() ? Math.round(ctx.music()!.positionMs / 1000) : -1;
+    const restored = await toggleTo(beforeToggle);
     console.log(`[music] tabtoggle ${JSON.stringify({ from: beforeToggle, flipped, restored })}`);
+    if (seekBar) {
+      console.log(
+        `[music] tabseek ${JSON.stringify({
+          ok: Math.abs(seekDom - seekTarget) <= 4 && Math.abs(playerAfterSeek - seekTarget) <= 6,
+          target: seekTarget,
+          dom: seekDom,
+          player: playerAfterSeek,
+          max: seekMax,
+          fill: seekFill
+        })}`
+      );
+    } else {
+      console.log('[music] tabseek {"ok":false,"reason":"no-bar"}');
+    }
 
     console.log(`[music] net ${JSON.stringify({ requests })}`);
   } finally {

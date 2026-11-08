@@ -58,5 +58,7 @@ contextBridge.exposeInMainWorld('beam', {
   },
   reportPanelTiming: (ms: number, reduced: boolean): void => ipcRenderer.send(IPC.panelTiming, ms, reduced),
   musicCommand: (cmd: 'toggle' | 'next' | 'prev'): Promise<{ ok: boolean; error?: string }> =>
-    ipcRenderer.invoke(IPC.musicCommand, cmd)
+    ipcRenderer.invoke(IPC.musicCommand, cmd),
+  musicSeek: (positionMs: number): Promise<{ ok: boolean; error?: string }> =>
+    ipcRenderer.invoke(IPC.musicSeek, positionMs)
 });

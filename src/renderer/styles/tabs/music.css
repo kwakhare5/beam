@@ -42,6 +42,21 @@
 }
 
 .track-bar {
+  position: relative;
+  display: flex;
+  align-items: center;
+  height: 14px;
+  border-radius: var(--r-pill);
+  touch-action: none;
+}
+
+.track-bar:focus-visible {
+  outline: 2px solid var(--ring);
+  outline-offset: 2px;
+}
+
+.track-rail {
+  width: 100%;
   height: 4px;
   border-radius: var(--r-pill);
   background: var(--control);
@@ -53,6 +68,17 @@
   height: 100%;
   border-radius: inherit;
   background: var(--primary-text);
+}
+
+.track-knob {
+  position: absolute;
+  top: 50%;
+  width: 10px;
+  height: 10px;
+  border-radius: var(--r-pill);
+  background: var(--primary-text);
+  transform: translate(-50%, -50%);
+  pointer-events: none;
 }
 
 .track-times {
@@ -68,10 +94,10 @@
 .panel-music {
   display: grid;
   grid-template-columns: 148px minmax(0, 1fr);
-  grid-template-rows: auto auto auto;
+  grid-template-rows: auto;
   align-content: center;
-  align-items: start;
-  gap: var(--space-2);
+  align-items: center;
+  gap: var(--space-3);
   padding: var(--space-2);
 }
 
@@ -81,7 +107,7 @@
   flex: none;
   object-fit: cover;
   border-radius: var(--r-card);
-  align-self: start;
+  align-self: center;
 }
 
 .panel-music .art-fallback-img {
@@ -95,28 +121,27 @@
   display: flex;
   flex-direction: column;
   justify-content: center;
-  gap: var(--space-2);
+  gap: var(--space-3);
   min-height: 0;
 }
 
 .panel-music .panel-music-content {
-  display: contents;
-}
-
-.panel-music .panel-meta {
   grid-column: 2;
   grid-row: 1;
-  align-self: center;
 }
 
-.panel-music .track {
-  grid-column: 1 / -1;
-  grid-row: 2;
+.music-artist {
+  display: flex;
+  align-items: center;
+  gap: var(--space-1);
+  min-width: 0;
 }
 
-.panel-music .music-controls {
-  grid-column: 1 / -1;
-  grid-row: 3;
+.music-artist-name {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .panel-music-skeleton {
@@ -130,11 +155,4 @@
   height: 148px;
   flex: none;
   border-radius: var(--r-card);
-}
-
-.panel-music .panel-sub {
-  display: -webkit-box;
-  -webkit-box-orient: vertical;
-  -webkit-line-clamp: 2;
-  overflow: hidden;
 }
