@@ -10,6 +10,7 @@ import { createTray } from './tray';
 import {
   anchorBounds,
   clampToWorkArea,
+  isCursorNear,
   PANEL_HEIGHT,
   PANEL_WIDTH,
   PILL_HEIGHT,
@@ -380,6 +381,17 @@ if (!gotLock) {
         if (!window.isDestroyed()) window.webContents.send(IPC.settingsState, settingsSnapshot());
       };
       window.webContents.on('did-finish-load', sendSettings);
+      let near = false;
+      const pollNear = (): void => {
+        if (window.isDestroyed()) return;
+        const next = isCursorNear(screen.getCursorScreenPoint(), pillPosition);
+        if (next === near) return;
+        near = next;
+        window.webContents.send(IPC.pillNear, next);
+      };
+      const nearPoll = setInterval(pollNear, 250);
+      window.webContents.once('did-finish-load', pollNear);
+      window.once('closed', () => clearInterval(nearPoll));
       const showPill = (source: string): void => {
         if (window.isDestroyed()) return;
         hiddenByFullscreen = false;

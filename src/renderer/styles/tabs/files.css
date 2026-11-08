@@ -82,7 +82,7 @@
   height: 24px;
   padding: 0;
   border: 0;
-  border-radius: var(--r-micro);
+  border-radius: var(--r-control);
   background: none;
   color: var(--muted-foreground);
   font: inherit;
@@ -105,7 +105,7 @@
 
 .row-action:focus-visible {
   outline: 2px solid var(--ring);
-  outline-offset: 1px;
+  outline-offset: 2px;
 }
 
 .row-action:disabled {
@@ -179,6 +179,6 @@
 
 .shelf-undo:focus-visible {
   outline: 2px solid var(--ring);
-  outline-offset: 1px;
+  outline-offset: 2px;
   border-radius: var(--r-micro);
 }

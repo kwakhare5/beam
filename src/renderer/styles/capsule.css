@@ -15,8 +15,14 @@
   color: var(--card-foreground);
   transition:
     width 120ms var(--ease),
+    height 120ms var(--ease),
     border-color 120ms var(--ease),
     box-shadow 120ms var(--ease);
+}
+
+.pill[data-state='playing'],
+.pill[data-state='paused'] {
+  width: 108px;
 }
 
 .pill[data-state='drag'] {
@@ -49,7 +55,8 @@
 }
 
 .pill[data-state='quiet'] {
-  width: 30px;
+  width: 26px;
+  height: 26px;
   justify-content: center;
   padding: 0;
 }
@@ -59,6 +66,8 @@
 }
 
 .pill[data-state='quiet'] .mascot {
+  width: 18px;
+  height: 18px;
   opacity: 0.6;
 }
 
@@ -78,7 +87,7 @@
 
 .pill[data-state='done'] {
   justify-content: center;
-  border-color: var(--primary);
+  border-color: var(--primary-text);
 }
 
 .pill[data-state='error'] {
@@ -107,7 +116,7 @@
 }
 
 .pill[data-state='drag'] {
-  border-color: var(--primary);
+  border-color: var(--primary-text);
   border-style: dashed;
 }
 
@@ -121,8 +130,8 @@
 
 .mascot-wrap {
   position: relative;
-  width: 24px;
-  height: 24px;
+  width: 20px;
+  height: 20px;
   flex: none;
   display: flex;
   align-items: center;
@@ -172,8 +181,8 @@
 }
 
 .mascot {
-  width: 24px;
-  height: 24px;
+  width: 20px;
+  height: 20px;
   flex: none;
   display: block;
   transition: opacity 120ms var(--ease);
@@ -239,7 +248,7 @@
 }
 
 .pill:focus-visible {
-  outline: 2px solid var(--primary);
+  outline: 2px solid var(--ring);
   outline-offset: 2px;
 }
 

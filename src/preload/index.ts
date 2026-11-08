@@ -40,6 +40,9 @@ contextBridge.exposeInMainWorld('beam', {
   onHelperState: (callback: (state: HelperState) => void): void => {
     ipcRenderer.on(IPC.helperState, (_event, state: HelperState) => callback(state));
   },
+  onPillNear: (callback: (near: boolean) => void): void => {
+    ipcRenderer.on(IPC.pillNear, (_event, near: boolean) => callback(near));
+  },
   startTimer: (minutes: number): Promise<TimerSnapshot | null> => ipcRenderer.invoke(IPC.timerStart, minutes),
   cancelTimer: (): Promise<TimerSnapshot | null> => ipcRenderer.invoke(IPC.timerCancel),
   dismissTimer: (): Promise<TimerSnapshot | null> => ipcRenderer.invoke(IPC.timerDismiss),
