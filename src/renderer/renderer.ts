@@ -7,7 +7,6 @@ import {
   bindPanelTabs,
   formatSize,
   iconSprite,
-  musicClock,
   panel,
   pill,
   transportControls,
@@ -19,7 +18,10 @@ import chimeUrl from './assets/beam-chime.wav';
 import { clampMinutes, clock, timerData as buildTimerData, type TimerPreset } from './core/timer';
 import { ENABLED_TABS, pickTab, type LastUsed } from './core/tabs';
 import { shiftMonth } from './core/calendar';
-import { UndoSlot } from './core/undo';
+import { bindDropTarget, FileShelf, fileLabel } from './files';
+import { QuietTimer, QUIET_AFTER, QUIET_RETURN } from './quiet';
+import { MusicSession } from './music';
+import { chordFromEvent, SettingsController } from './settings';
 import type { AddResult, CopyResult, FileChange, HelperState, MusicState, SettingsPatch, SettingsSnapshot, ShelfFile, TimerSnapshot } from '../shared/ipc';
 
 type BeamApi = {
@@ -86,18 +88,11 @@ if (app) {
 const pillEl = app?.querySelector<HTMLElement>('.pill') ?? null;
 let shelfCount = 0;
 let shelfMissing = false;
-let music: MusicState | null = null;
 let helperOk = true;
-let musicBase = 0;
 let override: { state: string; label: string } | null = null;
-let noticeTimer: number | undefined;
-let musicClearTimer: number | undefined;
-const QUIET_AFTER = 20000;
-const QUIET_RETURN = 2000;
-let quiet = false;
-let quietTimer: number | undefined;
 let pillHovered = false;
 let cursorNear = false;
+const quiet = new QuietTimer(() => idleEligible(), () => renderPill());
 
 let lastUsed: LastUsed | null = null;
 let timerPreset: TimerPreset = '25';
@@ -106,7 +101,6 @@ let timerSnapshot: TimerSnapshot = { phase: 'idle', minutes: 0, remainingMs: 0, 
 let chime: HTMLAudioElement | null = null;
 let chimedId = 0;
 let chimeVolume = 0.6;
-let rebinding = false;
 let calendarView = new Date();
 
 function stamp(tab: LastUsed): void {
@@ -141,63 +135,11 @@ function playChime(id: number): void {
     });
 }
 
-function applySettings(next: SettingsSnapshot): void {
-  const display = next.shortcut.replace(/\+/g, ' + ');
-  panelData.settings = {
-    startup: next.startup,
-    shortcut: display,
-    volume: next.volume,
-    theme: next.theme,
-    rebinding,
-    ...(next.error ? { error: next.error } : {})
-  };
-  chimeVolume = next.volume / 100;
-  document.documentElement.dataset.theme = next.theme;
-  if (panelEl) renderPanel();
-}
-
 function playTestChime(): void {
   chime ??= new Audio(chimeUrl);
   chime.currentTime = 0;
   chime.volume = chimeVolume;
   void chime.play().catch((error: unknown) => console.error('[settings] test chime failed', error));
-}
-
-function chordFromEvent(event: KeyboardEvent): string | null {
-  const mods: string[] = [];
-  if (event.ctrlKey) mods.push('Ctrl');
-  if (event.altKey) mods.push('Alt');
-  if (event.shiftKey) mods.push('Shift');
-  if (event.metaKey) mods.push('Command');
-  const key = event.key;
-  const name = /^[a-zA-Z]$/.test(key)
-    ? key.toUpperCase()
-    : /^[0-9]$/.test(key)
-      ? key
-      : key === ' ' || key === 'Spacebar'
-        ? 'Space'
-        : /^F([1-9]|1[0-9]|2[0-4])$/.test(key)
-          ? key
-          : null;
-  if (!name || mods.length === 0) return null;
-  return [...mods, name].join('+');
-}
-
-function submitChord(chord: string | null): void {
-  if (!chord) return;
-  rebinding = false;
-  if (!beam) {
-    renderPanel();
-    return;
-  }
-  void beam
-    .setSettings({ shortcut: chord })
-    .then((result) => applySettings(result.settings))
-    .catch((error: unknown) => {
-      rebinding = false;
-      renderPanel();
-      console.error('[settings] shortcut failed', error);
-    });
 }
 
 function applyTimer(next: TimerSnapshot): void {
@@ -262,11 +204,7 @@ function dismissTimer(): void {
 }
 
 function openedTab(rows: number): Tab {
-  return pickTab(lastUsed, Boolean(music), rows);
-}
-
-function fileLabel(count: number): string {
-  return count === 1 ? '1 file' : `${count} files`;
+  return pickTab(lastUsed, music.hasMusic, rows);
 }
 
 function setPip(state: 'playing' | 'paused' | 'danger' | null): void {
@@ -296,7 +234,8 @@ function setMark(art: string | null): void {
 
 function renderControls(state: string): void {
   if (!pillEl) return;
-  const show = Boolean(music) && (state === 'playing' || state === 'paused');
+  const track = music.state;
+  const show = Boolean(track) && (state === 'playing' || state === 'paused');
   const existing = pillEl.querySelector<HTMLElement>('.controls');
   if (!show) {
     pillEl.classList.remove('has-controls');
@@ -305,8 +244,8 @@ function renderControls(state: string): void {
   }
   pillEl.classList.add('has-controls');
   const toggle = existing?.querySelector<HTMLButtonElement>('[data-action="toggle"]');
-  if (toggle && (toggle.getAttribute('aria-label') === 'Pause') === music!.playing) return;
-  const markup = transportControls(music!.playing);
+  if (toggle && (toggle.getAttribute('aria-label') === 'Pause') === track!.playing) return;
+  const markup = transportControls(track!.playing);
   if (existing) existing.outerHTML = markup;
   else pillEl.insertAdjacentHTML('beforeend', markup);
 }
@@ -357,13 +296,14 @@ function renderPillSlot(state: string, label: string): void {
 
 function renderPill(): void {
   if (!pillEl) return;
+  const track = music.state;
   const timerState = timerSnapshot.phase === 'running' ? 'timer' : timerSnapshot.phase === 'done' ? 'done' : null;
-  const idle = !override && !music && shelfCount === 0 && !timerState;
-  const quietState = helperOk && idle && quiet && !pillHovered;
+  const idle = !override && !track && shelfCount === 0 && !timerState;
+  const quietState = helperOk && idle && quiet.active && !pillHovered;
   const state = helperOk
     ? override?.state ??
       timerState ??
-      (music ? (music.playing ? 'playing' : 'paused') : shelfCount > 0 ? 'files' : quietState ? 'quiet' : 'idle')
+      (track ? (track.playing ? 'playing' : 'paused') : shelfCount > 0 ? 'files' : quietState ? 'quiet' : 'idle')
     : 'error';
   const label = helperOk
     ? override?.label ??
@@ -371,29 +311,29 @@ function renderPill(): void {
         ? 'Done'
         : timerSnapshot.phase === 'running'
           ? ''
-          : music
-            ? music.title
+          : track
+            ? track.title
             : shelfCount > 0
               ? fileLabel(shelfCount)
               : quietState
                 ? ''
                 : 'Beam')
     : 'Connection lost';
-  const musicVisual = helperOk && Boolean(music) && (state === 'playing' || state === 'paused');
+  const musicVisual = helperOk && Boolean(track) && (state === 'playing' || state === 'paused');
   pillEl.dataset.state = state;
   pillEl.classList.toggle('expands', musicVisual || state === 'timer' || state === 'done' || state === 'error');
-  setMark(musicVisual && music ? music.art : null);
+  setMark(musicVisual && track ? track.art : null);
   setPip(
     !helperOk
       ? 'danger'
       : shelfMissing
         ? 'danger'
-        : musicVisual && music
-          ? music.playing
+        : musicVisual && track
+          ? track.playing
             ? 'playing'
             : 'paused'
-          : state === 'timer' && music
-            ? music.playing
+          : state === 'timer' && track
+            ? track.playing
               ? 'playing'
               : 'paused'
             : null
@@ -406,7 +346,7 @@ function renderPill(): void {
     !helperOk
       ? 'Connection lost'
       : state === 'playing' || state === 'paused'
-        ? `${music!.playing ? 'Playing' : 'Paused'} ${music!.title}`
+        ? `${track!.playing ? 'Playing' : 'Paused'} ${track!.title}`
         : state === 'timer'
           ? `Timer ${clock(timerSnapshot.remainingMs)}, open panel`
           : state === 'done'
@@ -419,7 +359,7 @@ function renderPill(): void {
     !helperOk
       ? 'Connection lost'
       : state === 'playing' || state === 'paused'
-        ? `${music!.playing ? 'Playing' : 'Paused'} ${music!.title}`
+        ? `${track!.playing ? 'Playing' : 'Paused'} ${track!.title}`
         : state === 'files'
           ? fileLabel(shelfCount)
           : ''
@@ -434,15 +374,14 @@ function setPill(state: string, label: string): void {
 
 function showShelf(): void {
   override = null;
-  quiet = false;
+  quiet.reset();
   renderPill();
-  scheduleQuiet();
 }
 
 function idleEligible(): boolean {
   return (
     helperOk &&
-    !music &&
+    !music.hasMusic &&
     shelfCount === 0 &&
     timerSnapshot.phase === 'idle' &&
     !override &&
@@ -454,35 +393,15 @@ function idleEligible(): boolean {
 }
 
 function scheduleQuiet(delay = QUIET_AFTER): void {
-  if (quietTimer !== undefined) {
-    window.clearTimeout(quietTimer);
-    quietTimer = undefined;
-  }
-  if (!idleEligible()) {
-    quiet = false;
-    return;
-  }
-  quietTimer = window.setTimeout(() => {
-    quietTimer = undefined;
-    quiet = idleEligible();
-    renderPill();
-  }, delay);
+  quiet.schedule(delay);
 }
 
 function wakePill(): void {
-  if (quietTimer !== undefined) {
-    window.clearTimeout(quietTimer);
-    quietTimer = undefined;
-  }
-  if (quiet) {
-    quiet = false;
-    renderPill();
-  }
+  quiet.wake();
 }
 
 function resetQuiet(): void {
-  quiet = false;
-  scheduleQuiet();
+  quiet.reset();
 }
 
 const beam = window.beam;
@@ -499,87 +418,62 @@ const panelData: PanelData = {
 let activeTab: Tab = 'music';
 let panelEl: HTMLElement | null = null;
 let wrapEl: HTMLElement | null = null;
+const music = new MusicSession(
+  () => onMusicChange(),
+  () => wrapEl,
+  () => document.body.classList.contains('is-open')
+);
 let reportPillSize: () => void = () => {};
 
-function applyFiles(files: ShelfFile[]): void {
-  panelData.files = files.map((file) => ({
-    path: file.path,
-    name: file.name,
-    size: formatSize(file.sizeBytes),
-    kind: file.kind,
-    missing: file.missing
-  }));
-  shelfCount = files.length;
-  shelfMissing = files.some((file) => file.missing);
-  showShelf();
-  renderPanel();
-}
-
-function applyAddResult(result: AddResult): void {
-  stamp('files');
-  applyFiles(result.files);
-  if (noticeTimer !== undefined) window.clearTimeout(noticeTimer);
-  if (result.truncated) {
-    setPill('files', `Max ${result.limit}`);
-    noticeTimer = window.setTimeout(() => {
-      noticeTimer = undefined;
-      showShelf();
-    }, 2400);
-  } else {
-    noticeTimer = undefined;
+const settings = new SettingsController(
+  () => beam,
+  {
+    setVolume: (volume) => {
+      chimeVolume = volume;
+    },
+    apply: (data) => {
+      panelData.settings = data;
+    },
+    render: () => {
+      if (panelEl) renderPanel();
+    }
   }
-}
+);
 
-const undo = new UndoSlot(renderUndo);
+const shelf = new FileShelf(() => beam, {
+  stamp: () => stamp('files'),
+  root: () => wrapEl,
+  rows: (files) => {
+    panelData.files = files.map((file) => ({
+      path: file.path,
+      name: file.name,
+      size: formatSize(file.sizeBytes),
+      kind: file.kind,
+      missing: file.missing
+    }));
+    shelfCount = files.length;
+    shelfMissing = files.some((file) => file.missing);
+    showShelf();
+    renderPanel();
+  },
+  setPill: (state, label) => setPill(state, label),
+  showShelf: () => showShelf()
+});
 
-function setFilesStatus(text: string): void {
-  const node = wrapEl?.querySelector<HTMLElement>('[data-files-status]');
-  if (node) node.textContent = text;
-}
-
-function renderUndo(): void {
-  if (!wrapEl) return;
-  const note = wrapEl.querySelector<HTMLElement>('[data-files-status]');
-  const button = wrapEl.querySelector<HTMLElement>('[data-files-undo]');
-  if (!note || !button) return;
-  const empty = Boolean(wrapEl.querySelector('.drop-well'));
-  note.textContent = undo.value ? 'Removed' : empty ? '' : 'Files clear on quit';
-  button.hidden = undo.value === null;
-}
-
-async function removeRow(path: string): Promise<void> {
-  if (!beam) return;
-  const result = await beam.removeFile(path);
-  if (!result.ok) {
-    setFilesStatus('Remove failed');
-    return;
-  }
-  applyFiles(result.files);
-  undo.arm(path);
-}
-
-async function clearShelf(): Promise<void> {
-  if (!beam) return;
-  const result = await beam.clearFiles();
-  if (!result.ok) {
-    setFilesStatus('Clear failed');
-    return;
-  }
-  undo.clear();
-  applyFiles(result.files);
-}
+bindDropTarget(shelf, (state, label) => setPill(state, label), () => showShelf());
 
 function renderPanel(): void {
   if (!app) return;
+  panelData.music = music.data;
   panelData.timer = timerData();
   panelData.calendar = { view: calendarView, today: new Date() };
-  panelData.settings.rebinding = rebinding;
+  panelData.settings.rebinding = settings.rebinding;
   if (!wrapEl) {
     wrapEl = document.createElement('div');
     wrapEl.className = 'panel-wrap';
     app.appendChild(wrapEl);
     bindPanelTabs(wrapEl);
-    bindMusicSeek(wrapEl, (positionMs) => seekMusic(positionMs));
+    bindMusicSeek(wrapEl, (positionMs) => (beam ? music.seek(beam, positionMs) : undefined));
     wrapEl.addEventListener('click', (event) => {
       const target = event.target;
       if (!(target instanceof Element)) return;
@@ -587,7 +481,7 @@ function renderPanel(): void {
       const tab = target.closest<HTMLElement>('[role="tab"]');
       if (tab) {
         activeTab = tab.id.replace('tab-', '') as Tab;
-        if (activeTab !== 'settings' && ENABLED_TABS.includes(activeTab)) stamp(activeTab as LastUsed);
+        if (activeTab !== 'settings') stamp(activeTab);
       }
       const preset = target.closest<HTMLElement>('[data-timer-preset]')?.dataset.timerPreset;
       if (preset) {
@@ -636,17 +530,11 @@ function renderPanel(): void {
       if (!beam) return;
       const setting = target.closest<HTMLElement>('[data-setting]')?.dataset.setting;
       if (setting === 'startup') {
-        void beam
-          .setSettings({ startup: !panelData.settings.startup })
-          .then((result) => applySettings(result.settings))
-          .catch((error: unknown) => console.error('[settings] startup failed', error));
+        settings.patch({ startup: !panelData.settings.startup });
         return;
       }
       if (setting === 'theme') {
-        void beam
-          .setSettings({ theme: panelData.settings.theme === 'dark' ? 'light' : 'dark' })
-          .then((result) => applySettings(result.settings))
-          .catch((error: unknown) => console.error('[settings] theme failed', error));
+        settings.patch({ theme: panelData.settings.theme === 'dark' ? 'light' : 'dark' });
         return;
       }
       if (setting === 'volume-test') {
@@ -654,25 +542,18 @@ function renderPanel(): void {
         return;
       }
       if (setting === 'reset') {
-        void beam
-          .resetPosition()
-          .then((result) => applySettings(result.settings))
-          .catch((error: unknown) => console.error('[settings] reset failed', error));
+        settings.reset();
         return;
       }
       if (setting === 'shortcut') {
-        rebinding = true;
-        renderPanel();
+        settings.beginRebind();
         return;
       }
       const step = target.closest<HTMLElement>('[data-volume-step]')?.dataset.volumeStep;
       if (step) {
         const delta = Number(step);
         const next = Math.max(0, Math.min(100, panelData.settings.volume + (Number.isFinite(delta) ? delta : 0)));
-        void beam
-          .setSettings({ volume: next })
-          .then((result) => applySettings(result.settings))
-          .catch((error: unknown) => console.error('[settings] volume failed', error));
+        settings.patch({ volume: next });
       }
     });
     wrapEl.addEventListener('keydown', (event) => {
@@ -682,13 +563,13 @@ function renderPanel(): void {
       const selected = root.querySelector<HTMLElement>('[role="tab"][aria-selected="true"]');
       if (selected) {
         activeTab = selected.id.replace('tab-', '') as Tab;
-        if (activeTab !== 'settings' && ENABLED_TABS.includes(activeTab)) stamp(activeTab as LastUsed);
+        if (activeTab !== 'settings') stamp(activeTab);
       }
     });
     bindClearAll(wrapEl);
     wrapEl.addEventListener('beam:files:clear', () => {
       stamp('files');
-      void clearShelf();
+      void shelf.clear();
     });
     if (beam) {
       bindFilesActions(wrapEl, (paths, source) => {
@@ -696,36 +577,18 @@ function renderPanel(): void {
         return beam.copyFiles(paths, source);
       }, (path) => {
         stamp('files');
-        void removeRow(path);
+        void shelf.remove(path);
       });
       bindFileDrag(wrapEl, (paths) => beam.startFileDrag(paths));
       wrapEl.addEventListener('click', (event) => {
         const target = event.target;
         if (!(target instanceof Element)) return;
         if (target.closest('[data-files-undo]')) {
-          const path = undo.value;
-          if (!path) return;
-          undo.clear();
-          void beam
-            .addFiles([path])
-            .then((result) => {
-              applyAddResult(result);
-              setFilesStatus('Restored');
-              window.setTimeout(() => renderUndo(), 2500);
-            })
-            .catch(() => setFilesStatus('Undo failed'));
+          shelf.restore();
           return;
         }
         if (!target.closest('[data-add-files]')) return;
-        void beam
-          .pickFiles()
-          .then((result) => {
-            if (result) applyAddResult(result);
-          })
-          .catch((error: unknown) => {
-            console.error('[files] pick failed', error);
-            setFilesStatus('Add failed');
-          });
+        shelf.pick();
       });
       wrapEl.addEventListener('click', (event) => {
         const target = event.target;
@@ -741,60 +604,17 @@ function renderPanel(): void {
   }
   wrapEl.innerHTML = panel(activeTab, panelData);
   panelEl = wrapEl.querySelector<HTMLElement>('.panel');
-  renderUndo();
+  shelf.renderUndo();
 }
 
-function paintMusicProgress(elapsed: number): void {
-  if (!music || music.durationMs <= 0) return;
-  const duration = music.durationMs;
-  const clamped = Math.min(duration, Math.max(0, elapsed));
-  panelData.music.positionMs = clamped;
-  if (!document.body.classList.contains('is-open')) return;
-  const bar = wrapEl?.querySelector<HTMLElement>('.panel-music [data-music-bar]');
-  if (!bar) return;
-  const percent = Math.round((clamped / duration) * 100);
-  bar.setAttribute('aria-valuenow', String(Math.round(clamped / 1000)));
-  bar.setAttribute('aria-valuetext', `${musicClock(clamped)} of ${musicClock(duration)}`);
-  const fill = bar.querySelector<HTMLElement>('.track-fill');
-  if (fill) fill.style.width = `${percent}%`;
-  const knob = bar.querySelector<HTMLElement>('.track-knob');
-  if (knob) knob.style.left = `${percent}%`;
-  const times = bar.parentElement?.querySelectorAll<HTMLElement>('.track-times span');
-  if (times && times.length === 2) {
-    const [elapsedEl, totalEl] = times;
-    if (elapsedEl) elapsedEl.textContent = musicClock(clamped);
-    if (totalEl) totalEl.textContent = musicClock(duration);
-  }
+function onMusicChange(): void {
+  panelData.music = music.data;
+  resetQuiet();
+  renderPill();
+  if (wrapEl && document.body.classList.contains('is-open')) renderPanel();
 }
 
-function tickMusicProgress(): void {
-  if (!music || !music.playing || music.durationMs <= 0) return;
-  if (wrapEl?.querySelector('.panel-music .track[data-seeking]')) return;
-  paintMusicProgress(music.positionMs + (performance.now() - musicBase));
-}
-
-let seekSeq = 0;
-
-async function seekMusic(positionMs: number): Promise<void> {
-  if (!beam || !music || music.durationMs <= 0) return;
-  const current = music;
-  const target = Math.min(Math.max(Math.round(positionMs), 0), current.durationMs);
-  const seq = ++seekSeq;
-  const result = await beam.musicSeek(target).catch((error: unknown) => {
-    console.error('[music] seek failed', error);
-    return { ok: false };
-  });
-  if (seq !== seekSeq || music !== current) return;
-  if (!result.ok) {
-    paintMusicProgress(current.positionMs + (current.playing ? performance.now() - musicBase : 0));
-    return;
-  }
-  current.positionMs = target;
-  musicBase = performance.now();
-  paintMusicProgress(target);
-}
-
-window.setInterval(tickMusicProgress, 1000);
+window.setInterval(() => music.tick(), 1000);
 
 let closingTimer: number | undefined;
 
@@ -853,64 +673,6 @@ if (app && beam) {
     ) {
       beam.openPanel();
     }
-  });
-
-  let dragDepth = 0;
-  const hasFiles = (event: DragEvent): boolean => event.dataTransfer?.types.includes('Files') === true;
-  const dragLabel = (count: number): string => `+${fileLabel(Math.max(1, count))}`;
-
-  window.addEventListener('dragenter', (event) => {
-    if (!hasFiles(event)) return;
-    event.preventDefault();
-    dragDepth += 1;
-    setPill('drag', dragLabel(event.dataTransfer?.items.length ?? 1));
-  });
-
-  window.addEventListener('dragover', (event) => {
-    if (!hasFiles(event)) return;
-    event.preventDefault();
-    if (event.dataTransfer) event.dataTransfer.dropEffect = 'copy';
-    setPill('drag', dragLabel(event.dataTransfer?.items.length ?? 1));
-  });
-
-  window.addEventListener('dragleave', (event) => {
-    if (!hasFiles(event)) return;
-    dragDepth = Math.max(0, dragDepth - 1);
-    if (dragDepth === 0) showShelf();
-  });
-
-  window.addEventListener('dragend', () => {
-    dragDepth = 0;
-    showShelf();
-  });
-
-  window.addEventListener('drop', (event) => {
-    event.preventDefault();
-    dragDepth = 0;
-    showShelf();
-    const files = Array.from(event.dataTransfer?.files ?? []);
-    let paths: string[] = [];
-    let readFailed = false;
-    try {
-      paths = files.map((file) => beam.getPathForFile(file)).filter((path) => path.length > 0);
-    } catch (error) {
-      readFailed = true;
-      console.error('[files] path read failed', error);
-    }
-    if (!paths.length) {
-      if (readFailed) setFilesStatus('Add failed');
-      return;
-    }
-    void beam
-      .addFiles(paths)
-      .then((result) => {
-        applyAddResult(result);
-      })
-      .catch((error: unknown) => {
-        console.error('[files] add failed', error);
-        setFilesStatus('Add failed');
-        showShelf();
-      });
   });
 
   if (pillEl) {
@@ -978,7 +740,7 @@ if (app && beam) {
   beam.onPanelOpen((files, tab) => {
     wakePill();
     activeTab = tab ?? openedTab(files.length);
-    applyFiles(files);
+    shelf.apply(files);
     if (!panelEl) return;
     const el = panelEl;
     void el.offsetWidth;
@@ -1016,13 +778,9 @@ if (app && beam) {
   beam.onHelperState((state) => {
     helperOk = state.ok;
     if (!helperOk) {
-      music = null;
-      panelData.music = { title: '', subtitle: '', playing: false, positionMs: 0, durationMs: 0 };
-      quiet = false;
-      if (quietTimer !== undefined) {
-        window.clearTimeout(quietTimer);
-        quietTimer = undefined;
-      }
+      music.clear();
+      panelData.music = music.data;
+      quiet.forceIdle();
       if (wrapEl && document.body.classList.contains('is-open')) renderPanel();
     } else {
       scheduleQuiet();
@@ -1040,57 +798,25 @@ if (app && beam) {
   });
 
   beam.onTimerState(applyTimer);
-  beam.onSettingsState((state) => applySettings(state));
+  beam.onSettingsState((state) => settings.apply(state));
   void beam
     .getSettings()
-    .then((state) => applySettings(state))
+    .then((state) => settings.apply(state))
     .catch((error: unknown) => console.error('[settings] load failed', error));
 
-  beam.onMusicState((state) => {
-    if (state) {
-      if (musicClearTimer !== undefined) {
-        window.clearTimeout(musicClearTimer);
-        musicClearTimer = undefined;
-      }
-      music = state;
-      musicBase = performance.now();
-      panelData.music = {
-        title: state.title,
-        subtitle: state.artist,
-        art: state.art ?? undefined,
-        playing: state.playing,
-        positionMs: state.positionMs,
-        durationMs: state.durationMs
-      };
-      resetQuiet();
-      renderPill();
-      if (wrapEl && document.body.classList.contains('is-open')) renderPanel();
-      return;
-    }
-    if (!music) return;
-    if (musicClearTimer !== undefined) return;
-    musicClearTimer = window.setTimeout(() => {
-      musicClearTimer = undefined;
-      music = null;
-      panelData.music = { title: '', subtitle: '', playing: false, positionMs: 0, durationMs: 0 };
-      resetQuiet();
-      renderPill();
-      if (wrapEl && document.body.classList.contains('is-open')) renderPanel();
-    }, 500);
-  });
+  beam.onMusicState((state) => music.apply(state));
 
   window.addEventListener(
     'keydown',
     (event) => {
-      if (!rebinding) return;
+      if (!settings.rebinding) return;
       event.preventDefault();
       event.stopPropagation();
       if (event.key === 'Escape') {
-        rebinding = false;
-        renderPanel();
+        settings.cancelRebind();
         return;
       }
-      submitChord(chordFromEvent(event));
+      settings.submit(chordFromEvent(event));
     },
     true
   );

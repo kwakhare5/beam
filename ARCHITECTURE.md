@@ -33,7 +33,7 @@ Implemented: Electron shell with single-instance lock, the 136×42 window anchor
 
 Built in the helper: stdio client, SMTC read with PNG artwork, CF_HDROP clipboard, fullscreen detection, ping, and test-only session listing plus title/index picks (`music.sessions` / `music.pick`, behind the sessions test flag).
 
-Landed 2026-11-07 by R4: main is split into `geometry.ts`, `shelf.ts`, `panel.ts`, `music.ts`, `hotkey.ts`, `timer.ts`, and `dev/harness.ts` (excluded from packaged files); the renderer's shared core lives in `src/renderer/core/` and the site demo imports the same modules. R6 added `startup.ts` and filled the Settings screen. Still target: the packaged build (R8).
+Landed 2026-11-07 by R4: main is split into `geometry.ts`, `shelf.ts`, `panel.ts`, `music.ts`, `hotkey.ts`, `timer.ts`, and `dev/harness.ts` (excluded from packaged files); the renderer's shared core lives in `src/renderer/core/` and the site demo imports the same modules. R6 added `startup.ts` and filled the Settings screen. Landed 2026-11-08 by C1: settings IPC lives in `settings-ipc.ts`; `dev/harness.ts` also owns every `BEAM_*` flag and its scheduling (`readHooks`, `scheduleReady`, `afterShow`, `onMusicPayload`, `onFullscreen`), so `index.ts` has no env reads; the renderer split into `files.ts`, `music.ts`, `quiet.ts`, and `settings.ts`, leaving `renderer.ts` with rendering, panel wiring, and gestures. Still target: the packaged build (R8).
 
 ---
 
@@ -78,9 +78,10 @@ D:\Beam
 │   │   ├── tray.ts           tray icon + menu (Settings, Reset Position, Hide, Quit)
 │   │   ├── hotkey.ts         default/fallback registration, chord validation, rebind with rollback
 │   │   ├── settings.ts       read/write settings.json, defaults, versioned shape
+│   │   ├── settings-ipc.ts   snapshot, validation, settings IPC handlers
 │   │   ├── startup.ts        HKCU Run value read/write for Start with Windows
 │   │   ├── timer.ts          deadline, 200ms ticker, one-shot completion
-│   │   ├── dev/harness.ts    every BEAM_* probe (excluded from packaged files)
+│   │   ├── dev/harness.ts    every BEAM_* flag, schedule, and probe (excluded from packaged files)
 │   │   └── bridge.ts         spawn helper + JSON-lines client (8s request timeout, 3/60s restart policy, 16M buffer cap)
 │   ├── preload/index.ts      contextBridge surface (the only door)
 │   ├── renderer/
@@ -107,7 +108,11 @@ D:\Beam
 │   │   │   ├── panel/        shell, body
 │   │   │   ├── controls/     buttons, fields, indicators
 │   │   │   └── tabs/         music, files, timer, calendar, settings
-│   │   ├── renderer.ts
+│   │   ├── renderer.ts       pill rendering, panel wiring, pointer gestures
+│   │   ├── files.ts          shelf rows, undo, status, drop target
+│   │   ├── music.ts          music view, null hold, local tick, seek
+│   │   ├── quiet.ts          quiet timer
+│   │   ├── settings.ts       settings state, chord capture, rebind
 │   │   └── assets.d.ts       .svg/.woff2 module declarations
 │   └── shared/               (planned)
 │       ├── ipc.ts            channel names + payload types
@@ -153,7 +158,7 @@ Rules: helper never prints anything else to stdout (stderr is for logs). Any mal
 
 **Drag-out never goes through the helper.** 0.4c tried `DoDragDrop` on a dedicated STA thread: Windows kept the mouse capture with Chromium's window, so the drag loop spun at 100% CPU and never dropped. The code was deleted 2026-10-29. The renderer starts the drag from its own `dragstart` gesture and main calls `webContents.startDrag({ file, files, icon })`, which uses Chromium's native drag source and accepts multiple paths. Built 2026-10-31 for Files rows only: a row is draggable when its path is on the shelf and still exists; `beam:files:drag` re-checks both in main and ignores anything else. The capsule keeps moving the window (DESIGN Pointer Drag) — one pointer gesture cannot do both. The old `BEAM_DRAG_TEST` hook was removed.
 
-**Artwork:** the helper saves the current thumbnail to `%TEMP%\Beam\art\<hash>.png`, overwrites it per track, and wipes the folder on start and quit. This is the one allowed disk write; the file shelf stays paths-only in memory.
+**Artwork:** the helper sends the thumbnail as a base64 PNG inside `music.changed`; main wraps it as a `data:` URL for the renderer, so the app writes no temp art file. The file shelf stays paths-only in memory.
 
 **Clipboard:** Windows keeps `CF_HDROP` alive only while the owning process lives. The helper owns the clipboard, so a helper crash breaks paste until it restarts. Accepted; covered by a restart test in task 8.1. Built at 0.4b: `DROPFILES` + double-null UTF-16 paths in moveable global memory, five clipboard-open retries; data is rendered immediately, so it survives the helper exiting.
 

@@ -5,6 +5,7 @@ import { join } from 'node:path';
 import { screen, type BrowserWindow } from 'electron';
 import { IPC, type MusicState } from '../../shared/ipc';
 import type { Bridge } from '../bridge';
+import type { MusicPayload } from '../music';
 import type { Shelf } from '../shelf';
 
 export interface HarnessContext {
@@ -14,6 +15,183 @@ export interface HarnessContext {
   music: () => MusicState | null;
   liveApp: () => string;
   sendMusic: () => void;
+}
+
+export type DevHooks = {
+  panel: boolean;
+  reset: boolean;
+  idle: boolean;
+  settings: string;
+  fullscreen: boolean;
+  drop: boolean;
+  copy: boolean;
+  dragout: boolean;
+  missing: boolean;
+  clear: boolean;
+  empty: boolean;
+  music: boolean;
+  musicCmd: boolean;
+  musicTab: boolean;
+  sessions: boolean;
+  ui: boolean;
+  uiPhase: string;
+  timer: boolean;
+  timerHidden: boolean;
+  timerScaleMs: number;
+};
+
+export function readHooks(env: NodeJS.ProcessEnv = process.env): DevHooks {
+  const scale = Number(env.BEAM_TIMER_SCALE_MS ?? '');
+  return {
+    panel: env.BEAM_PANEL_TEST === '1',
+    reset: env.BEAM_RESET_TEST === '1',
+    idle: env.BEAM_IDLE_TEST === '1',
+    settings: env.BEAM_SETTINGS_TEST ?? '',
+    fullscreen: env.BEAM_FULLSCREEN_TEST === '1',
+    drop: env.BEAM_DROP_TEST === '1',
+    copy: env.BEAM_COPY_TEST === '1',
+    dragout: env.BEAM_DRAGOUT_TEST === '1',
+    missing: env.BEAM_MISSING_TEST === '1',
+    clear: env.BEAM_CLEAR_TEST === '1',
+    empty: env.BEAM_EMPTY_TEST === '1',
+    music: env.BEAM_MUSIC_TEST === '1',
+    musicCmd: env.BEAM_MUSIC_CMD_TEST === '1',
+    musicTab: env.BEAM_MUSIC_TAB_TEST === '1',
+    sessions: env.BEAM_MUSIC_SESSIONS_TEST === '1',
+    ui: env.BEAM_UI_TEST === '1',
+    uiPhase: env.BEAM_UI_TEST_PHASE ?? 'all',
+    timer: env.BEAM_TIMER_TEST === '1',
+    timerHidden: env.BEAM_TIMER_HIDDEN_TEST === '1',
+    timerScaleMs: Number.isFinite(scale) && scale > 0 ? scale : 60_000
+  };
+}
+
+export interface DevActions {
+  openPanel: () => void;
+  closePanel: () => void;
+  resetPosition: () => void;
+  trayToggle: () => void;
+}
+
+function runTask(label: string, task: () => Promise<void>): void {
+  void task().catch((error: unknown) => console.error(`[${label}] error`, error));
+}
+
+export function afterShow(hooks: DevHooks, target: BrowserWindow, startHiddenTimer: () => void): void {
+  if (hooks.timerHidden) {
+    setTimeout(() => {
+      if (!target.isDestroyed()) startHiddenTimer();
+    }, 1500);
+  }
+  if (hooks.idle) {
+    setTimeout(() => {
+      if (!target.isDestroyed()) probeIdle(target);
+    }, 800);
+  }
+}
+
+export function scheduleReady(
+  hooks: DevHooks,
+  target: BrowserWindow,
+  ctx: HarnessContext,
+  actions: DevActions
+): void {
+  const later = (ms: number, label: string, task: () => Promise<void>): void => {
+    setTimeout(() => {
+      if (!target.isDestroyed()) runTask(label, task);
+    }, ms);
+  };
+
+  if (hooks.panel) {
+    setTimeout(() => {
+      if (target.isDestroyed()) return;
+      actions.openPanel();
+      console.log('[panel] test-open');
+    }, 8000);
+    setTimeout(() => {
+      if (target.isDestroyed()) return;
+      actions.closePanel();
+      console.log('[panel] test-dismiss');
+    }, 9600);
+  }
+  if (hooks.reset) {
+    setTimeout(() => {
+      if (!target.isDestroyed()) actions.resetPosition();
+    }, 1200);
+  }
+  if (hooks.drop) later(1200, 'drop', () => runDropTest(target));
+  if (hooks.copy) later(1200, 'copy', () => runCopyTest(target, actions.openPanel));
+  if (hooks.dragout) later(1200, 'dragout', () => runDragoutTest(target, actions.openPanel, actions.closePanel));
+  if (hooks.missing) later(1200, 'missing', () => runMissingTest(target, actions.openPanel, actions.closePanel));
+  if (hooks.clear) later(1200, 'clear', () => runClearTest(target, actions.openPanel));
+  if (hooks.empty) later(1200, 'empty', () => runEmptyTest(target, actions.openPanel));
+  if (hooks.settings) {
+    const start = (): void => {
+      if (target.isDestroyed()) return;
+      runTask('settings', () => runSettingsTest(target, hooks.settings === '1' ? 'on' : 'off', actions.openPanel));
+    };
+    if (target.isVisible()) setTimeout(start, 1200);
+    else target.once('show', () => setTimeout(start, 1200));
+  }
+  if (hooks.musicTab) later(1200, 'music', () => runMusicTabTest(ctx, target, actions.openPanel));
+  if (hooks.ui) later(1200, 'ui', () => runUiTest(ctx, target, hooks.uiPhase));
+  if (hooks.timer) later(1200, 'timer', () => runTimerTest(target, actions.openPanel));
+}
+
+let musicCmdStarted = false;
+let musicSessionsStarted = false;
+
+export function onMusicPayload(
+  hooks: DevHooks,
+  payload: MusicPayload | null,
+  ctx: HarnessContext,
+  applyMusic: () => void
+): void {
+  if (hooks.sessions && !musicSessionsStarted) {
+    musicSessionsStarted = true;
+    runTask('sessions', () => runMusicSessionsTest(ctx));
+  }
+  if (hooks.music) {
+    console.log(
+      payload
+        ? `[music] input ${JSON.stringify({
+            title: payload.title,
+            playing: payload.playing,
+            hasArt: Boolean(payload.art)
+          })}`
+        : '[music] input null'
+    );
+  }
+  applyMusic();
+  if (hooks.musicCmd && !musicCmdStarted && payload && (payload.title || payload.artist)) {
+    musicCmdStarted = true;
+    runTask('music', () => runMusicCommandTest(ctx));
+  }
+}
+
+export function onFullscreen(
+  hooks: DevHooks,
+  active: boolean,
+  target: BrowserWindow,
+  actions: { trayToggle: () => void; timerPhase: () => string }
+): void {
+  if (active) {
+    if (hooks.fullscreen) {
+      setTimeout(() => {
+        if (!target.isDestroyed()) actions.trayToggle();
+      }, 1500);
+    }
+    return;
+  }
+  if (hooks.timerHidden && actions.timerPhase() === 'done') {
+    setTimeout(() => {
+      if (target.isDestroyed()) return;
+      void target.webContents
+        .executeJavaScript(`document.querySelector('.pill')?.dataset.state ?? null`)
+        .then((state: unknown) => console.log(`[timer] hidden shown state=${String(state)}`))
+        .catch(() => {});
+    }, 700);
+  }
 }
 
 export function probeMusic(target: BrowserWindow, started: number, attempt = 0): void {
@@ -466,7 +644,7 @@ export async function runUiTest(ctx: HarnessContext, target: BrowserWindow, phas
   const added = (await target.webContents.executeJavaScript(
     `window.beam.addFiles(${JSON.stringify(paths)}).then((result) => ({ accepted: result.accepted, count: result.count }))`
   )) as { accepted: number; count: number };
-  const dropped = await until((state) => ctx.shelf.count === 3, 3000);
+  const dropped = await until(() => ctx.shelf.count === 3, 3000);
   ui('add', { accepted: added.accepted, shelf: ctx.shelf.count, ok: dropped.ok, state: dropped.snap.state, label: dropped.snap.label });
 
   const openedClick = await openPanel();
@@ -571,7 +749,7 @@ export async function runUiTest(ctx: HarnessContext, target: BrowserWindow, phas
   await click('#panel-files .clear-all');
   await wait(150);
   await click('#panel-files .clear-all');
-  const cleared = await until((state) => ctx.shelf.count === 0, 3000);
+  const cleared = await until(() => ctx.shelf.count === 0, 3000);
   const clearSnap = await snap();
   ui('clear', { ok: cleared.ok, shelf: ctx.shelf.count, rows: clearSnap.rows, state: clearSnap.state, label: clearSnap.label });
   escape();

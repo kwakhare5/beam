@@ -3,7 +3,7 @@ import { statSync } from 'node:fs';
 import { join } from 'node:path';
 import { Bridge, type HelperEvent } from './bridge';
 import { BeamTimer } from './timer';
-import { IPC, type AddResult, type CopyResult, type SettingsPatch, type SettingsResult, type SettingsSnapshot, type ShelfFile, type TimerSnapshot } from '../shared/ipc';
+import { IPC, type AddResult, type CopyResult, type ShelfFile, type TimerSnapshot } from '../shared/ipc';
 import { getSettingsPath, loadSettings, saveSettings, type BeamSettings } from './settings';
 import { helperPath, trayIconPath } from './paths';
 import { createTray } from './tray';
@@ -13,17 +13,17 @@ import {
   isCursorNear,
   PANEL_HEIGHT,
   PANEL_WIDTH,
-  PILL_HEIGHT,
   placeWindow,
   savedPillBounds,
   WINDOW_HEIGHT,
   WINDOW_WIDTH
 } from './geometry';
 import { MAX_SHELF, Shelf } from './shelf';
-import { currentHotkey, DEFAULT_HOTKEY, rebindHotkey, registerHotkey } from './hotkey';
-import { isStartupEnabled, setStartupEnabled } from './startup';
+import { DEFAULT_HOTKEY, registerHotkey } from './hotkey';
+import { isStartupEnabled } from './startup';
 import { MusicService, type MusicPayload } from './music';
 import { PanelController } from './panel';
+import { registerSettingsIpc } from './settings-ipc';
 
 function readPoint(x: unknown, y: unknown): { x: number; y: number } | null {
   if (typeof x !== 'number' || !Number.isFinite(x)) return null;
@@ -39,6 +39,21 @@ const gotLock = app.requestSingleInstanceLock();
 if (!gotLock) {
   app.quit();
 } else {
+  type HarnessModule = typeof import('./dev/harness');
+  let harnessModule: HarnessModule | null = null;
+
+  function dev(): HarnessModule | null {
+    if (app.isPackaged) return null;
+    if (harnessModule) return harnessModule;
+    try {
+      harnessModule = require('./dev/harness') as HarnessModule;
+    } catch (error) {
+      console.error('[dev] harness unavailable', error);
+      return null;
+    }
+    return harnessModule;
+  }
+
   let win: BrowserWindow | null = null;
   let tray: ReturnType<typeof createTray> | null = null;
   let pickingFiles = false;
@@ -92,38 +107,15 @@ if (!gotLock) {
     height: WINDOW_HEIGHT
   };
   let windowDrag: { pointerX: number; pointerY: number; bounds: Electron.Rectangle } | null = null;
-  const panelTest = process.env.BEAM_PANEL_TEST === '1';
-  const resetTest = process.env.BEAM_RESET_TEST === '1';
-  const idleTest = process.env.BEAM_IDLE_TEST === '1';
-  const settingsTest = process.env.BEAM_SETTINGS_TEST ?? '';
-  const fullscreenTest = process.env.BEAM_FULLSCREEN_TEST === '1';
-  const dropTest = process.env.BEAM_DROP_TEST === '1';
-  const copyTest = process.env.BEAM_COPY_TEST === '1';
-  const dragoutTest = process.env.BEAM_DRAGOUT_TEST === '1';
-  const missingTest = process.env.BEAM_MISSING_TEST === '1';
-  const clearTest = process.env.BEAM_CLEAR_TEST === '1';
-  const emptyTest = process.env.BEAM_EMPTY_TEST === '1';
-  const musicTest = process.env.BEAM_MUSIC_TEST === '1';
-  const musicCmdTest = process.env.BEAM_MUSIC_CMD_TEST === '1';
-  const musicTabTest = process.env.BEAM_MUSIC_TAB_TEST === '1';
-  const musicSessionsTest = process.env.BEAM_MUSIC_SESSIONS_TEST === '1';
-  const uiTest = process.env.BEAM_UI_TEST === '1';
-  const uiTestPhase = process.env.BEAM_UI_TEST_PHASE ?? 'all';
-  const timerTest = process.env.BEAM_TIMER_TEST === '1';
-  const timerHiddenTest = process.env.BEAM_TIMER_HIDDEN_TEST === '1';
-  const timerScale = ((): number => {
-    const raw = Number(process.env.BEAM_TIMER_SCALE_MS ?? '');
-    return Number.isFinite(raw) && raw > 0 ? raw : 60_000;
-  })();
+  const hooks = dev()?.readHooks() ?? null;
+  const timerScale = hooks?.timerScaleMs ?? 60_000;
   let helperOk = true;
   let liveMusicApp = '';
-  let musicCmdStarted = false;
-  let musicSessionsStarted = false;
 
   const music = new MusicService((view) => {
     if (!win || win.isDestroyed()) return;
     win.webContents.send(IPC.musicState, view);
-    if (musicTest && view) dev()?.probeMusic(win, Date.now());
+    if (hooks?.music && view) dev()?.probeMusic(win, Date.now());
   });
 
   function sendHelperState(): void {
@@ -182,32 +174,14 @@ if (!gotLock) {
     if (event.evt !== 'music.changed') return;
     const payload = event.payload as MusicPayload | null;
     liveMusicApp = payload?.app ?? '';
-    if (musicSessionsTest && !musicSessionsStarted) {
-      musicSessionsStarted = true;
-      runDev((harness) => harness.runMusicSessionsTest(harnessCtx), 'sessions');
-    }
     if (!payload) {
       console.log('[music] none');
     } else {
       console.log(`[music] ${payload.title} - ${payload.artist} (${payload.app})`);
       console.log(`[music] art ${payload.art ? 'yes' : 'none'}`);
     }
-    if (musicTest) {
-      console.log(
-        payload
-          ? `[music] input ${JSON.stringify({
-              title: payload.title,
-              playing: payload.playing,
-              hasArt: Boolean(payload.art)
-            })}`
-          : '[music] input null'
-      );
-    }
-    music.apply(payload);
-    if (musicCmdTest && !musicCmdStarted && payload && (payload.title || payload.artist)) {
-      musicCmdStarted = true;
-      runDev((harness) => harness.runMusicCommandTest(harnessCtx), 'music');
-    }
+    if (hooks) dev()?.onMusicPayload(hooks, payload, harnessCtx, () => music.apply(payload));
+    else music.apply(payload);
   };
   const bridge = new Bridge(
     helperPath(),
@@ -231,8 +205,6 @@ if (!gotLock) {
     }
   );
 
-  type HarnessModule = typeof import('./dev/harness');
-  let harnessModule: HarnessModule | null = null;
   const harnessCtx: import('./dev/harness').HarnessContext = {
     window: () => win,
     shelf,
@@ -241,24 +213,6 @@ if (!gotLock) {
     liveApp: () => liveMusicApp,
     sendMusic: () => music.sendCurrent()
   };
-
-  function dev(): HarnessModule | null {
-    if (app.isPackaged) return null;
-    if (harnessModule) return harnessModule;
-    try {
-      harnessModule = require('./dev/harness') as HarnessModule;
-    } catch (error) {
-      console.error('[dev] harness unavailable', error);
-      return null;
-    }
-    return harnessModule;
-  }
-
-  function runDev(task: (harness: HarnessModule) => Promise<void>, label: string): void {
-    const harness = dev();
-    if (!harness) return;
-    void task(harness).catch((error: unknown) => console.error(`[${label}] error`, error));
-  }
 
   function createWindow(restored: boolean): void {
     win = new BrowserWindow({
@@ -300,17 +254,11 @@ if (!gotLock) {
           pillPosition = target.getBounds();
         }, 500);
       }
-      if (timerHiddenTest) {
-        setTimeout(() => {
-          if (target.isDestroyed()) return;
+      if (hooks) {
+        dev()?.afterShow(hooks, target, () => {
           const snapshot = timer.start(4);
           console.log(`[timer] hidden start id=${snapshot.id} minutes=4`);
-        }, 1500);
-      }
-      if (idleTest) {
-        setTimeout(() => {
-          if (!target.isDestroyed()) dev()?.probeIdle(target);
-        }, 800);
+        });
       }
     });
 
@@ -369,18 +317,6 @@ if (!gotLock) {
     createWindow(restoredBounds !== null);
     if (win) {
       const window = win;
-      let settingsError = '';
-      const settingsSnapshot = (): SettingsSnapshot => ({
-        startup: isStartupEnabled(),
-        shortcut: currentHotkey() || settings.shortcut || DEFAULT_HOTKEY,
-        volume: settings.volume,
-        theme: settings.theme,
-        ...(settingsError ? { error: settingsError } : {})
-      });
-      const sendSettings = (): void => {
-        if (!window.isDestroyed()) window.webContents.send(IPC.settingsState, settingsSnapshot());
-      };
-      window.webContents.on('did-finish-load', sendSettings);
       let near = false;
       const pollNear = (): void => {
         if (window.isDestroyed()) return;
@@ -457,18 +393,20 @@ if (!gotLock) {
         if (active) {
           if (!window.isVisible() || hiddenByUser) return;
           hidePill();
-          if (fullscreenTest) setTimeout(() => trayToggle(), 1500);
+          if (hooks) {
+            dev()?.onFullscreen(hooks, true, window, {
+              trayToggle,
+              timerPhase: () => timer.snapshot().phase
+            });
+          }
           return;
         }
         if (hiddenByFullscreen) showPill('fullscreen exit');
-        if (timerHiddenTest && timer.snapshot().phase === 'done') {
-          setTimeout(() => {
-            if (window.isDestroyed()) return;
-            void window.webContents
-              .executeJavaScript(`document.querySelector('.pill')?.dataset.state ?? null`)
-              .then((state: unknown) => console.log(`[timer] hidden shown state=${String(state)}`))
-              .catch(() => {});
-          }, 700);
+        if (hooks) {
+          dev()?.onFullscreen(hooks, false, window, {
+            trayToggle,
+            timerPhase: () => timer.snapshot().phase
+          });
         }
       };
       if (fullscreenActive) onFullscreen(true);
@@ -725,69 +663,12 @@ if (!gotLock) {
         console.log(`[timer] chime id=${typeof id === 'number' ? id : 0} ok=${ok === true}`);
       });
 
-      ipcMain.handle(IPC.settingsGet, (event): SettingsSnapshot => {
-        if (event.sender !== window.webContents) return settingsSnapshot();
-        return settingsSnapshot();
-      });
-
-      ipcMain.handle(IPC.settingsSet, (event, patch: unknown): SettingsResult => {
-        if (event.sender !== window.webContents) {
-          return { ok: false, settings: settingsSnapshot(), error: 'untrusted sender' };
-        }
-        if (!patch || typeof patch !== 'object') {
-          return { ok: false, settings: settingsSnapshot(), error: 'bad settings change' };
-        }
-        const change = patch as SettingsPatch;
-        settingsError = '';
-        let ok = true;
-        if (change.theme !== undefined) {
-          if (change.theme === 'dark' || change.theme === 'light') settings.theme = change.theme;
-          else { ok = false; settingsError = 'Unknown theme'; }
-        }
-        if (change.volume !== undefined) {
-          const volume = change.volume;
-          if (typeof volume === 'number' && Number.isFinite(volume)) {
-            settings.volume = Math.max(0, Math.min(100, Math.round(volume)));
-          } else {
-            ok = false;
-            settingsError = 'Volume must be 0 to 100';
-          }
-        }
-        if (change.startup !== undefined) {
-          if (typeof change.startup === 'boolean') {
-            const result = setStartupEnabled(change.startup);
-            if (result.ok) settings.startup = change.startup;
-            else { ok = false; settingsError = result.error ?? 'Startup change failed'; }
-          } else {
-            ok = false;
-            settingsError = 'Startup must be true or false';
-          }
-        }
-        if (change.shortcut !== undefined) {
-          if (typeof change.shortcut === 'string' && change.shortcut !== currentHotkey()) {
-            const result = rebindHotkey(change.shortcut, trayToggle);
-            if (result.ok) settings.shortcut = result.shortcut;
-            else { ok = false; settingsError = result.error ?? 'Shortcut unavailable'; }
-          } else if (typeof change.shortcut !== 'string') {
-            ok = false;
-            settingsError = 'Shortcut must be a chord';
-          }
-        }
-        if (ok) saveSettings(settings);
-        const snapshot = settingsSnapshot();
-        window.webContents.send(IPC.settingsState, snapshot);
-        console.log(
-          `[settings] set ok=${ok} theme=${settings.theme} volume=${settings.volume} shortcut=${currentHotkey() || 'none'} startup=${snapshot.startup}${settingsError ? ` error=${settingsError}` : ''}`
-        );
-        return { ok, settings: snapshot, ...(settingsError ? { error: settingsError } : {}) };
-      });
-
-      ipcMain.handle(IPC.settingsResetPosition, (event): SettingsResult => {
-        if (event.sender !== window.webContents) {
-          return { ok: false, settings: settingsSnapshot(), error: 'untrusted sender' };
-        }
-        resetPosition();
-        return { ok: true, settings: settingsSnapshot() };
+      registerSettingsIpc({
+        window,
+        settings,
+        save: () => saveSettings(settings),
+        resetPosition,
+        trayToggle
       });
 
       ipcMain.on(IPC.pillSize, (event, width: unknown, height: unknown) => {
@@ -808,62 +689,13 @@ if (!gotLock) {
       ipcMain.on(IPC.panelTiming, (_event, ms: number, reduced: boolean) => {
         console.log(`[panel] open ${ms}ms reduced=${reduced}`);
       });
-      if (panelTest) {
-        setTimeout(() => {
-          openPanel();
-          console.log('[panel] test-open');
-        }, 8000);
-        setTimeout(() => {
-          closePanel();
-          console.log('[panel] test-dismiss');
-        }, 9600);
-      }
-      if (resetTest) {
-        setTimeout(() => {
-          if (!window.isDestroyed()) resetPosition();
-        }, 1200);
-      }
-      if (dropTest) {
-        setTimeout(() => runDev((harness) => harness.runDropTest(window), 'drop'), 1200);
-      }
-      if (copyTest) {
-        setTimeout(() => runDev((harness) => harness.runCopyTest(window, openPanel), 'copy'), 1200);
-      }
-      if (dragoutTest) {
-        setTimeout(() => runDev((harness) => harness.runDragoutTest(window, openPanel, closePanel), 'dragout'), 1200);
-      }
-      if (missingTest) {
-        setTimeout(() => runDev((harness) => harness.runMissingTest(window, openPanel, closePanel), 'missing'), 1200);
-      }
-      if (clearTest) {
-        setTimeout(() => runDev((harness) => harness.runClearTest(window, openPanel), 'clear'), 1200);
-      }
-      if (emptyTest) {
-        setTimeout(() => runDev((harness) => harness.runEmptyTest(window, openPanel), 'empty'), 1200);
-      }
-      if (settingsTest) {
-        const start = (): void => {
-          if (!window.isDestroyed()) {
-            runDev((harness) => harness.runSettingsTest(window, settingsTest === '1' ? 'on' : 'off', openPanel), 'settings');
-          }
-        };
-        if (window.isVisible()) setTimeout(start, 1200);
-        else window.once('show', () => setTimeout(start, 1200));
-      }
-      if (musicTabTest) {
-        setTimeout(() => {
-          if (!window.isDestroyed()) runDev((harness) => harness.runMusicTabTest(harnessCtx, window, openPanel), 'music');
-        }, 1200);
-      }
-      if (uiTest) {
-        setTimeout(() => {
-          if (!window.isDestroyed()) runDev((harness) => harness.runUiTest(harnessCtx, window, uiTestPhase), 'ui');
-        }, 1200);
-      }
-      if (timerTest) {
-        setTimeout(() => {
-          if (!window.isDestroyed()) runDev((harness) => harness.runTimerTest(window, openPanel), 'timer');
-        }, 1200);
+      if (hooks) {
+        dev()?.scheduleReady(hooks, window, harnessCtx, {
+          openPanel,
+          closePanel,
+          resetPosition,
+          trayToggle
+        });
       }
     }
 

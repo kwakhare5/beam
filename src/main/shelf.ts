@@ -11,10 +11,6 @@ export class Shelf {
     return this.paths.length;
   }
 
-  list(): readonly string[] {
-    return this.paths;
-  }
-
   rows(): ShelfFile[] {
     return this.paths.map((path) => {
       try {

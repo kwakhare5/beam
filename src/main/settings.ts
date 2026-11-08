@@ -1,13 +1,12 @@
 import { app } from 'electron';
 import { mkdirSync, readFileSync, renameSync, writeFileSync } from 'node:fs';
 import { dirname, join } from 'node:path';
+import type { Theme } from '../shared/ipc';
 
 export interface SavedPosition {
   x: number;
   y: number;
 }
-
-export type Theme = 'dark' | 'light';
 
 export interface BeamSettings {
   version: 1;

@@ -1,7 +1,7 @@
 import type { TimerData } from '../ui/panel/tabs/timer';
 
 export type TimerPreset = NonNullable<TimerData['preset']>;
-export type TimerPhase = 'idle' | 'running' | 'done';
+type TimerPhase = 'idle' | 'running' | 'done';
 
 export function clock(ms: number): string {
   const total = Math.max(0, Math.ceil(ms / 1000));
