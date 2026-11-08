@@ -674,6 +674,26 @@ if (!gotLock) {
         }
       });
 
+      ipcMain.handle(IPC.musicSeek, async (event, positionMs: unknown): Promise<{ ok: boolean; error?: string }> => {
+        if (event.sender !== window.webContents) return { ok: false, error: 'untrusted sender' };
+        const current = music.current;
+        if (!current) return { ok: false, error: 'no active media session' };
+        if (typeof positionMs !== 'number' || !Number.isFinite(positionMs) || positionMs < 0) {
+          console.error(`[music] seek rejected ${String(positionMs)}`);
+          return { ok: false, error: 'invalid position' };
+        }
+        const target = Math.round(Math.min(positionMs, current.durationMs));
+        try {
+          await bridge.musicSeek(target);
+          console.log(`[music] seek=${target} ok=true`);
+          return { ok: true };
+        } catch (error) {
+          const message = error instanceof Error ? error.message : String(error);
+          console.error(`[music] seek=${target} ok=false ${message}`);
+          return { ok: false, error: message };
+        }
+      });
+
       ipcMain.handle(IPC.timerStart, (event, minutes: unknown): TimerSnapshot | null => {
         if (event.sender !== window.webContents) return null;
         const value = typeof minutes === 'number' && Number.isFinite(minutes) ? Math.round(minutes) : 0;

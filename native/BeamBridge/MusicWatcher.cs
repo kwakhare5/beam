@@ -47,6 +47,29 @@ internal sealed class MusicWatcher : IDisposable
         }
     }
 
+    public async Task<(bool Ok, string? Error)> SeekAsync(long positionMs)
+    {
+        try
+        {
+            var current = Resolve();
+            if (current is null)
+            {
+                return (false, "no active media session");
+            }
+
+            var timeline = current.GetTimelineProperties();
+            var start = (long)timeline.StartTime.TotalMilliseconds;
+            var end = (long)timeline.EndTime.TotalMilliseconds;
+            var target = Math.Clamp(positionMs, Math.Max(0, start), Math.Max(start, end));
+            var ok = await current.TryChangePlaybackPositionAsync(TimeSpan.FromMilliseconds(target).Ticks);
+            return ok ? (true, null) : (false, "the player refused the seek");
+        }
+        catch (Exception ex)
+        {
+            return (false, ex.Message);
+        }
+    }
+
     public async Task<JsonArray> SessionsAsync()
     {
         var list = new JsonArray();

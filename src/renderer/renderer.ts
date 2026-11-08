@@ -3,6 +3,7 @@ import {
   bindClearAll,
   bindFileDrag,
   bindFilesActions,
+  bindMusicSeek,
   bindPanelTabs,
   formatSize,
   iconSprite,
@@ -50,6 +51,7 @@ type BeamApi = {
   resetPosition(): Promise<{ ok: boolean; settings: SettingsSnapshot; error?: string }>;
   onSettingsState(callback: (state: SettingsSnapshot) => void): void;
   musicCommand(cmd: 'toggle' | 'next' | 'prev'): Promise<{ ok: boolean; error?: string }>;
+  musicSeek(positionMs: number): Promise<{ ok: boolean; error?: string }>;
   reportPanelTiming(ms: number, reduced: boolean): void;
 };
 
@@ -577,6 +579,7 @@ function renderPanel(): void {
     wrapEl.className = 'panel-wrap';
     app.appendChild(wrapEl);
     bindPanelTabs(wrapEl);
+    bindMusicSeek(wrapEl, (positionMs) => seekMusic(positionMs));
     wrapEl.addEventListener('click', (event) => {
       const target = event.target;
       if (!(target instanceof Element)) return;
@@ -741,24 +744,54 @@ function renderPanel(): void {
   renderUndo();
 }
 
-function tickMusicProgress(): void {
-  if (!music || !music.playing || music.durationMs <= 0) return;
-  const elapsed = Math.min(music.durationMs, music.positionMs + (performance.now() - musicBase));
-  panelData.music.positionMs = elapsed;
+function paintMusicProgress(elapsed: number): void {
+  if (!music || music.durationMs <= 0) return;
+  const duration = music.durationMs;
+  const clamped = Math.min(duration, Math.max(0, elapsed));
+  panelData.music.positionMs = clamped;
   if (!document.body.classList.contains('is-open')) return;
   const bar = wrapEl?.querySelector<HTMLElement>('.panel-music [data-music-bar]');
   if (!bar) return;
-  const duration = music.durationMs;
-  bar.setAttribute('aria-valuenow', String(Math.round(elapsed / 1000)));
-  bar.setAttribute('aria-valuetext', `${musicClock(elapsed)} of ${musicClock(duration)}`);
+  const percent = Math.round((clamped / duration) * 100);
+  bar.setAttribute('aria-valuenow', String(Math.round(clamped / 1000)));
+  bar.setAttribute('aria-valuetext', `${musicClock(clamped)} of ${musicClock(duration)}`);
   const fill = bar.querySelector<HTMLElement>('.track-fill');
-  if (fill) fill.style.width = `${Math.round((elapsed / duration) * 100)}%`;
+  if (fill) fill.style.width = `${percent}%`;
+  const knob = bar.querySelector<HTMLElement>('.track-knob');
+  if (knob) knob.style.left = `${percent}%`;
   const times = bar.parentElement?.querySelectorAll<HTMLElement>('.track-times span');
   if (times && times.length === 2) {
     const [elapsedEl, totalEl] = times;
-    if (elapsedEl) elapsedEl.textContent = musicClock(elapsed);
+    if (elapsedEl) elapsedEl.textContent = musicClock(clamped);
     if (totalEl) totalEl.textContent = musicClock(duration);
   }
+}
+
+function tickMusicProgress(): void {
+  if (!music || !music.playing || music.durationMs <= 0) return;
+  if (wrapEl?.querySelector('.panel-music .track[data-seeking]')) return;
+  paintMusicProgress(music.positionMs + (performance.now() - musicBase));
+}
+
+let seekSeq = 0;
+
+async function seekMusic(positionMs: number): Promise<void> {
+  if (!beam || !music || music.durationMs <= 0) return;
+  const current = music;
+  const target = Math.min(Math.max(Math.round(positionMs), 0), current.durationMs);
+  const seq = ++seekSeq;
+  const result = await beam.musicSeek(target).catch((error: unknown) => {
+    console.error('[music] seek failed', error);
+    return { ok: false };
+  });
+  if (seq !== seekSeq || music !== current) return;
+  if (!result.ok) {
+    paintMusicProgress(current.positionMs + (current.playing ? performance.now() - musicBase : 0));
+    return;
+  }
+  current.positionMs = target;
+  musicBase = performance.now();
+  paintMusicProgress(target);
 }
 
 window.setInterval(tickMusicProgress, 1000);

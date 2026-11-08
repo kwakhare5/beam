@@ -65,6 +65,7 @@ export const IPC = {
   filesRemove: 'beam:files:remove',
   filesClear: 'beam:files:clear',
   musicCommand: 'beam:music:command',
+  musicSeek: 'beam:music:seek',
   musicState: 'beam:music:state',
   helperState: 'beam:helper:state',
   timerStart: 'beam:timer:start',

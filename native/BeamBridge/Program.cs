@@ -87,6 +87,9 @@ internal static class Program
                     case "music.prev":
                         CommandMusic(request, cmd, watcher);
                         break;
+                    case "music.seek":
+                        SeekMusic(request, watcher);
+                        break;
                     case "music.sessions" when sessionsTest:
                         ReplySessions(request, watcher);
                         break;
@@ -143,6 +146,35 @@ internal static class Program
         if (!ok)
         {
             Protocol.Log($"{cmd} failed: {error}");
+        }
+        var reply = new JsonObject { ["id"] = id, ["ok"] = ok };
+        if (!ok && error is not null)
+        {
+            reply["error"] = error;
+        }
+        Protocol.Emit(reply);
+    }
+
+    private static void SeekMusic(JsonObject request, MusicWatcher watcher)
+    {
+        var id = request["id"]?.DeepClone();
+        if (request["positionMs"] is not JsonValue value ||
+            !value.TryGetValue<long>(out var positionMs) ||
+            positionMs < 0)
+        {
+            Protocol.Emit(new JsonObject
+            {
+                ["id"] = id,
+                ["ok"] = false,
+                ["error"] = "positionMs must be a non-negative number"
+            });
+            return;
+        }
+
+        var (ok, error) = watcher.SeekAsync(positionMs).GetAwaiter().GetResult();
+        if (!ok)
+        {
+            Protocol.Log($"music.seek failed: {error}");
         }
         var reply = new JsonObject { ["id"] = id, ["ok"] = ok };
         if (!ok && error is not null)

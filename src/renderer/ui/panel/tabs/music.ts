@@ -31,8 +31,87 @@ function progress(data: MusicData): string {
   const percent = Math.round((clamped / duration) * 100);
   const elapsed = musicClock(clamped);
   const total = musicClock(duration);
+  const now = Math.round(clamped / 1000);
+  const max = Math.round(duration / 1000);
 
-  return `<div class="track"><div class="track-bar" data-music-bar role="progressbar" aria-label="Track position" aria-valuemin="0" aria-valuemax="${Math.round(duration / 1000)}" aria-valuenow="${Math.round(clamped / 1000)}" aria-valuetext="${esc(`${elapsed} of ${total}`)}"><span class="track-fill" style="width:${percent}%"></span></div><div class="track-times"><span>${elapsed}</span><span>${total}</span></div></div>`;
+  return `<div class="track"><div class="track-bar" data-music-bar data-duration-ms="${Math.round(duration)}" role="slider" tabindex="0" aria-label="Seek" aria-valuemin="0" aria-valuemax="${max}" aria-valuenow="${now}" aria-valuetext="${esc(`${elapsed} of ${total}`)}"><span class="track-rail"><span class="track-fill" style="width:${percent}%"></span></span><span class="track-knob" style="left:${percent}%"></span></div><div class="track-times"><span>${elapsed}</span><span>${total}</span></div></div>`;
+}
+
+function paintBar(bar: HTMLElement, positionMs: number): void {
+  const duration = Number(bar.dataset.durationMs ?? '0');
+  const clamped = Math.min(Math.max(positionMs, 0), duration);
+  const percent = duration > 0 ? Math.round((clamped / duration) * 100) : 0;
+  const fill = bar.querySelector<HTMLElement>('.track-fill');
+  const knob = bar.querySelector<HTMLElement>('.track-knob');
+  if (fill) fill.style.width = `${percent}%`;
+  if (knob) knob.style.left = `${percent}%`;
+  bar.setAttribute('aria-valuenow', String(Math.round(clamped / 1000)));
+  bar.setAttribute('aria-valuetext', `${musicClock(clamped)} of ${musicClock(duration)}`);
+  const times = bar.parentElement?.querySelectorAll<HTMLElement>('.track-times span');
+  if (times && times.length === 2) {
+    const [elapsedEl, totalEl] = times;
+    if (elapsedEl) elapsedEl.textContent = musicClock(clamped);
+    if (totalEl) totalEl.textContent = musicClock(duration);
+  }
+}
+
+export function bindMusicSeek(root: Document | Element, seek: (positionMs: number) => void | Promise<void>): void {
+  const barFrom = (target: EventTarget | null): HTMLElement | null => {
+    if (!(target instanceof Element)) return null;
+    return target.closest<HTMLElement>('[data-music-bar]');
+  };
+  const positionAt = (bar: HTMLElement, clientX: number): number => {
+    const rect = bar.getBoundingClientRect();
+    const duration = Number(bar.dataset.durationMs ?? '0');
+    const ratio = rect.width > 0 ? Math.min(1, Math.max(0, (clientX - rect.left) / rect.width)) : 0;
+    return Math.round(ratio * duration);
+  };
+  const commit = (bar: HTMLElement, positionMs: number): void => {
+    const track = bar.closest<HTMLElement>('.track');
+    track?.setAttribute('data-seeking', 'true');
+    void Promise.resolve(seek(positionMs)).finally(() => track?.removeAttribute('data-seeking'));
+  };
+
+  let drag: { bar: HTMLElement; pointerId: number } | null = null;
+  root.addEventListener('pointerdown', (event) => {
+    const pointer = event as PointerEvent;
+    const bar = barFrom(pointer.target);
+    if (!bar || pointer.button !== 0) return;
+    pointer.preventDefault();
+    bar.focus({ preventScroll: true });
+    bar.closest<HTMLElement>('.track')?.setAttribute('data-seeking', 'true');
+    drag = { bar, pointerId: pointer.pointerId };
+    bar.setPointerCapture(pointer.pointerId);
+    paintBar(bar, positionAt(bar, pointer.clientX));
+  });
+  root.addEventListener('pointermove', (event) => {
+    const pointer = event as PointerEvent;
+    if (!drag || pointer.pointerId !== drag.pointerId) return;
+    paintBar(drag.bar, positionAt(drag.bar, pointer.clientX));
+  });
+  const end = (event: Event): void => {
+    const pointer = event as PointerEvent;
+    if (!drag || pointer.pointerId !== drag.pointerId) return;
+    const { bar } = drag;
+    drag = null;
+    if (bar.hasPointerCapture(pointer.pointerId)) bar.releasePointerCapture(pointer.pointerId);
+    commit(bar, positionAt(bar, pointer.clientX));
+  };
+  root.addEventListener('pointerup', end);
+  root.addEventListener('pointercancel', end);
+  root.addEventListener('keydown', (event) => {
+    const bar = barFrom((event as KeyboardEvent).target);
+    if (!bar) return;
+    const key = (event as KeyboardEvent).key;
+    if (key !== 'ArrowLeft' && key !== 'ArrowRight' && key !== 'Home' && key !== 'End') return;
+    event.preventDefault();
+    const duration = Number(bar.dataset.durationMs ?? '0');
+    const now = Number(bar.getAttribute('aria-valuenow') ?? '0') * 1000;
+    const next =
+      key === 'Home' ? 0 : key === 'End' ? duration : Math.min(Math.max(now + (key === 'ArrowLeft' ? -5000 : 5000), 0), duration);
+    paintBar(bar, next);
+    commit(bar, next);
+  });
 }
 
 export function musicPanel(data: MusicData, active = true): string {
@@ -75,7 +154,7 @@ export function musicPanel(data: MusicData, active = true): string {
 
   return panelBody(
     'music',
-    `${art}<div class="panel-music-content"><div class="panel-meta"><div class="panel-title-row"><div class="panel-title">${esc(data.title)}</div>${pip}</div><div class="panel-sub">${esc(data.subtitle)}</div></div>${progress(data)}${controls}</div>`,
+    `${art}<div class="panel-music-content"><div class="panel-meta"><div class="panel-title">${esc(data.title)}</div><div class="panel-sub music-artist"><span class="music-artist-name">${esc(data.subtitle)}</span>${pip}</div></div>${progress(data)}${controls}</div>`,
     'panel-music',
     active
   );

@@ -95,6 +95,11 @@ export class Bridge {
     if (reply.ok !== true) throw new Error(reply.error ?? 'helper refused the command');
   }
 
+  async musicSeek(positionMs: number): Promise<void> {
+    const reply = await this.send('music.seek', { positionMs });
+    if (reply.ok !== true) throw new Error(reply.error ?? 'helper refused the seek');
+  }
+
   async musicSessions(): Promise<MusicSessionRow[]> {
     const reply = await this.send('music.sessions');
     return Array.isArray(reply.sessions) ? reply.sessions : [];
