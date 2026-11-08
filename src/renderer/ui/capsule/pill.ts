@@ -2,9 +2,9 @@ import { icon } from '../shared/icons';
 import { esc } from '../shared/html';
 import { MASCOTS } from '../shared/mascots';
 
-export type PillState = 'quiet' | 'idle' | 'playing' | 'paused' | 'timer' | 'done' | 'files' | 'drag' | 'error';
+type PillState = 'quiet' | 'idle' | 'playing' | 'paused' | 'timer' | 'done' | 'files' | 'drag' | 'error';
 
-export interface PillData {
+interface PillData {
   state: PillState;
   title: string;
   hover?: boolean;

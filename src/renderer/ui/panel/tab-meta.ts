@@ -2,7 +2,7 @@ import type { IconName } from '../shared/icons';
 
 export type Tab = 'music' | 'files' | 'timer' | 'calendar' | 'settings';
 
-export interface ContentTab {
+interface ContentTab {
   id: Exclude<Tab, 'settings'>;
   label: string;
   icon: IconName;

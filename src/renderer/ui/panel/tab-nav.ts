@@ -1,4 +1,4 @@
-export function activateTab(tab: HTMLElement): void {
+function activateTab(tab: HTMLElement): void {
   const panelEl = tab.closest('.panel');
   if (!panelEl) return;
   const id = tab.id.replace('tab-', '');

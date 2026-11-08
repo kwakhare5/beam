@@ -3,11 +3,11 @@ import type { SavedPosition } from './settings';
 
 export const WINDOW_WIDTH = 136;
 export const WINDOW_HEIGHT = 42;
-export const PILL_HEIGHT = 30;
+const PILL_HEIGHT = 30;
 export const PANEL_WIDTH = 452;
 export const PANEL_HEIGHT = 316;
-export const PILL_GAP = 12;
-export const NEAR_RADIUS = 37;
+const PILL_GAP = 12;
+const NEAR_RADIUS = 37;
 
 export function isCursorNear(cursor: Point, pill: Rectangle): boolean {
   const dx = cursor.x - (pill.x + pill.width / 2);
