@@ -9,7 +9,7 @@ This document defines the two visual systems of Beam:
 # PART 1: DESKTOP APP UI SYSTEM (v1 target surface)
 
 ## 1. Aesthetic Direction & Craft
-- **Design Theme:** Solid desktop system in the macOS style: opaque shell (`#151517` dark / `#f4f4f2` light), brand gold (`#ffaa00`), neutral text (`#ededed`), 1px hairline border, standard filled buttons, keycap shortcuts, status dots, and one static mascot.
+- **Design Theme:** Solid desktop system in the macOS style: opaque shell (`#151517` dark / `#eceae6` light), brand gold (`#ffaa00`), neutral text (`#ededed` dark / `#1b1b19` light), 1px hairline border, standard filled buttons, keycap shortcuts, status dots, and one static mascot.
 - **No Glass:** Surfaces are opaque. No backdrop blur, no translucent shell, no reflections, no inner rims, no glow, no gradients. A soft shadow is allowed only to lift the floating window off the desktop.
 - **Canonical App Preview:** `showcase/app-preview.html` is the single file used to review every app UI state. It loads the app's real stylesheet and shared view functions (`src/renderer/ui/`), so it must be opened with `npm run ui`, never from disk. Every phase extends that file; no other preview or mock file is ever created.
 - **Copy Tone:** Clear, calm, and understated. Standard sentence and title casing (`No music playing`, `Drop files here`, `Done`, `Missing`). No forced lowercase rule.
@@ -28,6 +28,7 @@ Defined in [`src/renderer/styles/tokens.css`](file:///d:/Beam/src/renderer/style
 | `--surface-hover` | `#1d1d1f` | Solid row and tab hover |
 | `--foreground` | `#ededed` | Primary text |
 | `--muted-foreground` | `#8a8a8a` | Subtitles, metadata, inactive tabs |
+| `--track` | `#636368` | Unfilled seek rail (3.05:1 on the shell) |
 | `--primary` | `#ffaa00` | Brand gold: primary action, selected tab text |
 | `--primary-text` | `#ffaa00` | Gold text and thin strokes: timer digits, done check, today, position bar fill |
 | `--destructive` | `#ff453a` | Missing files, cancel text (5:1 on the shell) |
@@ -45,15 +46,16 @@ Light overrides every color token in the `[data-theme='light']` block of `tokens
 
 | Token | Value | Purpose |
 |---|---|---|
-| `--card` | `#f4f4f2` | Solid light shell |
-| `--border` | `rgba(0, 0, 0, 0.08)` | Hairline border |
-| `--control` | `#e7e7e5` | Solid light control fill |
-| `--control-hover` | `#dedddb` | Solid light control hover |
-| `--surface-hover` | `#eeeeec` | Solid light row and tab hover |
-| `--foreground` | `#111111` | Primary text |
-| `--muted-foreground` | `#6b6b6b` | Secondary text |
-| `--primary-text` | `#8a5a00` | High-contrast gold text |
-| `--destructive` | `#b42318` | Missing files, cancel text (6:1 on the light shell) |
+| `--card` | `#eceae6` | Solid warm-greige light shell |
+| `--border` | `rgba(0, 0, 0, 0.10)` | Hairline border |
+| `--control` | `#dfddd8` | Solid light control fill |
+| `--control-hover` | `#d4d1cb` | Solid light control hover |
+| `--surface-hover` | `#e4e1dc` | Solid light row and tab hover |
+| `--foreground` | `#1b1b19` | Primary text |
+| `--muted-foreground` | `#5f5d59` | Secondary text (5.5:1) |
+| `--track` | `#8a847a` | Unfilled seek rail (3.1:1 on the light shell) |
+| `--primary-text` | `#7a4e00` | High-contrast gold text (6.0:1) |
+| `--destructive` | `#a61b12` | Missing files, cancel text (6.3:1 on the light shell) |
 
 ## 3. Window & Surface Geometry
 
@@ -70,7 +72,7 @@ Light overrides every color token in the `[data-theme='light']` block of `tokens
 - **Pointer Drag:** Press and move anywhere on the capsule body to move the window; 4px of movement separates a drag from a click, so a plain click still expands the panel. The window stays at its pinned size, clamps inside a display's work area, and saves its position to `%APPDATA%\Beam\settings.json`; Reset Position re-anchors it above the primary taskbar. Transport and action buttons never start a drag.
 - **Click Isolation:** Transport buttons stop propagation and toggle playback directly; only clicks on the mascot, title, or empty capsule body trigger panel expansion.
 - **Lightweight Dismissal:** `Esc`, tray toggle, or clicking outside collapses the window. Opening focuses Beam so `Esc` and outside-click have a target; closing does not reactivate another app.
-- **Quiet Idle:** after 20s with no music, no shelf files, no hover, and the panel closed, the idle capsule becomes a `26×26` star-only nub (18px star at 60%) inside the same window. The cursor within `37px` of the nub centre (about 24px off its edge, polled at 4Hz by main) wakes it to the full 94px idle pill; music, a file, or an open panel also wake it. Near and hover never reveal actions by themselves. Leaving the near zone or hover returns it to quiet after 2s.
+- **Quiet Idle:** after 10s with no music, no shelf files, no hover, and the panel closed, the idle capsule becomes a `26×26` star-only nub (18px star at 60%) inside the same window. The cursor within `37px` of the nub centre (about 24px off its edge, polled at 4Hz by main) wakes it to the full 94px idle pill; music, a file, or an open panel also wake it. Near and hover never reveal actions by themselves. Leaving the near zone or hover returns it to quiet after 2s.
 - **Shaped Hit Area:** the window clips to the visible pill plus a 6px halo (the full 452×316 when open), so clicks in the old margins reach the desktop instead of opening the panel.
 - **Shadow Margins:** the `136×42` window leaves 21px on each side of the rest capsule and 6px above and below it; an expanded capsule leaves 4px on each side. The open window leaves 16px on all sides, so the panel shadow has room and the margin still counts as an outside click.
 
@@ -108,12 +110,12 @@ Light overrides every color token in the `[data-theme='light']` block of `tokens
 
 ## 6. Panel Specifications
 - **Panel Dimensions:** `420×284` body inside a `452×316` open window. Radius 16px, 1px border, no footer, 8px body padding. One fixed height for every tab — switching tabs never resizes the window — and each tab body centers its content, so leftover space splits top and bottom instead of pooling under the content. A long file list scrolls inside the fixed height.
-- **Tab Bar (40px):** Five equal tabs — Music, Files, Timer, Calendar, Settings — flat: no track background, no padding box, no selected fill. All five carry a 14px Lucide icon and a 12px label. The selected tab is gold icon + gold label at weight 500 plus a 2px gold underline inset 8px. Hover is a solid `--surface-hover` fill on the tab itself. Tabs are keyboard-navigable (arrows, Home, End). The panel opens to the last feature used this session — a drop or picker, a Files action, a transport, the timer, the calendar, a tab visit, or the tray's Settings item — and with no history picks Music when a session exists, else Files when the shelf holds rows, else Music.
+- **Tab Bar (40px):** Four equal content tabs — Music, Files, Timer, Calendar — plus a compact 28px icon-only Settings button on the right. Flat: no track background, no padding box, no selected fill. The four content tabs carry a 14px Lucide icon and a 12px label; Settings is the sliders icon with an `aria-label` and title. The selected tab is gold icon + gold label at weight 500 plus a 2px gold underline inset 8px (6px on the compact Settings button). Hover is a solid `--surface-hover` fill on the tab itself. Tabs are keyboard-navigable (arrows, Home, End). The panel opens to the last feature used this session — a drop or picker, a Files action, a transport, the timer, the calendar, a tab visit, or the tray's Settings item — and with no history picks Music when a session exists, else Files when the shelf holds rows, else Music.
 - **Music Tab:** 148×148 square art on the left with a `12px` radius and no border. The right column (242px at the default width) stacks the title (15/600, up to two lines), the artist with the 6px status dot on the same line, a seek slider with elapsed/total in 11px tabular digits, and the three transports, 12px apart and vertically centered against the art. The seek slider is a 14px hit strip around a 4px rail with a 10px gold knob; it is a focusable `role="slider"`: drag, click, ←/→ (5s), Home/End, and each commit goes through `music.seek` to the helper, with a silent repaint of the last known position when the player refuses. The transport is a solid 38px circular primary play/pause with 16px gap to 30px flanking controls. No artwork shows the 48px star on the panel background — no gray tile. Nothing playing uses the designed empty state — mascot, `No music playing`, `Start playback in any app` — with no transport row, so the panel never shows dead controls. Loading uses skeleton lines.
 - **Files Shelf:** 36px flush rows separated by 1px dividers, with plain 14px status icons (no icon box, no pips), 26-character middle-truncated filenames, right-aligned 11px text for size, `Folder`, or red `Missing`, and 24px copy/remove buttons that appear, and accept clicks, only on hover or focus. A missing row keeps only Remove; copy would fail. Existing rows drag out with their real path; missing rows cannot be dragged, and the capsule itself still moves the window. Row hover is a solid `--surface-hover` fill. Five rows fit; more scroll. Pinned bottom actions: an 11px muted `Files clear on quit` line takes the left end, with solid gold Copy all, text Add files, and red text Clear all pushed right. Add files (and the empty state) opens the Windows file picker. A visible status line reports Added / Removed / Copied / `Max 50`, a remove offers Undo for 5s, and quitting with rows asks before clearing them. The note exists only while the list holds rows. Copy all disables when every row is missing; Clear all asks for a second click. The empty state is a dashed drop well with an Add files button.
-- **Timer Tab:** 28px preset chips, always visible, with 25 min selected by default; the custom mode shows a 1–999 minute inline field with a `Set` chip below the chips; 40px digits; 12px note; Start in idle and custom, Cancel in running. Done shows a 40px gold check plus `Time’s up` with Start again and Dismiss.
-- **Calendar Tab:** Header with 28px left/right chevrons, month title, and Today. A real table with seven columns, full weekday names as column headers, and a full date label on every current-month cell; the first day of the week follows the Windows locale (Sunday fallback); two-letter locale weekday headers at 11px; only the weeks the month needs (five, or six when the month spills), padded with adjacent-month days, so days get a taller, calmer cell; today is gold.
-- **Settings Tab:** Five 44px rows separated by 1px dividers, no row gap: Start with Windows switch, Shortcut as keycaps without an outer box (`Click the keys to change it`), chime volume as plain 12px text with −/+ and a test button, theme row naming `Dark` or `Light` beside the switch, Reset position. 36×20 switch, 20px keycaps, 28px steppers with 8px radii.
+- **Timer Tab:** 28px preset chips, always visible, with 25 min selected by default; the custom mode shows a 1–999 minute inline field with a `Set` chip below the chips; 40px digits; 12px note. The countdown face is fixed at the panel centre in every mode, presets sit at the top, and Start/Cancel/Done actions stay pinned to the bottom, so starting or cancelling never moves the digits. Done shows a 40px gold check plus `Time’s up` with Start again and Dismiss.
+- **Calendar Tab:** Header with 28px left/right chevrons, month title, and Today. Today is an active 28px control with foreground text, not a muted disabled-looking chip. A real table with seven columns, full weekday names as column headers, and a full date label on every current-month cell; the first day of the week follows the Windows locale (Sunday fallback); two-letter locale weekday headers at 11px; only the weeks the month needs (five, or six when the month spills), padded with adjacent-month days, so days get a taller, calmer cell; today is gold.
+- **Settings Tab:** Five 44px rows separated by 1px dividers, no row gap: Start with Windows switch, Shortcut as keycaps without an outer box (`Click the keys to change it`), chime volume as plain 12px text with −/+ and a test button, theme row naming the current `Dark` / `Light` mode beside the dark-mode switch, Reset position. 36×20 switch, 20px keycaps, 28px steppers with 8px radii.
 
 ## 7. Motion, Typography & Code Architecture
 - **Font Stack:** Inter variable vendored in `assets/fonts/` (fallback `Segoe UI Variable Text`, `Segoe UI`, `sans-serif`). Tabular numerals for timer and position digits.

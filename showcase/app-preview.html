@@ -170,7 +170,7 @@
 
       <div class="g-section-title">
         <h3>Capsule States · 30px height</h3>
-        <span class="g-badge">136×42 window · 94 rest / 128 hover</span>
+        <span class="g-badge">136×42 window · 94/108 rest · 128 hover</span>
       </div>
       <div class="g-board-capsules">
         <div class="g-board-card">
@@ -182,7 +182,11 @@
           <div class="compare-window"><div data-pill="idleHover"></div></div>
         </div>
         <div class="g-board-card">
-          <div class="g-card-meta"><span>playing · rest (art + title)</span><code>94×30</code></div>
+          <div class="g-card-meta"><span>quiet · after 10s unused</span><code>26×26</code></div>
+          <div class="compare-window"><div data-pill="quiet"></div></div>
+        </div>
+        <div class="g-board-card">
+          <div class="g-card-meta"><span>playing · rest (art + title)</span><code>108×30</code></div>
           <div class="compare-window"><div data-pill="playingRest"></div></div>
         </div>
         <div class="g-board-card">
@@ -190,7 +194,7 @@
           <div class="compare-window"><div data-pill="playing"></div></div>
         </div>
         <div class="g-board-card">
-          <div class="g-card-meta"><span>paused · rest (art + amber dot)</span><code>94×30</code></div>
+          <div class="g-card-meta"><span>paused · rest (art + amber dot)</span><code>108×30</code></div>
           <div class="compare-window"><div data-pill="pausedRest"></div></div>
         </div>
         <div class="g-board-card">
@@ -198,7 +202,7 @@
           <div class="compare-window"><div data-pill="paused"></div></div>
         </div>
         <div class="g-board-card">
-          <div class="g-card-meta"><span>playing · no art (star fallback)</span><code>94×30</code></div>
+          <div class="g-card-meta"><span>playing · no art (star fallback)</span><code>108×30</code></div>
           <div class="compare-window"><div data-pill="playingNoArt"></div></div>
         </div>
         <div class="g-board-card">
@@ -233,6 +237,10 @@
           <div class="g-card-meta"><span>drag · accept state</span><code>128×30</code></div>
           <div class="compare-window"><div data-pill="drag"></div></div>
         </div>
+        <div class="g-board-card">
+          <div class="g-card-meta"><span>error · helper lost</span><code>128×30</code></div>
+          <div class="compare-window"><div data-pill="error"></div></div>
+        </div>
       </div>
 
       <div class="g-section-title" style="margin-top: 36px;">
@@ -256,6 +264,10 @@
           <div class="g-card-meta"><span>calendar · month grid</span><code>420×284</code></div>
           <div class="f-open"><div id="board-panel-calendar"></div></div>
         </div>
+        <div class="g-board-panel-card">
+          <div class="g-card-meta"><span>settings · compact icon tab</span><code>420×284</code></div>
+          <div class="f-open"><div id="board-panel-settings"></div></div>
+        </div>
       </div>
 
       <div class="g-section-title" style="margin-top: 36px;">
@@ -276,13 +288,13 @@
       <div class="g-head">
         <h2>Compare</h2>
         <p class="g-help">
-          Locked: every state rests at <b>94 wide</b>. Music, timer, and done grow to <b>128 wide</b> on hover or focus over 120ms; idle and files stay 94 and only brighten. Every pill sits in the same <code>136×42</code> window, so the window never resizes.
+          Rest widths: idle, files, timer, and done at <b>94</b>; playing and paused at <b>108</b>; quiet at <b>26</b>. Music, timer, and done grow to <b>128</b> on hover or focus over 120ms; idle and files stay 94 and only brighten. Every pill sits in the same <code>136×42</code> window, so the window never resizes.
         </p>
       </div>
 
       <div class="g-options">
         <div class="g-option">
-          <div class="g-option-head"><b>Rest</b><span>94 pill in a 136 window</span><code>one fact · 46px slot</code></div>
+          <div class="g-option-head"><b>Rest</b><span>108 music · 94 timer/done in a 136 window</span><code>one fact · 62/46px slot</code></div>
           <div class="g-option-pills">
             <div class="g-compare-item">
               <div class="g-compare-label">Music</div>
@@ -300,7 +312,7 @@
         </div>
 
         <div class="g-option">
-          <div class="g-option-head"><b>Hover</b><span>136 pill in a 144 window</span><code>actions · 8px edge padding</code></div>
+          <div class="g-option-head"><b>Hover</b><span>128 pill in a 136 window</span><code>actions · 8px edge padding</code></div>
           <div class="g-option-pills">
             <div class="g-compare-item">
               <div class="g-compare-label">Music</div>
@@ -323,13 +335,13 @@
       <div class="g-head">
         <h2>2 · Capsule</h2>
         <p class="g-help">
-          One <code>136×42</code> window. Idle starts at <code>94×30</code> and quiets to a <code>26×26</code> star after 20s; the cursor within 24px of the nub (or a hover) brings the label back, and it quiets again 2s after the cursor leaves. Music and paused rest at <code>108×30</code>; music, timer, and done grow to <code>128×30</code> on hover or focus and reveal their actions; files stay <code>94×30</code> and only brighten. Music swaps the star for the album thumbnail; paused adds an amber dot. Long names ellipsize, nothing spills.
+          One <code>136×42</code> window. Idle starts at <code>94×30</code> and quiets to a <code>26×26</code> star after 10s; a cursor within <code>37px of the centre</code> (about 24px off the nub) or a hover brings the label back, and it quiets again 2s after the cursor leaves. Music and paused rest at <code>108×30</code>; music, timer, and done grow to <code>128×30</code> on hover or focus and reveal their actions; files stay <code>94×30</code> and only brighten. Music swaps the star for the album thumbnail; paused adds an amber dot. Long names ellipsize, nothing spills.
         </p>
       </div>
 
       <div class="g-grid">
         <div class="g-row">
-          <div class="g-label"><b>Quiet · after 20s</b><span>star only; wakes when the cursor comes near or hovers the nub</span><code>26×26 · star 18px at 60%</code></div>
+          <div class="g-label"><b>Quiet · after 10s</b><span>star only; wakes when the cursor comes near or hovers the nub</span><code>26×26 · star 18px at 60%</code></div>
           <div class="f-pill is-quiet"><div data-pill="quiet"></div></div>
         </div>
         <div class="g-row">
@@ -448,7 +460,7 @@
           <ul>
             <li>Capsule <code>26×26 quiet</code> · <code>94×30 rest</code> · <code>108×30 music rest</code> · <code>128×30 hover</code> for music, timer, done · drag <code>128</code> · error <code>128</code></li>
             <li>Window <code>136×42</code> for every state</li>
-            <li>Near wake <code>37px from the centre</code> (~24px off the nub); quiet returns <code>2s</code> after the cursor leaves</li>
+            <li>Near wake <code>37px from the centre</code> (~24px off the nub); quiet after <code>10s</code>; returns <code>2s</code> after the cursor leaves</li>
             <li>Panel <code>420×284</code></li>
             <li>Open window <code>452×316</code> · 16px shadow margin</li>
             <li>Radii <code>6 / 8 / 12 / 16</code>; hit <code>24 / 28 / 32</code></li>
@@ -467,13 +479,13 @@
         <div class="g-card">
           <h3>States</h3>
           <ul>
-            <li>Capsule <code>idle · playing · paused · timer · done · files · drag</code></li>
+            <li>Capsule <code>quiet · idle · playing · paused · timer · done · files · drag · error</code></li>
             <li>Interaction <code>rest · hover · focus · pressed · disabled</code></li>
             <li>Panel <code>empty · loading · success</code></li>
             <li>Capsule <code>1px</code> · panel <code>2px</code> focus</li>
-            <li>Selected tab <code>gold icon + label + 2px underline, no fill</code></li>
+            <li>Tab bar <code>four equal labeled tabs + a 28px icon-only Settings button; selected = gold + 2px underline, no fill</code></li>
             <li>Dots <code>green playing · amber paused · red missing</code></li>
-            <li>Capsule art <code>24px thumbnail, star fallback</code></li>
+            <li>Capsule art <code>20px thumbnail, star fallback</code></li>
             <li>One fill level: no box inside a box</li>
             <li>Shell <code>solid · no blur · no rim · no glow</code></li>
             <li>No capsule glow</li>
@@ -709,7 +721,8 @@
       'board-panel-music': 'music',
       'board-panel-files': 'files',
       'board-panel-timer': 'timer',
-      'board-panel-calendar': 'calendar'
+      'board-panel-calendar': 'calendar',
+      'board-panel-settings': 'settings'
     };
     for (const [id, tab] of Object.entries(board)) {
       const el = document.getElementById(id);
