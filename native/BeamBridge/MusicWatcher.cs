@@ -8,6 +8,7 @@ namespace BeamBridge;
 internal sealed class MusicWatcher : IDisposable
 {
     private readonly object gate = new();
+    private readonly SemaphoreSlim publishGate = new(1, 1);
     private GlobalSystemMediaTransportControlsSessionManager? manager;
     private GlobalSystemMediaTransportControlsSession? session;
     private string lastLine = string.Empty;
@@ -265,6 +266,7 @@ internal sealed class MusicWatcher : IDisposable
 
     private async Task PublishAsync()
     {
+        await publishGate.WaitAsync();
         try
         {
             var current = Resolve();
@@ -302,7 +304,6 @@ internal sealed class MusicWatcher : IDisposable
                         ["app"] = current.SourceAppUserModelId ?? string.Empty,
                         ["title"] = props?.Title ?? string.Empty,
                         ["artist"] = props?.Artist ?? string.Empty,
-                        ["album"] = props?.AlbumTitle ?? string.Empty,
                         ["art"] = art,
                         ["playing"] = playback?.PlaybackStatus == GlobalSystemMediaTransportControlsSessionPlaybackStatus.Playing,
                         ["positionMs"] = timeline is null ? 0 : (long)timeline.Position.TotalMilliseconds,
@@ -322,6 +323,10 @@ internal sealed class MusicWatcher : IDisposable
         catch (Exception ex)
         {
             Protocol.Log($"music read failed: {ex.Message}");
+        }
+        finally
+        {
+            publishGate.Release();
         }
     }
 

@@ -66,13 +66,19 @@ export class Bridge {
       }
     });
 
+    child.stdin?.on('error', (error) => {
+      if (!this.stopping) console.error(`[bridge] stdin failed: ${error.message}`);
+      child.kill();
+      end(null);
+    });
+
     child.on('error', (error) => {
       console.error(`[bridge] spawn failed: ${error.message}`);
       end(null);
     });
 
     child.on('exit', (code) => {
-      console.error(`[bridge] helper exited (${code})`);
+      if (!this.stopping) console.error(`[bridge] helper exited (${code})`);
       end(code);
     });
 

@@ -65,6 +65,17 @@
   flex: none;
 }
 
+.tab-settings {
+  flex: none;
+  width: 28px;
+  padding: 0;
+}
+
+.tab-settings[aria-selected='true']::after {
+  left: 6px;
+  right: 6px;
+}
+
 .tab:hover {
   background: var(--surface-hover);
   color: var(--foreground);

@@ -1,12 +1,31 @@
 .panel-timer {
-  justify-content: space-between;
-  gap: var(--space-2);
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0;
 }
 
-.panel-timer.mode-running,
-.panel-timer.mode-done {
+.panel-timer .presets {
+  position: absolute;
+  top: var(--space-2);
+  left: var(--space-2);
+  right: var(--space-2);
+}
+
+.panel-timer .timer-custom {
+  position: absolute;
+  top: calc(var(--space-2) + 28px + var(--space-2));
+  left: var(--space-2);
+  right: var(--space-2);
+}
+
+.panel-timer .actions {
+  position: absolute;
+  left: var(--space-2);
+  right: var(--space-2);
+  bottom: var(--space-2);
   justify-content: center;
-  gap: var(--space-4);
 }
 
 .presets {

@@ -4,7 +4,6 @@ export type MusicPayload = {
   app: string;
   title: string;
   artist: string;
-  album: string;
   art: string | null;
   playing: boolean;
   positionMs: number;

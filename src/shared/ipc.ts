@@ -14,7 +14,7 @@ export type AddResult = {
   files: ShelfFile[];
 };
 
-export type CopyResult = { ok: boolean; count: number; error?: string };
+export type CopyResult = { ok: boolean; error?: string };
 
 export type FileChange = { ok: boolean; files: ShelfFile[] };
 
@@ -46,13 +46,12 @@ export type SettingsPatch = {
   theme?: Theme;
 };
 
-export type SettingsResult = { ok: boolean; settings: SettingsSnapshot; error?: string };
+export type SettingsResult = { ok: boolean; settings: SettingsSnapshot };
 
 export type TimerSnapshot = {
   phase: 'idle' | 'running' | 'done';
   minutes: number;
   remainingMs: number;
-  deadline: number;
   id: number;
   alert: boolean;
 };

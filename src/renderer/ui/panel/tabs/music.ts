@@ -69,7 +69,10 @@ export function bindMusicSeek(root: Document | Element, seek: (positionMs: numbe
   const commit = (bar: HTMLElement, positionMs: number): void => {
     const track = bar.closest<HTMLElement>('.track');
     track?.setAttribute('data-seeking', 'true');
-    void Promise.resolve(seek(positionMs)).finally(() => track?.removeAttribute('data-seeking'));
+    void Promise.resolve()
+      .then(() => seek(positionMs))
+      .catch((error: unknown) => console.error('[music] seek failed', error))
+      .finally(() => track?.removeAttribute('data-seeking'));
   };
 
   let drag: { bar: HTMLElement; pointerId: number } | null = null;
@@ -87,6 +90,10 @@ export function bindMusicSeek(root: Document | Element, seek: (positionMs: numbe
   root.addEventListener('pointermove', (event) => {
     const pointer = event as PointerEvent;
     if (!drag || pointer.pointerId !== drag.pointerId) return;
+    if (!drag.bar.isConnected) {
+      drag = null;
+      return;
+    }
     paintBar(drag.bar, positionAt(drag.bar, pointer.clientX));
   });
   const end = (event: Event): void => {
@@ -95,10 +102,22 @@ export function bindMusicSeek(root: Document | Element, seek: (positionMs: numbe
     const { bar } = drag;
     drag = null;
     if (bar.hasPointerCapture(pointer.pointerId)) bar.releasePointerCapture(pointer.pointerId);
+    if (!bar.isConnected) {
+      bar.closest<HTMLElement>('.track')?.removeAttribute('data-seeking');
+      return;
+    }
     commit(bar, positionAt(bar, pointer.clientX));
   };
+  const cancel = (event: Event): void => {
+    const pointer = event as PointerEvent;
+    if (!drag || pointer.pointerId !== drag.pointerId) return;
+    const { bar } = drag;
+    drag = null;
+    if (bar.hasPointerCapture(pointer.pointerId)) bar.releasePointerCapture(pointer.pointerId);
+    bar.closest<HTMLElement>('.track')?.removeAttribute('data-seeking');
+  };
   root.addEventListener('pointerup', end);
-  root.addEventListener('pointercancel', end);
+  root.addEventListener('pointercancel', cancel);
   root.addEventListener('keydown', (event) => {
     const bar = barFrom((event as KeyboardEvent).target);
     if (!bar) return;

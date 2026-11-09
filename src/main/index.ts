@@ -4,7 +4,7 @@ import { join } from 'node:path';
 import { Bridge, type HelperEvent } from './bridge';
 import { BeamTimer } from './timer';
 import { IPC, type AddResult, type CopyResult, type ShelfFile, type TimerSnapshot } from '../shared/ipc';
-import { getSettingsPath, loadSettings, saveSettings, type BeamSettings } from './settings';
+import { getSettingsPath, loadSettings, saveSettings, SETTINGS_DEFAULTS, type BeamSettings } from './settings';
 import { helperPath, trayIconPath } from './paths';
 import { createTray } from './tray';
 import {
@@ -92,14 +92,7 @@ if (!gotLock) {
   const panel = new PanelController(() => win, () => pillPosition, () => shelf.rows(), applyWindowShape);
   const openPanel = (tab?: 'settings'): void => panel.show(tab);
   const closePanel = (): void => panel.hide();
-  let settings: BeamSettings = {
-    version: 1,
-    position: null,
-    startup: false,
-    shortcut: '',
-    volume: 60,
-    theme: 'dark'
-  };
+  let settings: BeamSettings = { version: 1, position: null, ...SETTINGS_DEFAULTS };
   let pillPosition: Electron.Rectangle = {
     x: 0,
     y: 0,
@@ -326,13 +319,16 @@ if (!gotLock) {
         window.webContents.send(IPC.pillNear, next);
       };
       const nearPoll = setInterval(pollNear, 250);
-      window.webContents.once('did-finish-load', pollNear);
+      window.webContents.once('did-finish-load', () => {
+        near = false;
+        pollNear();
+      });
       window.once('closed', () => clearInterval(nearPoll));
       const showPill = (source: string): void => {
         if (window.isDestroyed()) return;
         hiddenByFullscreen = false;
         hiddenByUser = false;
-        panel.reset();
+        if (window.webContents.isLoading()) return;
         window.showInactive();
         console.log(`[fullscreen] shown (${source})`);
       };
@@ -391,7 +387,11 @@ if (!gotLock) {
       onFullscreen = (active: boolean): void => {
         if (window.isDestroyed()) return;
         if (active) {
-          if (!window.isVisible() || hiddenByUser) return;
+          if (hiddenByUser) return;
+          if (!window.isVisible()) {
+            hiddenByFullscreen = true;
+            return;
+          }
           hidePill();
           if (hooks) {
             dev()?.onFullscreen(hooks, true, window, {
@@ -458,7 +458,11 @@ if (!gotLock) {
       };
 
       tray = createTray(
-        () => openPanel('settings'),
+        () => {
+          if (!win || win.isDestroyed()) return;
+          if (!win.isVisible()) showPill('tray');
+          openPanel('settings');
+        },
         () => resetPosition(),
         () => trayToggle(),
         () => hideFromTray(),
@@ -471,9 +475,10 @@ if (!gotLock) {
         settings.shortcut = hotkey;
         saveSettings(settings);
       }
-      if (hotkey === 'Alt+Space') console.log('[hotkey] Alt+Space');
-      else if (hotkey) console.log(`[hotkey] ${hotkey} (Alt+Space taken)`);
-      else console.error('[hotkey] registration failed');
+      if (hotkey) {
+        const preferred = settings.shortcut || DEFAULT_HOTKEY;
+        console.log(`[hotkey] ${hotkey}${hotkey !== preferred ? ` (${preferred} taken)` : ''}`);
+      } else console.error('[hotkey] registration failed');
 
       ipcMain.on(IPC.windowDragStart, (event, x: unknown, y: unknown) => {
         const point = readPoint(x, y);
@@ -526,7 +531,7 @@ if (!gotLock) {
       });
 
       ipcMain.handle(IPC.filesCopy, async (event, payload: unknown): Promise<CopyResult> => {
-        if (event.sender !== window.webContents) return { ok: false, count: 0, error: 'untrusted sender' };
+        if (event.sender !== window.webContents) return { ok: false, error: 'untrusted sender' };
         const data = payload as { paths?: unknown; source?: unknown } | null;
         const source = data?.source === 'row' || data?.source === 'all' ? data.source : null;
         const requested = Array.isArray(data?.paths)
@@ -535,16 +540,16 @@ if (!gotLock) {
         const paths = shelf.canonical(requested);
         if (!source || !paths) {
           console.error(`[files] copy rejected source=${source} requested=${requested.length}`);
-          return { ok: false, count: 0, error: 'paths must come from the shelf' };
+          return { ok: false, error: 'paths must come from the shelf' };
         }
         try {
           await bridge.copy(paths);
           console.log(`[files] copy=${paths.length} source=${source} ok=true`);
-          return { ok: true, count: paths.length };
+          return { ok: true };
         } catch (error) {
           const message = error instanceof Error ? error.message : String(error);
           console.error(`[files] copy=${paths.length} source=${source} ok=false ${message}`);
-          return { ok: false, count: 0, error: message };
+          return { ok: false, error: message };
         }
       });
 
@@ -682,11 +687,16 @@ if (!gotLock) {
         if (!panel.open) applyWindowShape(window);
       });
 
-      ipcMain.on(IPC.panelRequestOpen, () => openPanel());
-      ipcMain.on(IPC.panelCollapsed, () => {
+      ipcMain.on(IPC.panelRequestOpen, (event) => {
+        if (event.sender !== window.webContents) return;
+        openPanel();
+      });
+      ipcMain.on(IPC.panelCollapsed, (event) => {
+        if (event.sender !== window.webContents) return;
         panel.collapsed();
       });
-      ipcMain.on(IPC.panelTiming, (_event, ms: number, reduced: boolean) => {
+      ipcMain.on(IPC.panelTiming, (event, ms: number, reduced: boolean) => {
+        if (event.sender !== window.webContents) return;
         console.log(`[panel] open ${ms}ms reduced=${reduced}`);
       });
       if (hooks) {

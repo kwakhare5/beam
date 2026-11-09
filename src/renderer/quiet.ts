@@ -1,4 +1,4 @@
-export const QUIET_AFTER = 20000;
+export const QUIET_AFTER = 10000;
 export const QUIET_RETURN = 2000;
 
 export class QuietTimer {

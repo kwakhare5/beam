@@ -10,7 +10,14 @@ internal static class Protocol
     {
         lock (Gate)
         {
-            Console.Out.WriteLine(line.ToJsonString());
+            try
+            {
+                Console.Out.WriteLine(line.ToJsonString());
+            }
+            catch
+            {
+                // stdout can close during shutdown; stdin EOF ends the process.
+            }
         }
     }
 

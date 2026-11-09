@@ -68,15 +68,13 @@ export class FileShelf {
     const api = this.api();
     if (!api) return;
     let paths: string[] = [];
-    let readFailed = false;
     try {
       paths = files.map((file) => api.getPathForFile(file)).filter((path) => path.length > 0);
     } catch (error) {
-      readFailed = true;
       console.error('[files] path read failed', error);
     }
     if (!paths.length) {
-      if (readFailed) this.status('Add failed');
+      this.status('Add failed');
       return;
     }
     this.add(paths);
@@ -114,25 +112,35 @@ export class FileShelf {
   async remove(path: string): Promise<void> {
     const api = this.api();
     if (!api) return;
-    const result = await api.removeFile(path);
-    if (!result.ok) {
+    try {
+      const result = await api.removeFile(path);
+      if (!result.ok) {
+        this.status('Remove failed');
+        return;
+      }
+      this.apply(result.files);
+      this.undo.arm(path);
+    } catch (error) {
+      console.error('[files] remove failed', error);
       this.status('Remove failed');
-      return;
     }
-    this.apply(result.files);
-    this.undo.arm(path);
   }
 
   async clear(): Promise<void> {
     const api = this.api();
     if (!api) return;
-    const result = await api.clearFiles();
-    if (!result.ok) {
+    try {
+      const result = await api.clearFiles();
+      if (!result.ok) {
+        this.status('Clear failed');
+        return;
+      }
+      this.undo.clear();
+      this.apply(result.files);
+    } catch (error) {
+      console.error('[files] clear failed', error);
       this.status('Clear failed');
-      return;
     }
-    this.undo.clear();
-    this.apply(result.files);
   }
 
   status(text: string): void {
@@ -177,7 +185,7 @@ export function bindDropTarget(
 
   window.addEventListener('dragleave', (event) => {
     if (!hasFiles(event)) return;
-    depth = Math.max(0, depth - 1);
+    depth = event.relatedTarget === null ? 0 : Math.max(0, depth - 1);
     if (depth === 0) showShelf();
   });
 
@@ -187,6 +195,7 @@ export function bindDropTarget(
   });
 
   window.addEventListener('drop', (event) => {
+    if (!hasFiles(event)) return;
     event.preventDefault();
     depth = 0;
     showShelf();

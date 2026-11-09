@@ -74,7 +74,7 @@ internal static class FileClipboard
         return true;
     }
 
-    public static byte[] BuildDropFiles(IReadOnlyList<string> paths)
+    private static byte[] BuildDropFiles(IReadOnlyList<string> paths)
     {
         var text = string.Join('\0', paths) + "\0\0";
         var bytes = new byte[DropFilesSize + Encoding.Unicode.GetByteCount(text)];

@@ -1,6 +1,6 @@
 import type { TimerSnapshot } from '../shared/ipc';
 
-export type TimerAlert = { id: number; minutes: number };
+type TimerAlert = { id: number; minutes: number };
 
 export class BeamTimer {
   private phase: TimerSnapshot['phase'] = 'idle';
@@ -21,7 +21,6 @@ export class BeamTimer {
       phase: this.phase,
       minutes: this.minutes,
       remainingMs: this.phase === 'running' ? Math.max(0, this.deadline - Date.now()) : 0,
-      deadline: this.phase === 'running' ? this.deadline : 0,
       id: this.id,
       alert
     };

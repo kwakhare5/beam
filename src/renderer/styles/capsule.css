@@ -115,6 +115,16 @@
   border-color: var(--border-hover);
 }
 
+.pill[data-state='done']:hover,
+.pill[data-state='done'][data-hover='true'] {
+  border-color: var(--primary-text);
+}
+
+.pill[data-state='error']:hover,
+.pill[data-state='error'][data-hover='true'] {
+  border-color: var(--destructive);
+}
+
 .pill[data-state='drag'] {
   border-color: var(--primary-text);
   border-style: dashed;
