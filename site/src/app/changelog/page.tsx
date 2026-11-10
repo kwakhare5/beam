@@ -1,13 +1,10 @@
-import type { Metadata } from 'next';
 import Link from 'next/link';
 import { StarLogo } from '../../components/brand';
+import { pageMetadata } from '../../lib/page-meta';
 
 const REPO = 'https://github.com/kwakhare5/beam';
 
-export const metadata: Metadata = {
-  title: 'changelog',
-  description: 'What changed in the beam preview, newest first.'
-};
+export const metadata = pageMetadata('changelog', 'What changed in the beam preview, newest first.', '/changelog');
 
 const ENTRIES = [
   {

@@ -1,8 +1,10 @@
 import type { Metadata, Viewport } from 'next';
+import { Analytics } from '@vercel/analytics/next';
+import { siteGraph } from '../components/structured-data';
 import './globals.css';
 
 const site = 'https://beamm.vercel.app';
-const title = 'beam. — one small bar for music, files, and time.';
+const title = 'beam. — a free Windows 11 bar for music, files, and time.';
 const description =
   'A tiny Windows 11 bar above your taskbar: live music controls, a file shelf, a countdown, and the month. Offline, one click away, never in the way.';
 
@@ -10,7 +12,6 @@ export const metadata: Metadata = {
   metadataBase: new URL(site),
   title: { default: title, template: '%s — beam.' },
   description,
-  alternates: { canonical: '/' },
   icons: { icon: '/mascot.svg' },
   openGraph: {
     type: 'website',
@@ -44,6 +45,11 @@ export default function RootLayout({
           Skip to content
         </a>
         {children}
+        <script
+          type="application/ld+json"
+          dangerouslySetInnerHTML={{ __html: JSON.stringify(siteGraph).replace(/</g, '\\u003c') }}
+        />
+        <Analytics />
       </body>
     </html>
   );

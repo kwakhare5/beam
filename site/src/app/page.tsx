@@ -1,8 +1,14 @@
 import Link from 'next/link';
+import type { Metadata } from 'next';
 import { ArrowUpRight, Plus } from 'lucide-react';
 import { FAQ, FEATURES, REPO } from '../content/site';
 import { HandArrow, StarLogo } from '../components/brand';
+import { faqGraph } from '../components/structured-data';
 import { LiveDemo } from '../components/live-demo';
+
+export const metadata: Metadata = {
+  alternates: { canonical: '/' }
+};
 
 export default function HomePage() {
   return (
@@ -45,9 +51,9 @@ export default function HomePage() {
 
       <main id="content" className="mx-auto w-full max-w-4xl px-5">
         <section className="pb-10 pt-16 sm:pt-20">
-          <p className="text-[15px] text-muted">A Windows 11 app that sits above your taskbar.</p>
+          <p className="text-[15px] text-muted">Beam is a free, offline Windows 11 app that sits above your taskbar.</p>
 
-          <h1 className="relative mt-4 inline-block text-[clamp(2.2rem,5.6vw,3.9rem)] font-semibold leading-[1]">
+          <h1 className="relative mt-8 inline-block text-[clamp(2.2rem,5.6vw,3.9rem)] font-semibold leading-[1] sm:mt-9">
             meet beam.
             <StarLogo
               size={56}
@@ -215,6 +221,15 @@ export default function HomePage() {
             <span>© 2026 Karan · built in public</span>
           </div>
           <div className="flex flex-wrap items-center gap-x-5 gap-y-2">
+            <Link href="/about" prefetch={false} className="py-1 transition-colors hover:text-ink">
+              about
+            </Link>
+            <Link href="/press" prefetch={false} className="py-1 transition-colors hover:text-ink">
+              press
+            </Link>
+            <Link href="/privacy" prefetch={false} className="py-1 transition-colors hover:text-ink">
+              privacy
+            </Link>
             <a href={REPO} target="_blank" rel="noopener noreferrer" className="py-1 transition-colors hover:text-ink">
               github
             </a>
@@ -243,6 +258,10 @@ export default function HomePage() {
           </div>
         </div>
       </footer>
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(faqGraph).replace(/</g, '\\u003c') }}
+      />
     </div>
   );
 }
