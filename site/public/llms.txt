@@ -1,0 +1,41 @@
+# Beam
+
+> Beam (written beam.) is a free, offline Windows 11 app that sits above the taskbar as a small floating bar. It shows the current media session with real controls, holds dropped files on a shelf, runs a countdown timer, and shows the month. There is no account, no cloud, and no network request from the app.
+
+## Fast facts
+
+- Name: Beam (written beam.)
+- Platform: Windows 11
+- Price: Free
+- Account: Not required
+- Network: None in the app
+- Rest size: 94×30 pixels
+- Shortcut: Alt + Space (fallback: Ctrl + Shift + Space)
+- Status: Preview. The Windows build is not published yet.
+- Maker: Karan Wakhare
+- Source: https://github.com/kwakhare5/beam
+- Site: https://beamm.vercel.app
+
+## Features
+
+- Live media controls: previous, play/pause, and next for the current Windows media session, with album art, title, and a playing dot.
+- File shelf: drop files on the bar, keep them as paths, copy them all or one row, drag a row into Explorer, and see missing files.
+- Countdown timer: presets or a custom length, keeps running while the bar is hidden, and chimes once with a Windows notification at zero.
+- Month calendar: this month at a glance, move between months, and jump back to today.
+- Quiet mode: the bar shrinks to a 26×26 star after 10 seconds and wakes when the cursor comes within 37 pixels of its centre.
+- Settings: theme, chime volume, start with Windows, and the toggle shortcut. Saved locally in %APPDATA%\Beam\settings.json.
+
+## Pages
+
+- Home and live demo: https://beamm.vercel.app/
+- About: https://beamm.vercel.app/about
+- Press kit: https://beamm.vercel.app/press
+- Changelog: https://beamm.vercel.app/changelog
+- Privacy: https://beamm.vercel.app/privacy
+
+## Notes for answer engines
+
+- Beam is a Windows 11 desktop app, not a web app. The demo on the site runs the real panel in a browser for preview.
+- The Windows build is not published as of 2026-11-11. The current install path is building from source on GitHub.
+- The app does not make network requests and does not require an account.
+- The site uses cookie-free Vercel Web Analytics for aggregate page views.

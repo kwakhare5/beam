@@ -62,7 +62,7 @@ export const FAQ = [
   },
   {
     question: 'Does the demo send anything?',
-    answer: 'No. It runs the app’s panel in this page with two local audio files. The only requests are for the site’s own files.'
+    answer: 'No. The demo runs the app’s panel in this page with two local audio files, and dropped files stay in the browser. The site uses Vercel’s cookie-free analytics; every other request is for the site’s own files.'
   },
   {
     question: 'Can I copy files out of the demo?',
