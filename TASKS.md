@@ -8,18 +8,19 @@
 
 **Done before the order:** 0.1 scaffold, 0.2 budget (90 MB / 0.035% CPU), 0.3 helper ping (6.3 MB), 0.4a live SMTC + PNG art, 0.4b CF_HDROP clipboard. Plus UI work outside the phase order: the app UI system, the canonical preview, the focus/cleanup pass (cards 21–35), the 2026-10-28 cleanup (card 43), the segmented-tab redesign (cards 44–54), the 100/136 capsule pass (cards 55–56), the 2026-10-29 audit fix pass (card 64), and the 6% capsule scale to 94×30 / 128×30 in a 136×42 window (card 67).
 
-## Audit snapshot — 2026-11-07 (read-only)
+## Audit snapshot — 2026-11-10
 
-The boxes were not changed by this audit. Read this with the notes on each task.
+The boxes reflect the 2026-11-10 code and gate. Read this with the notes on each task.
 
 - **Done and previously proven:** 1.1, 1.2, 1.3, 1.4 (single display), 1.5, 1.6, 0.5, 1.9, 3.1 (historical run), 3.2, 3.3, 3.4, 3.5, 2.1, 2.2, 2.3.
-- **Built and still unchecked:** 9.1, 9.2, 9.4, 9.7, 9.8, 9.9, timer (4.1/4.2/4.4), calendar (5.1/5.2/5.4), and last-used tab notes. 2.4, 9.3, 9.5, and 9.6 are now ticked by R1; 1.7, 1.8, and 7.1 are ticked by R6.
-- **Partial:** 2.5 has a no-art fallback and null-session debounce; paused/closed-player states are unproven. 4.3 has the done face but no chime or Windows banner.
+- **Built and still unchecked:** 9.2, 9.4, 9.7, 9.8, and 9.9. 9.1 is retired as superseded. 2.4, 9.3, 9.5, 9.6, and 6.1 are ticked; 1.7, 1.8, and 7.1 are ticked by R6; timer 4.1–4.5 and 9.1 are closed.
+- **Partial:** 2.5 has a no-art fallback and null-session debounce; paused/closed-player states are unproven. 9.2's picker, 9.4's quit confirm, and 9.7/9.8/9.9 have outside-suite or partial proof.
 - **Not built:** 5.3 midnight drift and a complete packaged build; R7–R9 remain.
 - **Gate history:** before R1, check 16 was red (synthetic CDP drag), 17 depended on Explorer keeping the foreground, 24 needed two live players, and 25 could not cover quiet and chevron in one run. R1 resolved all four; see the result line above.
 - **Doc conflict:** resolved 2026-11-07 by R6: 6.2 is retired and ADR-0012 last-used wins in the code.
 - **R1 result (2026-11-07):** `.\verify.ps1` exits 0, 25/25, no SKIPs. 2.4, 9.3, 9.5, and 9.6 are ticked. The real drop exposed a pill title DOM-churn bug (fixed); checks 11 and 20 were stale (quit moved to main; the 5s Undo status precedes the warning) and are corrected.
 - **R2 result (2026-11-07):** `.\verify.ps1` exits 0, 27/27, no SKIPs (checks 26–27). R3 result (same day): exits 0, 29/29; 4.1–4.5 are ticked by checks 25, 28, and 29. The timer deadline, chime, notification, and hidden completion are no longer missing.
+- **Audit cleanup (2026-11-10):** removed dead payload fields and exports, simplified the panel data and settings defaults, fixed the fullscreen-at-launch, tray-Settings, panel-reopen, seek-cancel, and file-action error paths, and corrected the stale docs. `.\verify.ps1` exits 0, 30/30, `SKIP summary: none`, `ALL CHECKS PASSED`; typecheck, app build, helper build, and site build pass.
 
 ## R. Codebase repair (approved 2026-11-07)
 
@@ -44,8 +45,8 @@ The boxes were not changed by this audit. Read this with the notes on each task.
   - Wire 7.1's five rows, tray Settings, startup toggle, hotkey capture plus fallback notice, theme switch. Persist and prove save/restart, registry entry and cleanup, hotkey toggle. Ticks 1.7, 1.8, 7.1; retires 6.2 against ADR-0012.
   - _Proved 2026-11-07:_ `.\verify.ps1` exit 0, 30/30, 5 music-active SKIPs, `ALL CHECKS PASSED`. Check 30 clicks the real controls: the theme switch logs `[settings] test theme {"ok":true,"theme":"light","applied":"light"}`, two + clicks reach 80%, the keycaps capture Ctrl+Alt+B and it opens the panel with real keystrokes, the startup switch writes and removes the HKCU `Run\Beam` value, and a restart loads `theme=light volume=80 shortcut=Ctrl+Alt+B startup=false` with `[hotkey] Ctrl+Alt+B`. Settings rows are live; tray Settings opens the tab. Two bugs found by the check are fixed: the delayed post-show re-anchor overwrote `pillPosition` with the panel rect when it fired after the panel opened (now skipped while the panel is open or dragging), and `rebinding` was not copied into the rendered settings data, so `Press keys…` never showed.
 - [x] **U1 Pill scale, near wake, audit fixes** — *Depends on: R6.*
-  - Pill: 20px mark/art, music/paused rest 108, quiet 26×26 with an 18px star. Near: main polls the real cursor at 4Hz, wakes quiet within 37px, and returns it 2s after the cursor leaves; near never reveals actions. Audit: light red `#b42318`, `--primary-text` for the bar fill and thin gold strokes, one 2px focus ring with a 2px offset, 8px control radii, Settings as a labeled fifth tab, sentence-case buttons, DESIGN truth pass. Prove with the full gate.
-  - _Proved 2026-11-08:_ `.\verify.ps1` exit 0, 30/30, no skips, `ALL CHECKS PASSED`. Check 25 measured `quiet {"ok":true,"state":"quiet","w":26,"h":26}`, a real cursor move to 32px from the centre woke it (`near {"ok":true,"state":"idle","w":94}`), it returned to quiet 2s after the cursor left (`nearleave ... "ms":2109`), and the hover wake still worked. Typecheck and build pass; preview measured 94 idle, 108 music rest, 128 hover, 26 quiet, and five labeled tabs with no overflow.
+  - Pill: 20px mark/art, music/paused rest 108, quiet 26×26 with an 18px star. Near: main polls the real cursor at 4Hz, wakes quiet within 37px, and returns it 2s after the cursor leaves; near never reveals actions. Audit: light red `#a61b12`, `--primary-text` for the bar fill and thin gold strokes, one 2px focus ring with a 2px offset, 8px control radii, a compact Settings button beside four equal content tabs, sentence-case buttons, DESIGN truth pass. Prove with the full gate.
+  - _Proved 2026-11-08:_ `.\verify.ps1` exit 0, 30/30, no skips, `ALL CHECKS PASSED`. Check 25 measured `quiet {"ok":true,"state":"quiet","w":26,"h":26}`, a real cursor move to 32px from the centre woke it (`near {"ok":true,"state":"idle","w":94}`), it returned to quiet 2s after the cursor left (`nearleave ... "ms":2109`), and the hover wake still worked. Typecheck and build pass; preview measured 94 idle, 108 music rest, 128 hover, 26 quiet, four labeled tabs plus the compact Settings button with no overflow.
 - [x] **U2 Music panel layout and seeking** — *Depends on: U1.*
   - Right-column player (148px art left; name, artist with the status pip, seek slider, and transports right). Real seek through the helper (`TryChangePlaybackPositionAsync`), drag/click/arrow keys, silent snap-back on refusal. Prove the helper against a real session before UI binding; full gate; docs.
   - _Proved 2026-11-08:_ `.\verify.ps1` exit 0, 30/30, no skips, `ALL CHECKS PASSED`: `PASS music tab ('Beam verify chrome beam-a.wav' art 148x148, slider seek 70% -> bar 420s / player 420s of 600s, bar advancing 3 s in 3s, controls prev/toggle/next, tab play/pause changed and restored, 0 network requests)`. The seek click moves both the rendered bar and the real SMTC player to 70%; the refusal repaint path is wired but no real player refused during the run. The first gate attempt failed check 8 at 174ms with the preview server and headless Chrome open; the clean rerun passed at 149ms with the check unchanged.
@@ -55,7 +56,7 @@ The boxes were not changed by this audit. Read this with the notes on each task.
 - [ ] **R7 Remaining proofs** — *Depends on: C1.*
   - Calendar midnight drift (5.3), locale week start and year boundaries, multi-monitor and 100/150% if hardware allows (otherwise mark blocked, do not tick). Windows 10 stays unproven.
 - [ ] **R8 Packaging** — *Depends on: R7.*
-  - `npm run dist` builds main, preload, renderer, and helper; outputs to `release/build`; verify asserts `app.asar`, helper, icon, and a portable launch. No publish until auth and a clean-profile checklist.
+  - `npm run dist` builds main, preload, renderer, and helper; outputs to `release` (electron-builder.yml); verify asserts `app.asar`, helper, icon, and a portable launch. No publish until auth and a clean-profile checklist.
 - [ ] **R9 Docs and final gate** — *Depends on: R8.*
   - Update ARCHITECTURE/PRD/DESIGN/AGENTS/README to code truth; add superseded banners to stale ADRs; retire timer-priority language; fix site copy claims; final `.\verify.ps1` exit 0 and site build.
 
@@ -63,9 +64,9 @@ The boxes were not changed by this audit. Read this with the notes on each task.
 
 These run before the phase tasks, as previous UI passes did. The canonical preview keeps every state; the app only shows what works. 2.4/2.5 proof is part of 9.9.
 
-- [ ] **9.1 Honest surfaces** — *Depends on: 2.3.*
+- [x] **9.1 Honest surfaces** — *Depends on: 2.3.*
   - Hide Timer, Calendar, Settings, and the pill timer/done actions in the app until their engines land. Keep them in `showcase/app-preview.html`. No dead tab or dead control in the app.
-  - _Superseded 2026-11-04 by ADR-0012: Timer and Calendar are live and visible; only Settings stays out until 7.1._
+  - _Superseded 2026-11-04 by ADR-0012; all five tabs are now live and Settings landed at 7.1._
 - [ ] **9.2 Add files picker** — *Depends on: 3.1.*
   - Native `dialog.showOpenDialog` through preload/main; add picked paths to the same shelf; empty state and action row both work. A drop while the panel is open refreshes the Files list.
 - [x] **9.3 Panel flow** — *Depends on: 1.3.*
@@ -74,8 +75,8 @@ These run before the phase tasks, as previous UI passes did. The canonical previ
 - [ ] **9.4 Feedback and safety** — *Depends on: 3.3, 3.5.*
   - Visible status for copy/add/remove failures; 5s Undo after a row remove; confirm Quit when the shelf is non-empty; a `Connection lost` pill state when the helper dies; tray Hide.
 - [x] **9.5 Quiet idle and chevron** — *Depends on: 1.5, 2.2.*
-  - 30×30 star-only quiet after 20s idle; 94×30 on hover; 2s return; idle-only. A 16px chevron in the music hover row opens the panel.
-  - _Proved 2026-11-07:_ check 25 quiet phase read 30x30 and woke on hover; chevron phase opened the panel with live music.
+  - 26×26 star-only quiet after 10s idle; 94×30 on near or hover; 2s return; idle-only. A 16px chevron in the music hover row opens the panel.
+  - _Proved 2026-11-08 (U1):_ check 25 read 26×26 quiet, woke it from a real cursor at 32px, measured a 2109ms return, and the chevron phase opened the panel with live music.
 - [x] **9.6 Hit area** — *Depends on: 9.5.*
   - Shape the window to the visible pill with a 6px shadow halo so the transparent margins click through. Re-test drag, hover, panel, and the real-mouse checks.
   - _Proved 2026-11-07:_ check 25's `WindowFromPoint` hit test: pill center belongs to Beam, the 16px margin does not; drag, hover, and panel checks stayed green.
@@ -83,10 +84,10 @@ These run before the phase tasks, as previous UI passes did. The canonical previ
   - Files rows start at the top with actions pinned bottom. More breathing room around the Music progress block.
 - [ ] **9.8 Keyboard and accessibility** — *Depends on: 1.6.*
   - Pill role, name, Enter, focus ring, live region; focus restoration on panel close; Settings tab inside the tablist; calendar focus style. Pull 1.8 forward.
-  - _Audit 2026-11-07: built and proven outside the suite. Settings is intentionally absent from the tablist until 7.1; this task's wording needs that correction._
+  - _Audit 2026-11-07: built and proven outside the suite; Settings is now a compact fifth button (7.1). Checks 25/30 cover the focus path._
 - [ ] **9.9 Proof** — *Depends on: 9.1–9.8.*
   - Add runtime checks for the quiet state, chevron, auto-pick, Esc/reopen, margin click-through, Add files, Undo, and quit confirm. Prove 2.4 and 2.5. `.\verify.ps1` exits 0.
-  - _Built 2026-11-04:_ check 25 runs a `BEAM_UI_TEST` app and asserts 94×30 rest, shelf add/undo, files auto-pick, last-used reopen, centered 5-minute timer, calendar nav, Esc, chevron, 30×30 quiet + wake, Clear All, and a real `WindowFromPoint` margin hit test. _2026-11-07: the suite is green and both media states are covered (quiet phase and chevron phase), but quit confirm, the timer done face, chime, banner, and the native Add files dialog remain uncovered._
+  - _Built 2026-11-04:_ check 25 runs a `BEAM_UI_TEST` app and asserts 94×30 rest, shelf add/undo, files auto-pick, last-used reopen, centered 5-minute timer, calendar nav, Esc, chevron, 26×26 quiet + wake, Clear All, and a real `WindowFromPoint` margin hit test. _2026-11-08: the suite is green and both media states are covered (quiet phase and chevron phase); timer completion, chime, and banner are covered by checks 28–29. Quit confirm and the native Add files dialog remain uncovered._
 
 ---
 
@@ -99,8 +100,8 @@ These run before the phase tasks, as previous UI passes did. The canonical previ
   - Pill does not take foreground on show. Panel closes without activating another app wrongly.
   - _Verify (proved 2026-10-29): the foreground window handle is unchanged ~1s after launch and Beam's own handle never becomes foreground; this replaced the Notepad typing test, which the Store Notepad could not run from a script.
 - [x] **1.6 Tray** — *Depends on: 1.1.*
-  - Icon near clock. Menu: Settings, Reset Position, Quit. Quit exits the process cleanly, helper included. Built; Settings stays disabled until the Settings screen lands at 7.1, and Reset needs a moved window from 1.4.
-  - _Verify (proved 2026-10-29): Quit exits the app and the helper. Settings is disabled until 7.1, and Reset Position is wired but unproven until 1.4 gives the window a moved position to reset from.
+  - Icon near clock. Menu: Settings, Reset Position, Hide, Quit. Quit exits the process cleanly, helper included; Settings opens the live Settings tab.
+  - _Verify (proved 2026-10-29): Quit exits the app and the helper. Check 12 proves Reset Position returns the pill to the anchor; check 30 drives the Settings tab.
 - [x] **1.3 Expand and collapse** — *Depends on: 1.6.*
   - 150ms screen-aware expand to the 452×316 window (420×284 panel, 16px shadow margin). Esc, outside click, and tray click all collapse it.
   - _Verify:_ measured animation duration 130–170ms; all three close paths work.
@@ -148,8 +149,8 @@ These run before the phase tasks, as previous UI passes did. The canonical previ
   - Play/Pause, Prev, Next fade in on hover. Fixed window size.
   - _Verify (proved 2026-11-02): check 22 hovers the live pill, asserts the transport overlay at opacity 1 with the title at 0, and clicks each button with injected mouse input; play/pause flipped playing true→false, Next moved `Allah Maaf Kare`→`Naah`, and Previous moved it back. Check 12 now presses the pill's left padding because the hover transports cover the center._
 - [x] **2.3 Music tab** — *Depends on: 1.3, 2.1.*
-  - 148px square art, full metadata, read-only position bar with elapsed/total, same controls. No seek control (out of scope).
-  - _Verify (proved 2026-11-02): check 23 opens the Music tab on the live Chrome track 'Pyar Ki' and asserts 148×148 art from a data URL, title and artist, a read-only DIV progressbar with no slider or tab stop, elapsed/total labels, and all three transports; the bar read 1s/228s and advanced 3s in 3s, and the tab play/pause flipped and restored real playback. CDP `Network.enable` saw 0 http(s) requests._
+  - 148px square art, full metadata, real seek slider with elapsed/total, and the same controls. Pointer drag/click, ←/→ 5s, Home/End.
+  - _Verify (proved 2026-11-08): check 23 opens the Music tab and asserts 148×148 art from a data URL, title and artist, the seek slider, elapsed/total labels, and all three transports; clicking 70% moved the bar and the real player to 420s of 600s, the bar advanced 3s in 3s, tab play/pause changed and restored playback, and CDP `Network.enable` saw 0 http(s) requests._
 - [x] **2.4 Session picking** — *Depends on: 2.1.*
   - Two players at once → last-touched wins; switching apps in the media popup switches Beam.
   - _Verify:_ Spotify + browser tab, toggle foreground, pill follows.
@@ -167,8 +168,7 @@ These run before the phase tasks, as previous UI passes did. The canonical previ
   - _Proved 2026-11-07:_ check 25 starts the 5-minute preset through a real click; check 28 starts the same preset through the panel and reads `0:05` at the test scale.
 - [x] **4.2 Live countdown on the pill** — *Depends on: 4.1.*
   - `mm:ss` under 60 min, `h:mm:ss` above. Main owns the deadline and pushes `beam:timer:state`; the renderer only displays it. Never a decrementing counter.
-  - _Audit 2026-11-07: the countdown uses a deadline, but it lives in the renderer (`timerDeadline` in `src/renderer/renderer.ts`), not main. Hidden-window completion is not covered._
-  - _Proved 2026-11-07 (R3): `BeamTimer` reads the deadline on every 200ms tick, pushes only when the ceiling second changes, and check 29 completes while the window is hidden. Sleep-across-the-machine is still unproven._
+  - _Proved 2026-11-07 (R3): the earlier renderer deadline was replaced by `BeamTimer` in main; it reads the deadline on every 200ms tick, pushes only when the ceiling second changes, and check 29 completes while the window is hidden. Sleep-across-the-machine is still unproven._
 - [x] **4.3 Done state** — *Depends on: 4.2.*
   - Chime plays once, Windows banner fires; the pill reads Done with a gold check and gold border (no digits, no glow, no mascot swap).
   - _Audit 2026-11-07: the done face is built; no chime or `Notification` code exists yet._
@@ -201,13 +201,9 @@ These run before the phase tasks, as previous UI passes did. The canonical previ
 
 ## G. Glue and settings
 
-- [ ] **6.1 Auto-pick on open** — *Depends on: 2.3, 4.2.*
-  - Timer running → Timer. Else music playing → Music. Else last-used tab. The renderer decides from the state it already holds; main sends no tab commands.
-  - _Audit 2026-11-07: ADR-0012 changed this to last-used first; `pickTab` follows the ADR. This task and 6.2 conflict with the approved design._
-  - _Verify:_ three scenarios produce three correct tabs.
-- [x] **6.2 Priority** — *Depends on: 6.1.*
-  - Both running → Timer wins.
-  - _Retired 2026-11-07 by R6 against ADR-0012:_ the panel opens to the last feature used; music and Timer do not preempt each other. The old audit note said this was unimplemented.
+- [x] **6.1 Auto-pick on open** — *Depends on: 2.3, 4.2.*
+  - Last-used tab first, then music → files → music. The renderer decides from the state it already holds; main sends no tab commands.
+  - _Proved 2026-11-07:_ check 25 asserts files auto-pick, last-used reopen, and the live-music chevron phase. ADR-0012 replaced the old timer-priority rule.
 - [x] **1.8 Global hotkey** — *Depends on: 1.6.*
   - `Alt+Space` registers; on failure try `Ctrl+Shift+Space` and tell the user. Rebindable in settings.
   - _Built and proved 2026-11-07 (R6):_ default `Alt+Space`, `Ctrl+Shift+Space` fallback logged and shown as the active chord in Settings. A click on the keycaps captures the next chord, rejects chords without a modifier or with no key, registers it, and rolls back to the old chord with `In use` if Windows refuses. Check 30 clicked the keycaps, captured Ctrl+Alt+B, pressed it with real keystrokes, and the restart registered the saved chord.
@@ -222,8 +218,8 @@ These run before the phase tasks, as previous UI passes did. The canonical previ
 ## H. Proof
 
 - [ ] **8.1 `verify.ps1` full suite** — *Depends on: every task above.*
-  - Typecheck, build, helper build, launch, window exists at correct height, hotkey registered, timer counts down, clipboard holds 3 files and still pastes after a forced helper restart, no outbound TCP from the app's PID, Electron under 130 MB, helper under 60 MB, total printed, CPU within budget.
-  - _Audit 2026-11-07: no hotkey check, no timer check in 8.1's sense, no paste after a forced helper restart, no Electron/total/CPU budget check. The suite has 27 checks and the 2026-11-07 R2 run is green; check 26 only proves the restart and pong._
+  - Typecheck, build, helper build, launch, anchor, panel, files, music, timer, Settings, helper restart, and UI states. The suite has 30 checks.
+  - _Audit 2026-11-10: still missing a paste-after-helper-restart proof, an outbound-TCP assertion, Electron/total/CPU budget checks, calendar midnight drift, and multi-monitor/100–150% scaling._
   - _Verify:_ `.\verify.ps1` exits 0 and prints each check.
 - [ ] **8.2 Packaged build** — *Depends on: 8.1.*
   - Installer or portable exe launches on a clean profile.

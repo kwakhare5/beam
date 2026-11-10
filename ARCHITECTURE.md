@@ -29,7 +29,7 @@ No network. No database. No server. Four parts, three seams.
 
 ### Current vs target (2026-10-29)
 
-Implemented: Electron shell with single-instance lock, the 136×42 window anchored above the taskbar with a 94×30 idle capsule (music and paused rest at 108×30, quiet at 26×26), tray, panel open/collapse at 452×316 with a ~150ms transform, pointer-captured window drag with a saved position (`settings.ts`), the idle star dim asserted from computed style, a 4Hz cursor poll that wakes the quiet nub within 37px of the pill centre and returns it 2s after the cursor leaves, hide-on-fullscreen with tray restore, a file drop shelf (paths only, deduped, 50 cap, pill count), live Files rows with copy and drag-out, the live music pill with prev / play-pause / next transports, a live Music tab with 148px art and a right-column player with a real seek slider, a main-owned timer (`timer.ts`) with a one-shot chime and Windows notification, the live Timer and Calendar tabs, the live Settings tab (startup, shortcut, volume, theme, reset) as a labeled fifth tab with the tray opening it, a registry-backed startup toggle (`startup.ts`), hotkey rebinding with rollback (`hotkey.ts`), split UI modules/styles, the canonical preview, thirty `verify.ps1` checks (including a real-mouse window drag → restart → reset, a real copy paste and a real row drag-out into Explorer, a real borderless fullscreen window, timer completion while hidden, and a real-click Settings pass through a restart), and `measure.ps1`.
+Implemented: Electron shell with single-instance lock, the 136×42 window anchored above the taskbar with a 94×30 idle capsule (music and paused rest at 108×30, quiet at 26×26), tray, panel open/collapse at 452×316 with a ~150ms transform, pointer-captured window drag with a saved position (`settings.ts`), the idle star dim asserted from computed style, a 4Hz cursor poll that wakes the quiet nub within 37px of the pill centre and returns it 2s after the cursor leaves, hide-on-fullscreen with tray restore, a file drop shelf (paths only, deduped, 50 cap, pill count), live Files rows with copy and drag-out, the live music pill with prev / play-pause / next transports, a live Music tab with 148px art and a right-column player with a real seek slider, a main-owned timer (`timer.ts`) with a one-shot chime and Windows notification, the live Timer and Calendar tabs, the live Settings tab (startup, shortcut, volume, theme, reset) as a compact icon button beside four equal content tabs with the tray opening it, a registry-backed startup toggle (`startup.ts`), hotkey rebinding with rollback (`hotkey.ts`), split UI modules/styles, the canonical preview, thirty `verify.ps1` checks (including a real-mouse window drag → restart → reset, a real copy paste and a real row drag-out into Explorer, a real borderless fullscreen window, timer completion while hidden, and a real-click Settings pass through a restart), and `measure.ps1`.
 
 Built in the helper: stdio client, SMTC read with PNG artwork, CF_HDROP clipboard, fullscreen detection, ping, and test-only session listing plus title/index picks (`music.sessions` / `music.pick`, behind the sessions test flag).
 
@@ -65,7 +65,7 @@ D:\Beam
 ├── measure.ps1               memory/CPU proof
 ├── README.md
 ├── GLOSSARY.md               UI vocabulary
-├── docs/adr/                 0001–0010 UI decisions
+├── docs/adr/                 0001–0012 UI decisions
 ├── PRD.md  DESIGN.md  ARCHITECTURE.md  TASKS.md  AGENTS.md  JOURNAL.md
 ├── scripts/generate-icons.mjs
 ├── src/
@@ -73,7 +73,7 @@ D:\Beam
 │   │   ├── index.ts          app lifecycle, single-instance lock, wiring
 │   │   ├── geometry.ts       pill/panel sizes, anchoring, saved-bounds restore, clamping
 │   │   ├── shelf.ts          MAX_SHELF + Shelf (add, canonical, remove, clear, rows)
-│   │   ├── panel.ts          PanelController (show/hide/collapse/blur/reset + shape)
+│   │   ├── panel.ts          PanelController (show/hide/collapse/blur + shape)
 │   │   ├── music.ts          MusicService (current payload, last-session forwarding)
 │   │   ├── tray.ts           tray icon + menu (Settings, Reset Position, Hide, Quit)
 │   │   ├── hotkey.ts         default/fallback registration, chord validation, rebind with rollback
@@ -114,15 +114,13 @@ D:\Beam
 │   │   ├── quiet.ts          quiet timer
 │   │   ├── settings.ts       settings state, chord capture, rebind
 │   │   └── assets.d.ts       .svg/.woff2 module declarations
-│   └── shared/               (planned)
-│       ├── ipc.ts            channel names + payload types
-│       └── bridge.ts         helper command/event types
+│   └── shared/
+│       └── ipc.ts            channel names + payload types
 ├── native/BeamBridge/        built at 0.3–0.4b: .NET 10 console, stdio JSON lines, ping, SMTC music events + PNG art, CF_HDROP clipboard, 10.8 MB private idle (2026-10-29)
 ├── assets/
 │   ├── mascot/*.svg          shipped
 │   ├── fonts/                InterVariable.woff2 + OFL.txt
-│   ├── tray.ico              shipped (16/20/24/32 PNG entries)
-│   └── chime.wav             (planned) generated, committed
+│   └── tray.ico              shipped (16/20/24/32 PNG entries)
 └── showcase/                 brand lab, never shipped
 ```
 
@@ -168,7 +166,7 @@ Rules: helper never prints anything else to stdout (stderr is for logs). Any mal
 
 ## 5. Seam B — Main ⇄ Renderer (IPC)
 
-All channels prefixed `beam:`. Renderer can call, main can push. The 27 channel names and payload types (`ShelfFile`, `AddResult`, `CopyResult`, `FileChange`, `MusicState`, `HelperState`, `TimerSnapshot`, `SettingsSnapshot`, `SettingsPatch`, `SettingsResult`) live in `src/shared/ipc.ts`; `main/index.ts`, `preload/index.ts`, and the renderer import them, so a channel rename fails the typecheck instead of drifting.
+All channels prefixed `beam:`. Renderer can call, main can push. The 29 channel names and payload types (`ShelfFile`, `AddResult`, `CopyResult`, `FileChange`, `MusicState`, `HelperState`, `TimerSnapshot`, `SettingsSnapshot`, `SettingsPatch`, `SettingsResult`) live in `src/shared/ipc.ts`; `main/index.ts`, `preload/index.ts`, and the renderer import them, so a channel rename fails the typecheck instead of drifting.
 
 | Direction | Channel | Purpose | State |
 |---|---|---|---|
@@ -208,7 +206,7 @@ Spotify changes track
 → Windows raises SMTC event
 → helper fires music.changed {title, artist, art: base64 PNG}
 → main wraps the art as a data URL and sends beam:music:state { title, artist, playing, positionMs, durationMs, art: data URL }
-→ renderer swaps pill title + 24px art + green/amber dot, and feeds the panel's Music tab
+→ renderer swaps pill title + 20px art + green/amber dot, and feeds the panel's Music tab
 ```
 
 The sandboxed renderer cannot read `%TEMP%\Beam\art\`, so main converts the helper's PNG to a `data:image/png;base64` URL per change; a changed track drops any in-flight read. A null session is held for 500ms before the pill leaves the track, because Spotify publishes a null gap between songs. A missing shelf file's danger dot outranks the music dot.
@@ -229,7 +227,7 @@ drop lands on pill → renderer collects paths → beam:files:add
 ```
 pointerdown on the capsule → 4px movement threshold → renderer sends screen coordinates
 → main sets bounds from the pointer delta with the size pinned, clamped to the display work area
-→ drag-end writes { x, y, displayId } to %APPDATA%\Beam\settings.json
+→ drag-end writes { x, y } to %APPDATA%\Beam\settings.json
 → next launch restores it when the rect still intersects a current display, else the primary anchor
 → tray Reset Position clears the saved position and re-anchors above the primary taskbar
 ```
@@ -240,7 +238,7 @@ renderer sends beam:timer:start {minutes} → beam:timer:start sets deadline = n
 → a 200ms ticker reads the deadline and pushes beam:timer:state only when ceil(seconds left) changes
 → renderer patches the pill digits and the open Timer tab; it never owns a clock
 → at 0: the ticker clears itself, sets phase done, pushes one alert:true snapshot
-→ the renderer plays assets/beam-chime.wav once per timer id and acks beam:timer:chimed
+→ the renderer plays src/renderer/assets/beam-chime.wav once per timer id and acks beam:timer:chimed
 → main logs the completion and fires an Electron Notification (tray balloon fallback)
 → hidden or fullscreen: same path, because the window does not own the clock
 ```
@@ -252,7 +250,7 @@ helper's WinEventHook sees a foreground change or the foreground window resize/m
 → compares window rect against monitor bounds → fullscreen.changed
 → a 1s poll catches fullscreen entries that fire no event
 → main hides the window (built 1.9); the tray click shows the pill again without
-  opening the panel or taking focus; the hotkey (1.8) is not built
+  opening the panel or taking focus; the hotkey (1.8) is live and rebindable
 → if Beam hid the window it shows it again on active:false, but not after a user show
 ```
 
@@ -275,12 +273,12 @@ helper's WinEventHook sees a foreground change or the foreground window resize/m
 | 2026-10-29 | UI split into capsule, panel, per-tab, and shared modules; styles split one file per component; every fill is solid (`--control`, `--control-hover`, `--surface-hover`); file badges and status pips are gone | The 437-line tab stylesheet and 313-line controls stylesheet mixed unrelated components, and translucent chips and pips read as glass; solid opaque fills match the Apple-style shell |
 | 2026-10-29 | Capsule is 94×30 at rest and 128×30 on hover inside a 136×42 window | Karan found 100×32 too heavy at 125% display scale; a 6% cut keeps the layout, type scale, and 8px edge padding while shrinking the surface and its margins |
 | 2026-10-27 | Last-touched media session wins | Windows can expose Spotify and a browser at once |
-| 2026-10-27 | Timer beats music when both are active | PRD's contextual rule needs one winner |
+| 2026-10-27 | Timer beats music when both are active (superseded 2026-11-07 by ADR-0012) | PRD's contextual rule needs one winner; the last-used tab now wins instead |
 | 2026-10-27 | One timer at a time, no pause, cancel allowed, max 999 min | Smallest thing that satisfies the PRD |
 | 2026-10-27 | Shelf cap 50 entries, folders allowed, wiped on quit | In-memory by design, matches PRD |
 | 2026-10-27 | Multi-file drag-out is owned by the app, not the helper (revised 2026-10-29) | Electron's `startDrag` handles a `files` list, and Chromium owns the mouse gesture that starts it. A cross-process `DoDragDrop` inside the helper spun at 100% CPU without dropping |
 | 2026-10-27 | Fonts: bundled Inter variable (decision changed 2026-10-28) | Segoe UI was the placeholder; Inter is vendored in `assets/fonts/` |
-| 2026-10-27 | Chime is a generated 1.5s WAV (planned; not committed yet) | No network fetch, no license question |
+| 2026-10-27 | Chime is a generated 0.9s WAV (built 2026-11-07) | No network fetch, no license question |
 | 2026-10-27 | Perf budget read as: under 0.5% avg CPU over 60s idle, under 130 MB private bytes summed across processes | "0% CPU" is not measurable as written |
 | 2026-10-27 | RAM ceiling raised 100 → 130 MB, PRD amended | User accepted the Electron baseline; 100 MB was not realistic |
 | 2026-10-27 | RAM gate runs immediately after scaffolding (task 0.2), before the helper | Failing the budget after the native spike would waste the hardest work; cheapest point to swap stacks is at the empty window |
@@ -310,45 +308,46 @@ helper's WinEventHook sees a foreground change or the foreground window resize/m
 | 2026-10-28 | Capsule state identity: done shows a gold check and gold border; paused shows a play glyph; shelf shows a count with a red pip when a file is missing | Running and done looked identical, paused was invisible at rest, and one missing filename could not represent several files (ADR-0009) |
 | 2026-10-29 | Music states show the 24px album thumbnail (star fallback) and a green/amber dot; paused drops the play glyph. The music track and transport span the panel width, selected content tabs get a 2px gold underline, missing rows drop copy, the timer says Set, and done shows a check + Time’s up | The paused glyph stole 20px from the title, the gold pip read as brand, and the narrow music column squeezed the transport (ADR-0010) |
 | 2026-10-28 | Capsule precedence is drag > timer > music > files > idle | Direct manipulation feedback wins for the moment it lasts; timer still beats music |
-| 2026-10-28 | Music panel shows a read-only position bar, no seeking | Square art plus a position readout fills the panel; SMTC seeking stays out of scope |
+| 2026-10-28 | Music panel shows a read-only position bar, no seeking (superseded 2026-11-08 by U2: real seek slider) | Square art plus a position readout fills the panel; SMTC seeking stayed out of scope until the helper seek path landed |
 | 2026-11-02 | The Music tab advances its read-only bar from the last SMTC position plus a local 1s tick; no helper poll, no network | SMTC publishes position only on session events, so a helper poll would add wakeups; local ticking matches the no-seek scope. Verified at check 23 (bar 1s/228s, +3s in 3s, 0 http(s) requests) |
 | 2026-10-28 | Files rows expose copy and remove on hover; the empty state is a dashed drop well | Task 3.3 already promised per-row copy, and the core action needs a visible target |
 | 2026-10-28 | Settings has five rows including Reset position, with real controls and dividers instead of a row gap | Read-only badges looked interactive; five 44px rows only fit 242px without the gap |
 | 2026-10-28 | Type scale 11/12/13/15/40 and spacing 4/8/12/16 | Five label sizes and three body rhythms made the panel look assembled from different screens |
 | 2026-10-31 | Window drag is renderer pointer capture plus main `setBounds` with the window size pinned | `setPosition` let Windows re-round the transparent window's height on every pointer move (42 grew to 141 in the first test); the renderer's 4px threshold keeps a plain click opening the panel |
-| 2026-10-31 | The saved position is the outer top-left plus `displayId`, restored only when that rect still intersects a current display | A monitor that was unplugged must not leave the pill offscreen; the primary taskbar anchor is the fallback, and Reset Position clears the value |
+| 2026-10-31 | The saved position is the outer top-left, restored only when that rect still intersects a current display | A monitor that was unplugged must not leave the pill offscreen; the primary taskbar anchor is the fallback, and Reset Position clears the value |
 | 2026-10-31 | Drag-out starts from Files rows only; the capsule keeps its window-move gesture | The capsule's pointer drag was locked to moving the window (ADR-0005), and one gesture cannot also hand files to Explorer; rows give drag-out a clear surface |
 | 2026-10-31 | Pointer-down is ignored for 200ms after a panel starts closing | In the 160ms before the window shrinks, the capsule sits centered in the panel-sized window, so a click there could drag the window instead of landing on the panel |
 | 2026-11-01 | Music art crosses the IPC seam as a base64 PNG data URL; a null session is held 500ms; a missing-file danger dot outranks the music dot | The sandbox cannot read the helper's temp PNG, Spotify emits a null gap between tracks that would blink the pill, and a deleted shelf file needs its warning even while music plays. Verified at check 21 (9–29ms) and by a real track change (15ms) |
 | 2026-11-02 | Pill transports call `music.toggle` / `next` / `prev` through the helper; the renderer only sends the action; a refusal is logged, not shown | WinRT stays behind the helper seam like every other Win32 call, and a 94px pill has no room for an error surface. The helper asks the manager for the live session on every command so a stale handle cannot wedge playback |
-| 2026-11-04 | Idle goes quiet (30×30 star) after 20s; the hover row gains a chevron; the window clips to the pill plus a 6px halo with `setShape`; the app renders only Music and Files | Idle distracted on an empty desktop, music hover hid every open target, and the 21px margins swallowed clicks meant for the window underneath. `setShape` is experimental, so one failure logs once and the window falls back to the full rect |
+| 2026-11-04 | Idle goes quiet (30×30 star, superseded 2026-11-08 by the 26×26 U1 row) after 20s; the hover row gains a chevron; the window clips to the pill plus a 6px halo with `setShape`; the app renders only Music and Files | Idle distracted on an empty desktop, music hover hid every open target, and the 21px margins swallowed clicks meant for the window underneath. `setShape` is experimental, so one failure logs once and the window falls back to the full rect |
 | 2026-11-04 | The app hides Timer, Calendar, and Settings until they work; the panel auto-picks Music, then Files, then the last tab; Add files uses the native picker and file actions report a status plus Undo | Dead tabs and dead buttons read as broken, and a silent remove or failed add left the user guessing |
 | 2026-11-04 | The preload is bundled by Vite (`vite.preload.mts`) and imports the shared channel constants at build time | A sandboxed preload can only require `electron` and builtins, so the shared-IPC import failed at runtime and `window.beam` never loaded; bundling keeps one channel source without weakening the sandbox |
 | 2026-11-04 | The panel opens to the last feature used this session — drop/picker, Files action, transport, timer, calendar, or tab visit — falling back to music → files → music | A state-based pick ignored what the user actually touched; session-only because the shelf and the live track do not survive quit |
 | 2026-11-04 | The timer counts down from a deadline in the renderer and the calendar keeps a month offset; both tabs are live, and the preview shows the same four tabs (Settings deferred) | Neither needs the helper or a network, and dead tabs broke the app/preview sync rule. Timer half superseded 2026-11-07 by R3: the deadline moved to main; the calendar half stands |
 | 2026-11-07 | The timer deadline, tick push, and completion move to main; the renderer only displays snapshots, plays the bundled chime once per timer id, and acks it over `beam:timer:chimed`; main fires an Electron Notification with a tray balloon fallback | Hidden windows throttle renderer timers and a completion must fire exactly once regardless of visibility. Checks 28–29 hold start/cancel/replace, the done face, one chime, one banner, and completion behind a fullscreen window |
-| 2026-11-08 | The capsule mark/art shrink to 20px, music and paused rest at 108×30, quiet shrinks to a 26×26 nub; main polls the cursor at 4Hz and wakes quiet within 37px, returning it 2s after the cursor leaves; Settings becomes a labeled fifth tab | The 24px mark squeezed a 44px title slot into two characters, the 30px quiet nub still read as a surface, and moving the cursor to the nub only woke it on a true hover. Settings as a lone icon broke the tab bar's five-column rhythm. Near wakes the label but never reveals actions, so a passing cursor cannot trigger a transport. Check 25 moves the real cursor and measures the 2s return |
+| 2026-11-08 | The capsule mark/art shrink to 20px, music and paused rest at 108×30, quiet shrinks to a 26×26 nub; main polls the cursor at 4Hz and wakes quiet within 37px, returning it 2s after the cursor leaves; Settings becomes a labeled fifth tab (superseded 2026-11-10 by the compact-button row) | The 24px mark squeezed a 44px title slot into two characters, the 30px quiet nub still read as a surface, and moving the cursor to the nub only woke it on a true hover. Settings as a lone icon broke the tab bar's five-column rhythm. Near wakes the label but never reveals actions, so a passing cursor cannot trigger a transport. Check 25 moves the real cursor and measures the 2s return |
 | 2026-11-08 | The Music tab becomes a right-column player (148px art left; title, artist+dot, seek slider, and transports right) and the bar becomes a real slider: pointer drag/click, ←/→ 5s, Home/End, `beam:music:seek` → `music.seek` → `TryChangePlaybackPositionAsync`; a refusal silently repaints the last position | The 148px meta column clipped most song names and the full-width read-only bar could not be used. Keeping the helper as the only WinRT caller preserves the seam, and updating the tick only after the helper accepts keeps the bar honest. Check 23 clicks 70% and proves both the bar and the real player land at 420s of 600s |
+| 2026-11-10 | Settings moves out of the five-column track into a 28px icon-only button; the four content tabs share the remaining width. The light theme becomes warm greige (`#eceae6` card, `#dfddd8` control, `#5f5d59` muted, `#7a4e00` gold text, `#a61b12` red). | The full “Settings” label spent a whole column on a utility action, and `#f4f4f2` read as white against a dark desktop. Four ~90px content tabs fit better, and the darker greige keeps muted text at 5.5:1 and gold at 6.0:1 without glare. |
 
-UI decisions: ADR-0001 (component boundaries), ADR-0002 (original mascot), ADR-0003 (window, capsule, and panel sizes), ADR-0004 (vanilla shadcn-style), ADR-0005 (capsule interaction), ADR-0006 (landscape panel), ADR-0007 (capsule-to-panel interaction), ADR-0008 (content dynamics), ADR-0009 (state identity, panel completeness, and scale), ADR-0010 (capsule artwork, dot language, and panel clarity), ADR-0011 (trust pass: quiet idle, chevron, shaped hit area, live tabs only).
+UI decisions: ADR-0001 (component boundaries), ADR-0002 (original mascot), ADR-0003 (window, capsule, and panel sizes), ADR-0004 (vanilla shadcn-style), ADR-0005 (capsule interaction), ADR-0006 (landscape panel), ADR-0007 (capsule-to-panel interaction), ADR-0008 (content dynamics), ADR-0009 (state identity, panel completeness, and scale), ADR-0010 (capsule artwork, dot language, and panel clarity), ADR-0011 (trust pass: quiet idle, chevron, shaped hit area, live tabs only), ADR-0012 (last-used tab, timer, calendar, and artwork).
 
 ## 8. Status
 
-Last status audit: 2026-11-07, read-only against the code and `verify.ps1`. The task-by-task notes live in `TASKS.md` under “Audit snapshot — 2026-11-07”; the evidence card is JOURNAL 114.
+Last status audit: 2026-11-10, read-only against the code and `verify.ps1`. The task-by-task notes live in `TASKS.md` under “Audit snapshot — 2026-11-10”; the evidence card is JOURNAL 126.
 
 **Built and previously proven:** shell anchor, no focus steal, tray, panel open/close, drag + position save/restore/reset (single display), idle dim, fullscreen detection and hide, single instance; the file shelf (drop, copy, drag-out, missing badge, remove, Clear All), music pill/transports/Music tab, and the Settings screen with startup, hotkey rebind, volume, theme, and reset.
 
-**Built and working, not accepted by the gate:** 9.1, 9.2, 9.4, 9.7, 9.8, 9.9, the calendar engine, Undo, the Add files picker, keyboard access, and the landing site. 2.4, 9.3, 9.5, 9.6, timer 4.1–4.5, and 1.7/1.8/7.1 are accepted by the 2026-11-07 green runs.
+**Built and working, not accepted by the gate:** 9.2, 9.4, 9.7, 9.8, 9.9, the calendar engine, Undo, the Add files picker, keyboard access, and the landing site. 2.4, 9.1 (retired as superseded), 9.3, 9.5, 9.6, timer 4.1–4.5, 1.7/1.8/7.1, U1, U2, and C1 are accepted by green runs; the 2026-11-10 audit gate is green.
 
 **Partial:** 2.5 has a no-art fallback and null-session debounce; paused and closed-player cases are unproven. Quit confirm and the native Add files dialog have no verify check; the chime and toast are asserted by the audio ack and the main log path, not recorded; the Settings chime test button is wired but no check clicks it.
 
 **Missing:** midnight calendar refresh (5.3), multi-monitor/100–150% proof, and a publishable package.
 
-**Verification:** 30 checks. The 2026-11-07 R6 run exits 0, 30/30, with five music-active skips. Check 16 is a real Explorer→pill drag; 17 retries the Explorer foreground; 24 proves playback-driven session switching; 25 runs separate quiet and chevron phases; 26 force-kills the helper and asserts a new pid plus a second pong; 27 proves a hung request rejects after 8s; 28 proves timer start/cancel/replace, the done face, one chime, one banner, and dismiss; 29 proves completion behind fullscreen with the pill hidden; 30 clicks the real Settings controls, presses the captured chord with SendKeys, writes/removes the Run entry, and proves the values survive a restart.
+**Verification:** 30 checks. The 2026-11-10 audit run exits 0, 30/30, with no skips. Check 16 is a real Explorer→pill drag; 17 retries the Explorer foreground; 24 proves playback-driven session switching; 25 runs separate quiet and chevron phases; 26 force-kills the helper and asserts a new pid plus a second pong; 27 proves a hung request rejects after 8s; 28 proves timer start/cancel/replace, the done face, one chime, one banner, and dismiss; 29 proves completion behind fullscreen with the pill hidden; 30 clicks the real Settings controls, presses the captured chord with SendKeys, writes/removes the Run entry, and proves the values survive a restart.
 
 **Packaging:** `extraResources` lists `BeamBridge.exe` and `tray.ico`, and `src/main/paths.ts` resolves them when packaged, but `npm run dist` only calls electron-builder and no package has been built. No exe or GitHub release is published.
 
-**Open conflicts:** resolved 2026-11-07 by R6: TASKS 6.2 is retired and ADR-0012 last-used wins in the code. README and TASKS previously drifted from the code and now carry the 2026-11-07 audit notes.
+**Open conflicts:** resolved 2026-11-07 by R6: TASKS 6.2 is retired and ADR-0012 last-used wins in the code. README and TASKS previously drifted from the code and now carry the 2026-11-10 cleanup notes.
 
 ## 9. Known Risks
 
