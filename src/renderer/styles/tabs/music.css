@@ -59,7 +59,7 @@
   width: 100%;
   height: 4px;
   border-radius: var(--r-pill);
-  background: var(--control);
+  background: var(--track);
   overflow: hidden;
 }
 
@@ -147,7 +147,7 @@
 .panel-music-skeleton {
   flex-direction: row;
   align-items: center;
-  gap: var(--space-2);
+  gap: var(--space-3);
 }
 
 .panel-music-skeleton .art {
@@ -155,4 +155,9 @@
   height: 148px;
   flex: none;
   border-radius: var(--r-card);
+}
+
+.panel-music-skeleton .panel-music-content {
+  min-height: 134px;
+  justify-content: space-between;
 }

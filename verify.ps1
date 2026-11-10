@@ -579,7 +579,13 @@ Assert-UI 'body padding must be 6px 4px for the 30px capsule' ($base -notmatch '
 Assert-UI 'capsule must rest at 94 (music 108), drag at 128, and grow to 128 on hover for music/timer/done' ($pill -notmatch 'width: 94px' -or $pill -notmatch 'width: 108px' -or $pill -notmatch 'width: 128px' -or $pill -notmatch '\.pill\.expands:hover' -or $pill -notmatch "data-state='drag'\] \{[^}]*width: 128px")
 Assert-UI 'quiet must shrink to a 26px capsule around an 18px star' ($pill -notmatch "data-state='quiet'\] \{[^}]*width: 26px" -or $pill -notmatch "data-state='quiet'\] \{[^}]*height: 26px" -or $pill -notmatch "data-state='quiet'\] \.mascot \{[^}]*width: 18px")
 Assert-UI 'the cursor within 37px of the pill must wake it' ($geometry -notmatch 'NEAR_RADIUS = 37' -or $main -notmatch 'isCursorNear' -or $main -notmatch 'IPC\.pillNear' -or $rendererTs -notmatch 'onPillNear' -or $preloadTs -notmatch 'pillNear')
+Assert-UI 'quiet must wait 10s before shrinking' ($quietTs -notmatch 'QUIET_AFTER = 10000')
 Assert-UI 'quiet must wait 2s after the cursor leaves' ($quietTs -notmatch 'QUIET_RETURN = 2000' -or $rendererTs -notmatch '!cursorNear')
+Assert-UI 'both themes must define a visible seek track' ($tokens -notmatch '--track: #636368' -or $tokens -notmatch '--track: #8a847a')
+Assert-UI 'the music rail must use the track token' ($musicCss -notmatch '\.track-rail \{[^}]*background: var\(--track\)')
+Assert-UI 'calendar Today must read as an active control' ($calendarCss -notmatch '\.cal-today-btn \{[^}]*color: var\(--foreground\)')
+Assert-UI 'timer actions must be pinned to the panel floor' ($timerCss -notmatch '\.panel-timer \.actions \{[^}]*bottom: var\(--space-2\)')
+Assert-UI 'done and error keep their borders on hover' ($pill -notmatch "data-state='done'\]:hover" -or $pill -notmatch "data-state='error'\]:hover")
 Assert-UI 'capsule uses only 94 rest, 108 music rest, 128 hover, and 26 quiet' ($pill -match 'width: (100|104|132|136|140|176|216)px')
 Assert-UI 'idle and files must not grow on hover' ($pill -match "data-state='(idle|files)'\]:hover[^{]*\{[^}]*width")
 Assert-UI 'the idle star must dim to 0.7' ($pill -notmatch "data-state='idle'\] \.mascot \{[^}]*opacity: 0\.7")
@@ -617,13 +623,13 @@ Assert-UI 'the preview must not fake the focus release' ($preview -match 'button
 Assert-UI 'the preview must bind the art fallback and the clear arm' ($preview -notmatch 'bindArtFallback' -or $preview -notmatch 'bindClearAll')
 $allStyles = $pill + $shellCss + $bodyCss + $buttonsCss + $fieldsCss + $indicatorsCss + $musicCss + $filesCss + $timerCss + $calendarCss + $settingsCss
 Assert-UI 'type scale starts at 11px' ($allStyles -match 'font-size: 10px')
-Assert-UI 'the shell must be solid in both themes' ($tokens -notmatch '--card: #151517' -or $tokens -notmatch '--card: #f4f4f2')
+Assert-UI 'the shell must be solid in both themes' ($tokens -notmatch '--card: #151517' -or $tokens -notmatch '--card: #eceae6')
 Assert-UI 'no glass, no specular rim, no glow' ($allStyles -match 'backdrop-filter' -or $allStyles -match 'var\(--highlight' -or $allStyles -match '0 0 6px' -or $tokens -match '--highlight')
 Assert-UI 'idle must dim the star and label, not the solid shell' ($pill -match "data-state='idle'\] \{[^}]*opacity")
 Assert-UI 'idle rest dims the star to 70% and hover restores it' ($pill -notmatch "data-state='idle'\] \.mascot \{[^}]*opacity: 0\.7" -or $pill -notmatch "data-state='idle'\]\[data-hover='true'\] \.mascot")
 Assert-UI 'every fill must be a solid color, no translucent glass' ($allStyles -match 'background: rgba\(')
 Assert-UI 'translucent fill tokens must stay deleted' ($tokens -match '--(secondary|muted|accent|keycap|pill-badge|destructive-soft|destructive-border):')
-Assert-UI 'solid control and surface tokens must exist in both themes' ($tokens -notmatch '--control: #252527' -or $tokens -notmatch '--control: #e7e7e5' -or $tokens -notmatch '--surface-hover')
+Assert-UI 'solid control and surface tokens must exist in both themes' ($tokens -notmatch '--control: #252527' -or $tokens -notmatch '--control: #dfddd8' -or $tokens -notmatch '--surface-hover')
 Assert-UI 'metadata is plain text, not glass chips' ($allStyles -match '\.pill-badge')
 Assert-UI 'file rows use plain metadata text and no status pips' ($filesTs -notmatch 'row-meta' -or $filesTs -match 'pill-badge|status-pip')
 Assert-UI 'file rows are flush with plain metadata' ($filesCss -notmatch '\.row-meta' -or $filesCss -match '\.row \{[^}]*border-radius')
@@ -631,7 +637,7 @@ Assert-UI 'the danger action is a text button' ($buttonsCss -notmatch '\.btn\.da
 Assert-UI 'inactive tabpanels must be hidden' ($bodyCss -notmatch '\.panel-body\[hidden\]')
 Assert-UI 'every tab shares one fixed panel height (no per-tab sizing)' ($shellCss -notmatch '\.panel \{[^}]*height: 100%' -or $shellCss -match '\.panel \{[^}]*max-height')
 Assert-UI 'panel bodies must center their content so no tab pools space at the bottom' ($bodyCss -notmatch '\.panel-body \{[^}]*justify-content: center')
-Assert-UI 'tab bar must keep the four equal tab columns' ($shellCss -notmatch '\.tab-track')
+Assert-UI 'tab bar must keep four equal content tabs and a compact Settings button' ($shellCss -notmatch '\.tab-track' -or $shellCss -notmatch '\.tab-settings \{[^}]*width: 28px')
 Assert-UI 'tabs must be flat; no track fill and no selected fill' ($shellCss -match '\.tab-track \{[^}]*background:' -or $shellCss -match "\.tab\[aria-selected='true'\] \{[^}]*background:")
 Assert-UI 'preview tabs must be wired' ($preview -notmatch 'bindPanelTabs')
 Assert-UI 'preview capsule frames must be 94 rest, 108 music rest, 26 quiet, and 128 hover' ($preview -notmatch '\.f-pill \{ width: 94px' -or $preview -notmatch '\.f-pill\.is-music \{ width: 108px' -or $preview -notmatch '\.f-pill\.is-quiet \{ width: 26px' -or $preview -notmatch '\.f-pill\.is-expanded \{ width: 128px')
@@ -670,6 +676,9 @@ try {
   Start-Sleep -Milliseconds 500
   $moveOut = Get-Content -LiteralPath $outLog -Raw -ErrorAction SilentlyContinue
   $panelBefore = ([regex]::Matches($moveOut, '\[panel\] bounds=')).Count
+  # A missed press is a click, and a click opens the panel by design. Dismiss that panel
+  # before the next attempt, and count opens only from the attempt whose drag ends.
+  $esc = New-Object -ComObject WScript.Shell
 
   $moveShell = Get-Process electron -ErrorAction SilentlyContinue | Where-Object { $_.MainWindowHandle -ne 0 } | Select-Object -First 1
   if (-not $moveShell) { throw 'no window to drag' }
@@ -688,6 +697,20 @@ try {
   $dragged = $false
   for ($attempt = 1; $attempt -le 3 -and -not $dragged; $attempt++) {
     $moveOut = Get-Content -LiteralPath $outLog -Raw -ErrorAction SilentlyContinue
+    $openCount = ([regex]::Matches($moveOut, '\[panel\] bounds=')).Count
+    $pillCount = ([regex]::Matches($moveOut, '\[window\] pill=')).Count
+    if ($openCount -gt $pillCount) {
+      $esc.SendKeys('{ESC}')
+      for ($i = 0; $i -lt 20; $i++) {
+        Start-Sleep -Milliseconds 100
+        $moveOut = Get-Content -LiteralPath $outLog -Raw -ErrorAction SilentlyContinue
+        if (([regex]::Matches($moveOut, '\[window\] pill=')).Count -gt $pillCount) { break }
+      }
+      if (([regex]::Matches($moveOut, '\[window\] pill=')).Count -le $pillCount) {
+        throw 'the panel left by a missed drag press did not close'
+      }
+    }
+    $attemptPanelBefore = ([regex]::Matches($moveOut, '\[panel\] bounds=')).Count
     $musicLines = [regex]::Matches($moveOut, '(?m)^\[music\] (none|\S.*\s\(\S+\))\s*$')
     $liveTrack = $musicLines.Count -gt 0 -and $musicLines[$musicLines.Count - 1].Groups[1].Value -ne 'none'
     if ($liveTrack) {
@@ -710,7 +733,7 @@ try {
     for ($i = 0; $i -lt 15; $i++) {
       Start-Sleep -Milliseconds 200
       $moveOut = Get-Content -LiteralPath $outLog -Raw -ErrorAction SilentlyContinue
-      if ($moveOut -match '\[move\] end=') { $dragged = $true; break }
+      if ($moveOut -match '\[move\] end=') { $panelBefore = $attemptPanelBefore; $dragged = $true; break }
     }
     [BeamScreen]::SetCursorPos($cursorBefore.X, $cursorBefore.Y) | Out-Null
     if (-not $dragged -and $attempt -lt 3) { Start-Sleep -Milliseconds 600 }
@@ -1954,8 +1977,11 @@ try {
     throw "the running timer left pill '$($timer.state)' mode '$($timer.mode)'"
   }
   if ($timer.digits -notmatch '^\d{1,2}:\d{2}$') { throw "the pill read '$($timer.digits)'" }
-  if ([math]::Abs([int]$timer.faceTop - [int]$timer.actionBottom) -gt 2) {
-    throw "the running timer is not centered (top air $($timer.faceTop), bottom air $($timer.actionBottom))"
+  if ([math]::Abs([int]$timer.faceTop - [int]$timer.idleFaceTop) -gt 2) {
+    throw "the countdown moved when the timer started (idle top $($timer.idleFaceTop), running top $($timer.faceTop))"
+  }
+  if ([math]::Abs([int]$timer.actionBottom - 8) -gt 2 -or [math]::Abs([int]$timer.idleActionBottom - 8) -gt 2) {
+    throw "the timer actions are not pinned to the panel floor (idle $($timer.idleActionBottom), running $($timer.actionBottom))"
   }
   $timercancel = Get-UiLog $uiOut 'timercancel'
   if (-not $timercancel.ok -or $null -ne $timercancel.digits) { throw 'Cancel did not clear the pill timer' }

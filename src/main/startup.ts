@@ -4,7 +4,7 @@ import { app } from 'electron';
 const RUN_KEY = 'HKCU\\Software\\Microsoft\\Windows\\CurrentVersion\\Run';
 const VALUE = 'Beam';
 
-export function startupCommand(): string {
+function startupCommand(): string {
   return app.isPackaged
     ? `"${app.getPath('exe')}"`
     : `"${process.execPath}" "${app.getAppPath()}"`;
@@ -31,7 +31,8 @@ export function setStartupEnabled(enabled: boolean): { ok: boolean; error?: stri
       try {
         execFileSync('reg.exe', ['delete', RUN_KEY, '/v', VALUE, '/f'], { stdio: 'ignore', windowsHide: true });
       } catch {
-        return { ok: !isStartupEnabled(), error: isStartupEnabled() ? 'reg delete failed' : undefined };
+        const current = isStartupEnabled();
+        return { ok: !current, error: current ? 'reg delete failed' : undefined };
       }
     }
     return isStartupEnabled() === enabled ? { ok: true } : { ok: false, error: 'the registry did not change' };

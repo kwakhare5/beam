@@ -34,10 +34,10 @@ export function registerSettingsIpc(gate: SettingsGate): void {
 
   ipcMain.handle(IPC.settingsSet, (event, patch: unknown): SettingsResult => {
     if (event.sender !== window.webContents) {
-      return { ok: false, settings: snapshot(), error: 'untrusted sender' };
+      return { ok: false, settings: snapshot() };
     }
     if (!patch || typeof patch !== 'object') {
-      return { ok: false, settings: snapshot(), error: 'bad settings change' };
+      return { ok: false, settings: snapshot() };
     }
     const change = patch as SettingsPatch;
     error = '';
@@ -90,12 +90,12 @@ export function registerSettingsIpc(gate: SettingsGate): void {
     console.log(
       `[settings] set ok=${ok} theme=${settings.theme} volume=${settings.volume} shortcut=${currentHotkey() || 'none'} startup=${current.startup}${error ? ` error=${error}` : ''}`
     );
-    return { ok, settings: current, ...(error ? { error } : {}) };
+    return { ok, settings: current };
   });
 
   ipcMain.handle(IPC.settingsResetPosition, (event): SettingsResult => {
     if (event.sender !== window.webContents) {
-      return { ok: false, settings: snapshot(), error: 'untrusted sender' };
+      return { ok: false, settings: snapshot() };
     }
     gate.resetPosition();
     return { ok: true, settings: snapshot() };

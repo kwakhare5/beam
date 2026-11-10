@@ -146,6 +146,10 @@
   min-width: 0;
 }
 
+.shelf-status-empty:has([data-files-status]:empty) {
+  display: none;
+}
+
 .shelf-status-empty {
   margin-right: 0;
   justify-content: center;

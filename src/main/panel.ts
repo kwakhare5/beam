@@ -18,7 +18,15 @@ export class PanelController {
 
   show(tab?: 'settings'): void {
     const window = this.window();
-    if (this.opened || !window || window.isDestroyed() || !window.isVisible()) return;
+    if (!window || window.isDestroyed()) return;
+    if (this.opened) {
+      if (tab) {
+        window.webContents.send(IPC.panelOpen, this.rows(), tab);
+        window.focus();
+      }
+      return;
+    }
+    if (!window.isVisible()) return;
     this.opened = true;
     const bounds = panelBounds(window);
     window.setBounds(bounds);
@@ -47,9 +55,5 @@ export class PanelController {
 
   dismissOnBlur(pickingFiles: boolean): void {
     if (this.opened && !pickingFiles) this.hide();
-  }
-
-  reset(): void {
-    this.opened = false;
   }
 }

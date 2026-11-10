@@ -12,7 +12,7 @@ export interface FileRow {
   path?: string;
 }
 
-type CopyOutcome = { ok: boolean; count: number; error?: string };
+type CopyOutcome = { ok: boolean; error?: string };
 
 export function filesPanel(rows: FileRow[], copied = false, active = true): string {
   if (!rows.length) {
@@ -111,7 +111,7 @@ export function bindFilesActions(
     statusTimer = window.setTimeout(() => {
       statusTimer = undefined;
       const current = root.querySelector<HTMLElement>('[data-files-status]');
-      if (current) current.textContent = 'Files clear on quit';
+      if (current) current.textContent = root.querySelector('.file-list') ? 'Files clear on quit' : '';
     }, 2500);
   };
 

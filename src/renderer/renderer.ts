@@ -97,7 +97,7 @@ const quiet = new QuietTimer(() => idleEligible(), () => renderPill());
 let lastUsed: LastUsed | null = null;
 let timerPreset: TimerPreset = '25';
 let timerCustom = '25';
-let timerSnapshot: TimerSnapshot = { phase: 'idle', minutes: 0, remainingMs: 0, deadline: 0, id: 0, alert: false };
+let timerSnapshot: TimerSnapshot = { phase: 'idle', minutes: 0, remainingMs: 0, id: 0, alert: false };
 let chime: HTMLAudioElement | null = null;
 let chimedId = 0;
 let chimeVolume = 0.6;
@@ -410,7 +410,7 @@ const panelData: PanelData = {
   music: { title: '', subtitle: '', playing: false, positionMs: 0, durationMs: 0 },
   files: [],
   timer: { mode: 'idle', digits: '25:00', note: 'Pick a length', preset: '25' },
-  calendar: new Date(),
+  calendar: { view: new Date(), today: new Date() },
   settings: { startup: false, shortcut: 'Alt + Space', volume: 60, theme: 'dark' },
   enabledTabs: ENABLED_TABS
 };
@@ -617,19 +617,43 @@ function onMusicChange(): void {
 window.setInterval(() => music.tick(), 1000);
 
 let closingTimer: number | undefined;
+let collapseTimer: number | undefined;
+let pillSizeTimer: number | undefined;
+
+function cancelPanelClose(): void {
+  if (closingTimer !== undefined) {
+    window.clearTimeout(closingTimer);
+    closingTimer = undefined;
+  }
+  if (collapseTimer !== undefined) {
+    window.clearTimeout(collapseTimer);
+    collapseTimer = undefined;
+  }
+  if (pillSizeTimer !== undefined) {
+    window.clearTimeout(pillSizeTimer);
+    pillSizeTimer = undefined;
+  }
+  document.body.classList.remove('is-closing');
+}
 
 function dismissPanel(): void {
   if (!document.body.classList.contains('is-open')) return;
+  cancelPanelClose();
   document.body.classList.remove('is-open');
   document.body.classList.add('is-closing');
-  if (closingTimer !== undefined) window.clearTimeout(closingTimer);
   closingTimer = window.setTimeout(() => {
     closingTimer = undefined;
     document.body.classList.remove('is-closing');
     pillEl?.focus({ preventScroll: true });
   }, 200);
-  setTimeout(() => beam?.panelCollapsed(), 160);
-  setTimeout(() => reportPillSize(), 220);
+  collapseTimer = window.setTimeout(() => {
+    collapseTimer = undefined;
+    beam?.panelCollapsed();
+  }, 160);
+  pillSizeTimer = window.setTimeout(() => {
+    pillSizeTimer = undefined;
+    reportPillSize();
+  }, 220);
   scheduleQuiet();
 }
 
@@ -738,6 +762,7 @@ if (app && beam) {
   }
 
   beam.onPanelOpen((files, tab) => {
+    cancelPanelClose();
     wakePill();
     activeTab = tab ?? openedTab(files.length);
     shelf.apply(files);

@@ -678,6 +678,7 @@ export async function runUiTest(ctx: HarnessContext, target: BrowserWindow, phas
 
   await click('#tab-timer');
   await wait(150);
+  const idleTimer = await snap();
   await click('#panel-timer [data-timer-preset="5"]');
   await wait(150);
   await click('#panel-timer [data-timer-start]');
@@ -688,7 +689,9 @@ export async function runUiTest(ctx: HarnessContext, target: BrowserWindow, phas
     digits: running.snap.digits,
     mode: running.snap.timerMode,
     faceTop: running.snap.faceTop,
-    actionBottom: running.snap.actionBottom
+    actionBottom: running.snap.actionBottom,
+    idleFaceTop: idleTimer.faceTop,
+    idleActionBottom: idleTimer.actionBottom
   });
   await click('#panel-timer [data-timer-cancel]');
   const cancelled = await until((state) => state.state !== 'timer', 2500);
