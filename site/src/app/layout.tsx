@@ -18,7 +18,7 @@ export const metadata: Metadata = {
     siteName: 'beam.',
     title,
     description,
-    images: [{ url: '/og.png', width: 1200, height: 630, alt: 'beam. — one small bar for music, files, and time.' }],
+    images: [{ url: '/og.png', width: 1200, height: 630, alt: 'beam. — music, files, time — all in one place.' }],
   },
   twitter: {
     card: 'summary_large_image',

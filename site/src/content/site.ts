@@ -20,7 +20,7 @@ export const FEATURES = [
   {
     icon: Timer,
     title: 'timer',
-    body: 'A countdown that keeps real time through sleep. Pick a preset, or set any length.',
+    body: 'A countdown that keeps running while the pill is hidden. Pick a preset, or set any length.',
     chip: 'bg-green-tint',
     ink: 'text-green'
   },
@@ -41,7 +41,7 @@ export const FAQ = [
   {
     question: 'What does it store on my PC?',
     answer:
-      'The bar’s position, in %APPDATA%\\Beam\\settings.json. Files on the shelf are paths kept in memory, and they clear when you quit.'
+      'Your theme, volume, shortcut, startup choice, and the bar’s position live in %APPDATA%\\Beam\\settings.json. Files on the shelf are paths kept in memory, and they clear when you quit.'
   },
   {
     question: 'Windows says it’s unsafe. What now?',

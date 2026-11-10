@@ -17,7 +17,7 @@ const ENTRIES = [
       'Keyboard control: the bar takes focus, Enter or Space opens the panel, and a focus ring shows where you are.',
       'Alt + Space toggles the panel, with Ctrl + Shift + Space as the fallback.',
       'Add files opens the Windows picker, and a cleared shelf can be undone for five seconds.',
-      'The bar dims to a quiet star after 20 seconds, and the window only clips to its visible shape.',
+      'The bar dims to a quiet star after 10 seconds, and the window only clips to its visible shape.',
       'The bar hides while a fullscreen window owns the screen, and the tray brings it back.'
     ]
   },
