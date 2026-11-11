@@ -2,7 +2,7 @@ import Link from 'next/link';
 import type { Metadata } from 'next';
 import { ArrowUpRight, Plus } from 'lucide-react';
 import { FAQ, FEATURES, REPO } from '../content/site';
-import { HandArrow, StarLogo } from '../components/brand';
+import { StarLogo } from '../components/brand';
 import { faqGraph } from '../components/structured-data';
 import { LiveDemo } from '../components/live-demo';
 
@@ -92,12 +92,11 @@ export default function HomePage() {
         <section id="demo" className="pb-14">
           <div className="mb-2 flex flex-col items-center">
             <p className="font-hand text-2xl text-purple">go on, click the star.</p>
-            <HandArrow className="pointer-events-none mt-1 translate-y-8 text-purple" />
           </div>
           <LiveDemo />
           <p className="mt-4 text-center text-[13px] text-muted">
             The real app, running in this page. The music is two free tracks, and the Files tab takes real dropped files.
-            Copy and drag-out work in the Windows app.
+            Sound starts when you click. Copy and drag-out work in the Windows app.
           </p>
         </section>
 
@@ -125,7 +124,7 @@ export default function HomePage() {
           </div>
 
           <p className="py-8 text-[15px] leading-relaxed text-muted">
-            That&apos;s the whole app. It rests at 94×30 pixels, opens with Alt + Space, and makes no network requests.
+            That&apos;s the whole app. It hugs its content, opens with Alt + Space, and makes no network requests.
           </p>
         </section>
 

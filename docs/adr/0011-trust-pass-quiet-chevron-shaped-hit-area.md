@@ -1,6 +1,6 @@
 # Trust pass: quiet idle, a chevron, a shaped hit area, and only live tabs
 
-Status: accepted 2026-11-04. Amends ADR-0007 and ADR-0009. Approved by the user in the UI audit.
+Status: accepted 2026-11-04. Amends ADR-0007 and ADR-0009. Approved by the user in the UI audit. **Amended 2026-11-11:** the 20px chevron is replaced by a 24px panel button that is a peer of the three transports inside the music hover row; the resting capsule itself opens the panel. Quiet is 26×26 after 10s.
 
 The app presented dead controls as live (Timer, Calendar, Settings, Add files, the pill's timer/done buttons), Esc left main's `panelOpen` true so the next pill click was ignored, the 21px transparent margins swallowed clicks meant for the window underneath, a playing pill hid every open target on hover, idle stayed a full labelled capsule all day, and file add/copy/remove failures were silent.
 

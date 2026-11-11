@@ -8,6 +8,15 @@ export const metadata = pageMetadata('changelog', 'What changed in the beam prev
 
 const ENTRIES = [
   {
+    date: '2026-11-11',
+    title: 'the bar, simplified',
+    items: [
+      'Click the bar to open the panel, and it opens to whatever the bar is showing: music, a running timer, or your files.',
+      'When music plays, hovering expands the bar into previous, play, next, and panel at proper 24px targets.',
+      'The bar now hugs its content, and the star and label center as one unit; the timer cancel is always visible.'
+    ]
+  },
+  {
     date: '2026-11-04',
     title: 'trust pass',
     items: [

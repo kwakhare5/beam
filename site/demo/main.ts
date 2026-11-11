@@ -2,6 +2,7 @@ import '../../src/renderer/styles.css';
 import {
   bindArtFallback,
   bindClearAll,
+  bindMarquee,
   bindMusicSeek,
   bindPanelTabs,
   formatSize,
@@ -32,6 +33,7 @@ const TRACKS = [
 ] as const;
 
 let trackIndex = 0;
+let interacted = false;
 const audioEl = new Audio();
 audioEl.preload = 'metadata';
 
@@ -96,25 +98,31 @@ function pillData() {
   }
   const track = TRACKS[trackIndex]!;
   const missing = files.some((row) => row.missing);
+  if (!interacted) {
+    return { state: 'playing' as const, title: track.title, art: track.art };
+  }
   return {
     state: audioEl.paused ? ('paused' as const) : ('playing' as const),
     title: track.title,
-    primaryIcon: audioEl.paused ? ('play' as const) : ('pause' as const),
     art: track.art,
     ...(missing && audioEl.paused ? { pip: 'danger' as const } : {})
   };
 }
 
 let pillEl: HTMLElement | null = null;
+let lastPillHtml = '';
 
 function renderPill(): void {
   const html = pill(pillData());
+  if (html === lastPillHtml) return;
+  lastPillHtml = html;
   if (pillEl) {
     pillEl.outerHTML = html;
   } else {
     app!.insertAdjacentHTML('afterbegin', html);
   }
   pillEl = app!.querySelector<HTMLElement>('.pill');
+  if (pillEl) bindMarquee(pillEl);
 }
 
 function renderPanel(): void {
@@ -135,7 +143,7 @@ function notifyParent(open: boolean): void {
 function openPanel(): void {
   if (opened) return;
   opened = true;
-  activeTab = pickTab(null, true, files.length);
+  activeTab = timerMode !== 'idle' ? 'timer' : pickTab(null, true, files.length);
   renderPanel();
   void panelWrap.offsetWidth;
   requestAnimationFrame(() => {
@@ -163,8 +171,11 @@ function updateProgress(): void {
   const position = Math.min(positionMs(), duration);
   bar.setAttribute('aria-valuenow', String(Math.round(position / 1000)));
   bar.setAttribute('aria-valuetext', `${musicClock(position)} of ${musicClock(duration)}`);
+  const percent = Math.round((position / duration) * 100);
   const fill = bar.querySelector<HTMLElement>('.track-fill');
-  if (fill) fill.style.width = `${Math.round((position / duration) * 100)}%`;
+  if (fill) fill.style.width = `${percent}%`;
+  const knob = bar.querySelector<HTMLElement>('.track-knob');
+  if (knob) knob.style.left = `${percent}%`;
   const times = bar.parentElement?.querySelectorAll<HTMLElement>('.track-times span');
   if (times?.length === 2) {
     times[0]!.textContent = musicClock(position);
@@ -322,13 +333,12 @@ app.addEventListener('click', (event) => {
     openPanel();
     return;
   }
-  if (action === 'prev' || action === 'toggle' || action === 'next') {
-    if (action === 'prev') loadTrack(trackIndex - 1, true);
-    else if (action === 'next') loadTrack(trackIndex + 1, true);
-    else toggleAudio();
+  if (action === 'prev' || action === 'next' || action === 'toggle') {
+    if (action === 'toggle') toggleAudio();
+    else loadTrack(trackIndex + (action === 'next' ? 1 : -1), true);
     return;
   }
-  if (target.closest('.pill .pill-action')) {
+  if (target.closest('.pill .pill-x')) {
     if (timerMode === 'running') cancelTimer();
     else if (timerMode === 'done') dismissTimer();
     return;
@@ -377,6 +387,20 @@ audioEl.addEventListener('timeupdate', () => {
 });
 audioEl.src = TRACKS[0].src;
 audioEl.load();
+audioEl.muted = true;
+void audioEl.play().catch(() => {});
+
+const enableSound = (): void => {
+  interacted = true;
+  audioEl.muted = false;
+  if (audioEl.paused) {
+    void audioEl.play().catch(() => renderPill());
+  }
+  window.removeEventListener('pointerdown', enableSound);
+  window.removeEventListener('keydown', enableSound);
+};
+window.addEventListener('pointerdown', enableSound);
+window.addEventListener('keydown', enableSound);
 
 window.setInterval(() => {
   if (timerMode !== 'running') return;

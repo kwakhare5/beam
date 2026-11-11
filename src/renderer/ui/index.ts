@@ -5,4 +5,5 @@ export type { Tab } from './panel/tab-meta';
 export { bindClearAll, bindFileDrag, bindFilesActions } from './panel/tabs/files';
 export { bindMusicSeek, musicClock } from './panel/tabs/music';
 export { bindArtFallback } from './shared/art';
+export { bindMarquee } from './shared/marquee';
 export { formatSize } from './shared/format';

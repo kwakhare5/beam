@@ -14,7 +14,7 @@ const FACTS = [
   ['Price', 'Free'],
   ['Account', 'Not required'],
   ['Network', 'None in the app'],
-  ['Rest size', '94×30 pixels'],
+  ['Rest size', 'Hugs its content: 69–127×30 pixels'],
   ['Shortcut', 'Alt + Space (fallback: Ctrl + Shift + Space)'],
   ['Status', 'Preview; Windows build not published'],
   ['Source', 'GitHub']
@@ -27,8 +27,8 @@ export default function AboutPage() {
       <h1 className="mt-4 text-[clamp(2.2rem,5.6vw,3.9rem)] font-semibold leading-[1]">a small bar, explained.</h1>
 
       <p className="mt-6 max-w-2xl text-[17px] leading-relaxed text-muted">
-        Beam is a free, offline Windows 11 app. It sits above the taskbar as a 94×30 pixel bar and keeps four things one
-        click away: the current track, a file shelf, a countdown, and the month.
+        Beam is a free, offline Windows 11 app. It sits above the taskbar as a small bar that hugs its content and keeps
+        four things one click away: the current track, a file shelf, a countdown, and the month.
       </p>
 
       <dl className="mt-10 grid grid-cols-1 gap-x-8 gap-y-4 border-y border-hairline py-6 text-[14px] sm:grid-cols-2">

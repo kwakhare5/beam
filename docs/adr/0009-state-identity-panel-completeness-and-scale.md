@@ -5,6 +5,7 @@ Status: accepted 2026-10-28. Amends ADR-0003, ADR-0005, ADR-0006, ADR-0007, and 
 The capsule states were hard to tell apart, four panel screens were clipped or missing their states, several settings rows looked interactive but were not, and the docs described a product that did not exist. We settled on:
 
 - **Done**: the capsule shows a centered 16px gold check and a 1px gold border at rest; hover swaps the check for `Done` plus a 28px dismiss. No digits, no glow. Running shows gold digits, so done and running do not look identical, and `00:00` no longer repeats "Time's up".
+  **Superseded in part 2026-11-11:** the capsule now shows `Done` with a gold border and an always-visible 28px dismiss; there is no check glyph and no hover swap.
 - **Paused**: a 12px play glyph sits outside the title slot, which leaves 30px for the title in the 100px rest width. Muted ink alone was invisible at rest.
 - **Shelf capsule**: a non-empty shelf shows its count (`5 files`). A missing file turns the mascot pip red; the panel row carries the name and the `Missing` badge. The `0 files` and missing-filename capsule states are gone because one summary has to win, and picking one missing name out of several was arbitrary.
 - **Precedence** when states overlap: drag, then timer, then music, then files, then idle. Direct manipulation feedback wins for the moment it lasts; timer still beats music.

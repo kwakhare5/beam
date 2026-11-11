@@ -3,6 +3,7 @@ import {
   bindClearAll,
   bindFileDrag,
   bindFilesActions,
+  bindMarquee,
   bindMusicSeek,
   bindPanelTabs,
   formatSize,
@@ -204,7 +205,10 @@ function dismissTimer(): void {
 }
 
 function openedTab(rows: number): Tab {
-  return pickTab(lastUsed, music.hasMusic, rows);
+  if (timerSnapshot.phase !== 'idle') return 'timer';
+  if (music.hasMusic) return 'music';
+  if (rows > 0) return 'files';
+  return pickTab(lastUsed, false, 0);
 }
 
 function setPip(state: 'playing' | 'paused' | 'danger' | null): void {
@@ -236,13 +240,11 @@ function renderControls(state: string): void {
   if (!pillEl) return;
   const track = music.state;
   const show = Boolean(track) && (state === 'playing' || state === 'paused');
-  const existing = pillEl.querySelector<HTMLElement>('.controls');
+  const existing = pillEl.querySelector<HTMLElement>('.pill-controls');
   if (!show) {
-    pillEl.classList.remove('has-controls');
     existing?.remove();
     return;
   }
-  pillEl.classList.add('has-controls');
   const toggle = existing?.querySelector<HTMLButtonElement>('[data-action="toggle"]');
   if (toggle && (toggle.getAttribute('aria-label') === 'Pause') === track!.playing) return;
   const markup = transportControls(track!.playing);
@@ -256,42 +258,45 @@ function renderPillSlot(state: string, label: string): void {
   const meta = slot?.querySelector<HTMLElement>('.meta');
   if (!slot || !meta) return;
   if (state === 'timer') {
-    meta.innerHTML = `<div class="digits" data-pill-digits>${clock(timerSnapshot.remainingMs)}</div>`;
+    let digits = meta.querySelector<HTMLElement>('[data-pill-digits]');
+    if (!digits) {
+      meta.innerHTML = '<div class="digits" data-pill-digits></div>';
+      digits = meta.querySelector<HTMLElement>('[data-pill-digits]');
+    }
+    if (digits) digits.textContent = clock(timerSnapshot.remainingMs);
   } else if (state === 'done') {
-    meta.innerHTML = `<span class="state-icon" aria-hidden="true"><svg aria-hidden="true" focusable="false"><use href="#i-check"/></svg></span>`;
+    if (!meta.querySelector('.done-label')) meta.innerHTML = '<span class="done-label">Done</span>';
   } else {
-    let title = meta.querySelector<HTMLElement>('.title');
-    if (!title) {
-      meta.innerHTML = '<div class="title"></div>';
-      title = meta.querySelector<HTMLElement>('.title');
+    let text = meta.querySelector<HTMLElement>('.title-text');
+    if (!text) {
+      meta.innerHTML = '<div class="title"><span class="title-track"><span class="title-text"></span></span></div>';
+      text = meta.querySelector<HTMLElement>('.title-text');
     }
-    if (title) {
-      if (title.textContent !== label) title.textContent = label;
-      if (title.title !== label) title.title = label;
+    if (text) {
+      if (text.textContent !== label) text.textContent = label;
+      const title = text.closest<HTMLElement>('.title');
+      if (title && title.title !== label) title.title = label;
     }
+    bindMarquee(pillEl);
   }
-  const existing = slot.querySelector<HTMLElement>('.pill-action');
-  if (state === 'timer') {
-    if (!existing) {
-      slot.insertAdjacentHTML(
-        'beforeend',
-        '<button type="button" class="icon-btn pill-action" data-action="pill-timer-cancel" aria-label="Cancel timer"><svg aria-hidden="true" focusable="false"><use href="#i-x"/></svg></button>'
-      );
-    }
-  } else {
-    existing?.remove();
+}
+
+function renderPillX(state: string): void {
+  if (!pillEl) return;
+  const kind = state === 'timer' ? 'pill-timer-cancel' : state === 'done' ? 'pill-timer-dismiss' : '';
+  let button = pillEl.querySelector<HTMLButtonElement>('.pill-x');
+  if (!kind) {
+    button?.remove();
+    return;
   }
-  const done = pillEl.querySelector<HTMLElement>('.done-actions');
-  if (state === 'done') {
-    if (!done) {
-      pillEl.insertAdjacentHTML(
-        'beforeend',
-        '<div class="pill-overlay done-actions"><span class="done-label">Done</span><button type="button" class="icon-btn pill-action" data-action="pill-timer-dismiss" aria-label="Dismiss"><svg aria-hidden="true" focusable="false"><use href="#i-x"/></svg></button></div>'
-      );
-    }
-  } else {
-    done?.remove();
+  if (!button) {
+    pillEl.insertAdjacentHTML('beforeend', '<button type="button" class="icon-btn pill-x"></button>');
+    button = pillEl.querySelector<HTMLButtonElement>('.pill-x');
   }
+  if (!button || button.dataset.action === kind) return;
+  button.dataset.action = kind;
+  button.setAttribute('aria-label', kind === 'pill-timer-cancel' ? 'Cancel timer' : 'Dismiss');
+  button.innerHTML = '<svg aria-hidden="true" focusable="false"><use href="#i-x"/></svg>';
 }
 
 function renderPill(): void {
@@ -321,7 +326,6 @@ function renderPill(): void {
     : 'Connection lost';
   const musicVisual = helperOk && Boolean(track) && (state === 'playing' || state === 'paused');
   pillEl.dataset.state = state;
-  pillEl.classList.toggle('expands', musicVisual || state === 'timer' || state === 'done' || state === 'error');
   setMark(musicVisual && track ? track.art : null);
   setPip(
     !helperOk
@@ -338,17 +342,21 @@ function renderPill(): void {
               : 'paused'
             : null
   );
-  renderControls(state);
   renderPillSlot(state, label);
-  pillEl.setAttribute('role', state === 'playing' || state === 'paused' ? 'group' : 'button');
+  renderControls(state);
+  renderPillX(state);
+  pillEl.setAttribute(
+    'role',
+    state === 'playing' || state === 'paused' || state === 'timer' || state === 'done' ? 'group' : 'button'
+  );
   pillEl.setAttribute(
     'aria-label',
     !helperOk
-      ? 'Connection lost'
+      ? 'Connection lost — open panel'
       : state === 'playing' || state === 'paused'
-        ? `${track!.playing ? 'Playing' : 'Paused'} ${track!.title}`
+        ? `${track!.playing ? 'Playing' : 'Paused'} ${track!.title} — open panel`
         : state === 'timer'
-          ? `Timer ${clock(timerSnapshot.remainingMs)}, open panel`
+          ? `Timer ${clock(timerSnapshot.remainingMs)} — open panel`
           : state === 'done'
             ? 'Timer finished — open panel'
             : state === 'files'

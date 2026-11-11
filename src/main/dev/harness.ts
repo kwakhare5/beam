@@ -200,7 +200,7 @@ export function probeMusic(target: BrowserWindow, started: number, attempt = 0):
     .executeJavaScript(
       `new Promise((resolve) => requestAnimationFrame(() => requestAnimationFrame(() => {
         const pill = document.querySelector('.pill');
-        const title = pill?.querySelector('.title');
+        const title = pill?.querySelector('.title-text');
         const mark = pill?.querySelector('.mascot');
         const pip = pill?.querySelector('.media-pip');
         resolve({
@@ -235,12 +235,12 @@ export async function waitForMusic(check: () => boolean, ms: number): Promise<bo
   return check();
 }
 
-export async function clickTransport(ctx: HarnessContext, action: 'prev' | 'toggle' | 'next'): Promise<boolean> {
+export async function clickTransport(ctx: HarnessContext, action: 'prev' | 'toggle' | 'next' | 'panel'): Promise<boolean> {
   const win = ctx.window();
   if (!win || win.isDestroyed()) return false;
   const point = (await win.webContents.executeJavaScript(
     `(() => {
-      const button = document.querySelector('.controls [data-action="${action}"]');
+      const button = document.querySelector('.pill-controls [data-action="${action}"]');
       if (!button) return null;
       const rect = button.getBoundingClientRect();
       return { x: Math.round(rect.left + rect.width / 2), y: Math.round(rect.top + rect.height / 2) };
@@ -286,23 +286,34 @@ export async function runMusicCommandTest(ctx: HarnessContext): Promise<void> {
   const hover = (await win.webContents.executeJavaScript(
     `(() => {
       const pill = document.querySelector('.pill');
-      const controls = pill?.querySelector('.controls');
+      const controls = pill?.querySelector('.pill-controls');
       const meta = pill?.querySelector('.meta');
+      const row = controls?.getBoundingClientRect();
+      const rect = pill?.getBoundingClientRect();
       return {
-        hasControls: pill?.classList.contains('has-controls') ?? false,
+        w: rect ? Math.round(rect.width) : 0,
+        rowW: row ? Math.round(row.width) : 0,
         opacity: controls ? getComputedStyle(controls).opacity : null,
+        pointer: controls ? getComputedStyle(controls).pointerEvents : null,
         metaOpacity: meta ? getComputedStyle(meta).opacity : null,
-        buttons: [...(pill?.querySelectorAll('.controls [data-action]') ?? [])].map((button) => ({
-          action: button.getAttribute('data-action'),
-          label: button.getAttribute('aria-label')
-        }))
+        buttons: [...(pill?.querySelectorAll('.pill-controls [data-action]') ?? [])].map((button) => {
+          const box = button.getBoundingClientRect();
+          return {
+            action: button.getAttribute('data-action'),
+            label: button.getAttribute('aria-label'),
+            w: Math.round(box.width),
+            h: Math.round(box.height)
+          };
+        })
       };
     })()`
   )) as {
-    hasControls: boolean;
+    w: number;
+    rowW: number;
     opacity: string | null;
+    pointer: string | null;
     metaOpacity: string | null;
-    buttons: { action: string | null; label: string | null }[];
+    buttons: { action: string | null; label: string | null; w: number; h: number }[];
   };
   console.log(`[music] hover ${JSON.stringify(hover)}`);
 
@@ -367,6 +378,51 @@ export async function runMusicCommandTest(ctx: HarnessContext): Promise<void> {
       ms: Date.now() - started
     })}`
   );
+
+  const panelPoint = (await win.webContents.executeJavaScript(
+    `(() => {
+      const button = document.querySelector('.pill-controls [data-action="panel"]');
+      if (!button) return null;
+      const rect = button.getBoundingClientRect();
+      return { x: Math.round(rect.left + rect.width / 2), y: Math.round(rect.top + rect.height / 2) };
+    })()`
+  )) as { x: number; y: number } | null;
+  let panelOk = false;
+  let panelTab: string | null = null;
+  if (panelPoint) {
+    win.webContents.sendInputEvent({ type: 'mouseMove', x: panelPoint.x, y: panelPoint.y });
+    await delay(80);
+    win.webContents.sendInputEvent({
+      type: 'mouseDown',
+      x: panelPoint.x,
+      y: panelPoint.y,
+      button: 'left',
+      clickCount: 1
+    });
+    win.webContents.sendInputEvent({
+      type: 'mouseUp',
+      x: panelPoint.x,
+      y: panelPoint.y,
+      button: 'left',
+      clickCount: 1
+    });
+    const deadline = Date.now() + 3000;
+    while (Date.now() < deadline) {
+      const view = (await win.webContents.executeJavaScript(
+        `(() => ({
+          open: document.body.classList.contains('is-open'),
+          selected: document.querySelector('[role="tab"][aria-selected="true"]')?.id.replace('tab-', '') ?? null
+        }))()`
+      )) as { open: boolean; selected: string | null };
+      panelTab = view.selected;
+      if (view.open) {
+        panelOk = true;
+        break;
+      }
+      await delay(100);
+    }
+  }
+  console.log(`[music] panel ${JSON.stringify({ ok: panelOk, selected: panelTab })}`);
   console.log('[music] cmd done');
 }
 
@@ -613,7 +669,16 @@ export async function runUiTest(ctx: HarnessContext, target: BrowserWindow, phas
 
   await wait(500);
   const start = await snap();
-  ui('start', { phase, state: start.state, music: Boolean(ctx.music()), chevron: start.chevron, w: start.w, h: start.h, viewport: start.viewport });
+  ui('start', {
+    phase,
+    state: start.state,
+    label: start.label,
+    music: Boolean(ctx.music()),
+    chevron: start.chevron,
+    w: start.w,
+    h: start.h,
+    viewport: start.viewport
+  });
   if (ctx.music()) ui('quiet', { skipped: 'music' });
 
   if (phase === 'chevron') {
@@ -816,7 +881,7 @@ export async function runUiTest(ctx: HarnessContext, target: BrowserWindow, phas
       const centerX = Math.round(bounds.x + bounds.width / 2);
       const centerY = Math.round(bounds.y + bounds.height / 2);
       moveCursor(centerX + 32, centerY);
-      const near = await until((state) => state.state !== 'quiet' && state.w === 94, 3000);
+      const near = await until((state) => state.state !== 'quiet' && state.w === 78, 3000);
       ui('near', { ok: near.ok, state: near.snap.state, w: near.snap.w });
       moveCursor(workArea.x + 8, workArea.y + 8);
       const leftAt = Date.now();
@@ -825,7 +890,7 @@ export async function runUiTest(ctx: HarnessContext, target: BrowserWindow, phas
       if (away.ok) {
         const at = await point('.pill');
         if (at) target.webContents.sendInputEvent({ type: 'mouseMove', x: at.x, y: at.y });
-        const woke = await until((state) => state.state !== 'quiet' && state.w === 94, 3000);
+        const woke = await until((state) => state.state !== 'quiet' && state.w === 78, 3000);
         ui('quietwake', { ok: woke.ok, state: woke.snap.state, w: woke.snap.w });
       }
     }
@@ -910,7 +975,7 @@ export async function pillSnapshot(ctx: HarnessContext): Promise<{ state: string
         const pill = document.querySelector('.pill');
         return {
           state: pill?.dataset.state ?? null,
-          label: pill?.querySelector('.title')?.textContent ?? null
+          label: pill?.querySelector('.title-text')?.textContent ?? null
         };
       })()`
     )) as { state: string | null; label: string | null };
@@ -1020,7 +1085,7 @@ export async function runDropTest(target: BrowserWindow): Promise<void> {
   while (!target.isDestroyed()) {
     try {
       const dom = (await target.webContents.executeJavaScript(
-        `(() => { const pill = document.querySelector('.pill'); const title = pill?.querySelector('.title'); return { state: pill?.dataset.state ?? null, title: title?.textContent ?? null }; })()`
+        `(() => { const pill = document.querySelector('.pill'); const title = pill?.querySelector('.title-text'); return { state: pill?.dataset.state ?? null, title: title?.textContent ?? null }; })()`
       )) as { state: string | null; title: string | null };
       console.log(`[drop] watch state=${dom.state} title=${dom.title}`);
     } catch {
@@ -1255,7 +1320,7 @@ const shelfSnapshot = async (target: BrowserWindow): Promise<ShelfSnapshot> =>
         note: body?.querySelector('.shelf-note')?.textContent ?? '',
         well: !!body?.querySelector('.drop-well'),
         state: pill?.dataset.state ?? '',
-        title: pill?.querySelector('.title')?.textContent ?? ''
+        title: pill?.querySelector('.title-text')?.textContent ?? ''
       };
     })()`
   )) as ShelfSnapshot;
@@ -1336,7 +1401,7 @@ export function probeIdle(target: BrowserWindow): void {
       `(() => {
         const pill = document.querySelector('.pill');
         const mark = pill?.querySelector('.mascot');
-        const title = pill?.querySelector('.title');
+        const title = pill?.querySelector('.title-text');
         if (!pill || !mark) return null;
         return {
           state: pill.dataset.state,

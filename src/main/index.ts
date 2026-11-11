@@ -59,7 +59,7 @@ if (!gotLock) {
   let pickingFiles = false;
   let hiddenByFullscreen = false;
   let hiddenByUser = false;
-  let pillSize = { width: 94, height: 30 };
+  let pillSize = { width: 78, height: 30 };
   let shapeFailed = false;
 
   function applyWindowShape(target: BrowserWindow): void {

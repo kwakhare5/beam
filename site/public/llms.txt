@@ -9,7 +9,7 @@
 - Price: Free
 - Account: Not required
 - Network: None in the app
-- Rest size: 94×30 pixels
+- Bar size: idle 78×30; music 69–108×30; timer 122×30; quiet 26×26
 - Shortcut: Alt + Space (fallback: Ctrl + Shift + Space)
 - Status: Preview. The Windows build is not published yet.
 - Maker: Karan Wakhare
