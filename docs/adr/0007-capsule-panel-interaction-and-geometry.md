@@ -1,6 +1,6 @@
 # Capsule-to-panel interaction, flicker prevention, and edge geometry
 
-Status: accepted; amended 2026-10-28 by ADR-0009, which changed the open window to 452×332, and by the two-width pass, which replaced the 184×44 rest window.
+Status: accepted; amended 2026-10-28 by ADR-0009, which changed the open window to 452×332, and by the two-width pass, which replaced the 184×44 rest window. **Superseded in part 2026-11-11:** the rest window is 136×42 and the open window 452×316. A click anywhere on the resting capsule opens the panel; only music expands (to 126×30), and its three transport buttons still never open the panel.
 
 Clicking the capsule expands the window to 452×332, which holds the 420×300 panel and a 16px shadow margin; transport buttons must not open the panel, continuous window resize calls stutter on Windows, and display edges clip fixed-direction growth.
 

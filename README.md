@@ -2,14 +2,14 @@
 
 Beam is an offline Windows 11 floating capsule for media controls, a file shelf, a timer, and a calendar. No cloud, no accounts, no network.
 
-## Current state (2026-11-10)
+## Current state (2026-11-11)
 
 **Working**
-- **Shell:** one 136×42 transparent window holding a 94×30 idle capsule (music and paused at 108×30; a 26×26 quiet star after 10s idle, woken when the cursor comes within 37px), clipped with `setShape` to the pill plus a 6px halo. It uses `showInactive()`, never takes focus on show, drags with pointer capture, persists its position in `%APPDATA%\Beam\settings.json`, and hides on fullscreen. Tray: Settings, Reset Position, Hide, Quit; Quit confirms while the shelf holds files.
+- **Shell:** one 136×42 transparent window holding a content-hugged capsule — idle 78×30 with the star and label centered as one unit, files 80–88, music and paused 69–108, timer 122 with an always-visible 28px cancel, done 108 with `Done` and a 28px dismiss, drag 88, error 127, and a 26×26 quiet star after 10s idle (woken when the cursor comes within 37px). Music alone expands on hover or focus, snapping to 126×30 with four 24px controls: previous, play/pause, next, panel. The window is clipped with `setShape` to the pill plus a 6px halo. It uses `showInactive()`, never takes focus on show, drags with pointer capture, persists its position in `%APPDATA%\Beam\settings.json`, and hides on fullscreen. Tray: Settings, Reset Position, Hide, Quit; Quit confirms while the shelf holds files.
 - **Files:** drop or Add files, per-row copy, drag-out to Explorer, missing badge, row remove with 5s Undo, armed Clear All, 50-entry in-memory cap.
-- **Music:** live SMTC title, art, dot, hover Prev / play-pause / Next, chevron, and the Music tab with a real seek slider. Sessions are picked automatically; last-touched switching is proven by check 24.
+- **Music:** live SMTC title, art, dot, the expanded hover row, and the Music tab with a real seek slider. Sessions are picked automatically; last-touched switching is proven by check 24.
 - **Timer and Calendar:** 5/10/25/custom countdown on the tab and pill with a main-owned deadline, cancel and replace, done face with one chime and one Windows notification (fires while the pill is hidden), month grid with arrows and Today. The deadline and alert path are proven by checks 28–29; calendar locale/midnight cases are still unproven.
-- **Glue and access:** last-used tab on open, `Alt+Space` (fallback `Ctrl+Shift+Space`), keyboard pill control, focus ring, live region, reduced-motion support.
+- **Glue and access:** a rest click opens the panel to what the pill shows (Music, Timer, Files, otherwise last-used), `Alt+Space` (fallback `Ctrl+Shift+Space`), keyboard pill control plus the hover row's four tab stops, one 2px focus ring, a live region, and Beam's own motion regardless of the OS reduced-motion flag.
 - **Landing site:** live at `beamm.vercel.app`, running the real renderer as a browser demo.
 
 **Built, with proof gaps**
@@ -23,7 +23,7 @@ Beam is an offline Windows 11 floating capsule for media controls, a file shelf,
 
 ## Verification
 
-`.\verify.ps1` has 30 checks. The 2026-11-10 audit run exits 0 with 30/30 and no skips: check 16 is a real Explorer→pill drag, check 17 retries the Explorer foreground, check 24 follows two live players, check 25 runs separate quiet and chevron phases (26×26 quiet, a real near-cursor wake, a 2s return, and the hover wake), check 26 force-kills the helper and proves a new pid plus a second pong, check 27 proves a hung request times out after 8s, check 28 proves timer start/cancel/replace with one chime, one banner, and the done face, check 29 proves completion behind a real fullscreen window, and check 30 proves the Settings controls and a persisted restart.
+`.\verify.ps1` has 30 checks. The last full green run is 30/30 with no skips (work card 128): check 16 is a real Explorer→pill drag, check 17 retries the Explorer foreground, check 24 follows two live players, check 25 runs a quiet phase and a live-media phase, check 26 force-kills the helper, check 27 proves the 8s timeout, check 28 proves timer start/cancel/replace with one chime and banner, check 29 proves completion behind fullscreen, and check 30 proves the Settings controls and a persisted restart. The capsule change landed after that run, so check 22 and the capsule static checks still describe the old hover row and must be reworked before the next green run.
 
 ## Commands
 

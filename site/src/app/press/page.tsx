@@ -14,7 +14,7 @@ const FACTS = [
   ['Platform', 'Windows 11'],
   ['Price', 'Free'],
   ['Status', 'Preview; Windows build not published'],
-  ['Size', '94×30 pixels at rest'],
+  ['Size', '69–127×30 pixels at rest, hugged'],
   ['Account', 'Not required'],
   ['Network', 'None in the app'],
   ['Source', REPO]

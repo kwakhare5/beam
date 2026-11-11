@@ -5,7 +5,7 @@ The shared language for the Beam desktop surface. Use these terms in code, docs,
 ## Surfaces
 
 **Capsule**:
-The visible surface: a 94×30 bar at rest for idle, playing, paused, timer, done, and files; drag is 128×30. Music, timer, and done grow to 128×30 on hover or focus. Idle centers the master mark and a muted label at 70% star opacity; music shows the album thumbnail (or the star) and the title; paused adds an amber dot; timer shows digits only; done shows a gold check; files shows a count.
+The visible surface that hugs its content at rest: idle 78×30, files 80–88, music and paused 69–108, timer 122, done 108, drag 88, error 127, quiet 26×26. Every rest label centers the master mark and its text as one unit. Music alone expands on hover or focus, to 126×30 with four 24px controls. Idle dims the star to 70%; music shows the album thumbnail (or the star) and the title; paused adds an amber dot; timer shows digits and an always-visible 28px ×; done shows `Done` and the same 28px ×; files shows a count.
 _Avoid_: pill, bar, bubble
 
 **Rest window**:
@@ -13,7 +13,7 @@ The 136×42 transparent window that contains the capsule and its shadow margin. 
 _Avoid_: pill window
 
 **Pill position**:
-The capsule window's saved top-left on screen, stored with its display id in `%APPDATA%\Beam\settings.json` after a drag. It is restored at launch when that display still exists; Reset Position clears it and returns to the primary taskbar anchor.
+The capsule window's saved top-left on screen, stored as x/y in `%APPDATA%\Beam\settings.json` after a drag. It is restored at launch when that rect still intersects a current display; Reset Position clears it and returns to the primary taskbar anchor.
 _Avoid_: window coordinates, drag position
 
 **Panel**:
@@ -29,11 +29,11 @@ The fill, 1px border, and shadow shared by the capsule and the panel.
 _Avoid_: background, chrome
 
 **Hover emphasis**:
-Hover brightens the border and reveals actions. The idle label and star brighten in place at 100. Music, timer, and done grow from 94 to 128: music fades the thumbnail and title for transports, timer adds cancel, done replaces its check with `Done` and dismiss. Idle and files never grow. The window never resizes.
-_Avoid_: hover growth, hover resize, OS resize
+Hover brightens the border in every state and brightens the idle label and star to 100. Music also expands once to 126×30 and fades the art and title for its four controls; the expansion snaps, so no target moves under a reaching cursor. No other state changes size. The window never resizes.
+_Avoid_: hover resize, OS resize
 
 **Hover action**:
-The single 28px icon button revealed on hover: cancel on timer, dismiss on done. Music reveals three 28px transports instead. Idle, files, and drag have no hover action.
+The music hover row contains four 24px controls: previous, play/pause, next, and panel. Timer and done carry an always-visible 28px × (cancel / dismiss) at rest rather than on hover. Idle, files, and drag have no controls.
 _Avoid_: hover button, hidden control
 
 ## Structure
@@ -75,8 +75,8 @@ Shifting the open window coordinates to preserve at least 8px margin from displa
 _Avoid_: screen padding, window snapping
 
 **Title / transport swap**:
-The playing capsule shows the track title at rest in a 46px slot and swaps the thumbnail and title for Previous / Play-Pause / Next on hover or focus while growing from 94 to 128 wide.
-_Avoid_: dynamic width, hover growth, text stretching
+The playing capsule shows the track title at rest in a hug-sized slot (108px max) and swaps the thumbnail and title for Previous / Play-Pause / Next / Panel on hover or focus while expanding once to 126px.
+_Avoid_: dynamic width, text stretching
 
 **Middle-truncation**:
 Ellipsizing long filenames in the center (`quarterl…inal.xlsx`) to preserve both the title prefix and file format extension.
@@ -94,18 +94,18 @@ _Avoid_: notification dot, badge, media pip
 The dashed empty area in the Files tab that accepts a drop and holds the Add button.
 _Avoid_: drop zone, empty state
 
-**Position bar**:
-The read-only progress line in the Music tab showing elapsed and total time. It cannot be dragged.
-_Avoid_: seek bar, scrubber, slider
+**Seek bar**:
+The interactive progress slider in the Music tab showing elapsed and total time. Pointer drag or click, ←/→ 5s, and Home/End go through `beam:music:seek` to the helper, which clamps to the SMTC timeline; a refusal repaints the last known position.
+_Avoid_: position bar, read-only bar
 
 ## Brand
 
 **Master mark**:
-The official Puffy Chubby Star mark (`beam-mascot.svg`), used at 24px in the capsule.
+The official Puffy Chubby Star mark (`beam-mascot.svg`), used at 20px in the capsule.
 _Avoid_: logo, avatar, mini mark
 
 **Mascot**:
-The single canonical Puffy Chubby Star mark (`beam-mascot.svg`), used at 24px in the capsule and 48px in panel empty states. Secondary star variants are deleted.
+The single canonical Puffy Chubby Star mark (`beam-mascot.svg`), used at 20px in the capsule and 48px in panel empty states. Secondary star variants are deleted.
 _Avoid_: logo, avatar, fake stars
 
 **Flat surface**:
@@ -135,8 +135,8 @@ The filled media glyphs (previous, play/pause, next) in the same 24px Lucide spr
 _Avoid_: filled icon set, second icon library
 
 **Focus ring**:
-Capsule controls use a 1px neutral inset ring; panel controls use a 2px neutral ring. The capsule itself has no ring and no glow.
-_Avoid_: capsule ring, gold glow, double ring
+The capsule body, its controls, and panel controls use one 2px neutral `--ring` outline with a 2px offset. No glow.
+_Avoid_: gold glow, double ring
 
 **shadcn-style**:
 The token vocabulary, 8px grid, Lucide icons, and component patterns used in the vanilla renderer.

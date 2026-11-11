@@ -576,7 +576,7 @@ Assert-UI 'tray needs Reset Position, Quit, and a quit path' ($trayTs -notmatch 
 Assert-UI 'main must create the tray' ($main -notmatch 'createTray\(')
 Assert-UI 'window must be 136x42 and showInactive' ($geometry -notmatch 'WINDOW_WIDTH = 136' -or $geometry -notmatch 'WINDOW_HEIGHT = 42' -or $main -notmatch 'showInactive')
 Assert-UI 'body padding must be 6px 4px for the 30px capsule' ($base -notmatch 'padding: 6px 4px')
-Assert-UI 'capsule must rest at 94 (music 108), drag at 128, and grow to 128 on hover for music/timer/done' ($pill -notmatch 'width: 94px' -or $pill -notmatch 'width: 108px' -or $pill -notmatch 'width: 128px' -or $pill -notmatch '\.pill\.expands:hover' -or $pill -notmatch "data-state='drag'\] \{[^}]*width: 128px")
+Assert-UI 'capsule must hug at rest, cap music at 108, expand to 126 on hover, and drop the old fixed widths' ($pill -notmatch 'width: max-content' -or $pill -notmatch 'max-width: 108px' -or $pill -notmatch 'width: 126px' -or $pill -notmatch 'max-width: 126px' -or $pill -match 'width: (94|118|128)px')
 Assert-UI 'quiet must shrink to a 26px capsule around an 18px star' ($pill -notmatch "data-state='quiet'\] \{[^}]*width: 26px" -or $pill -notmatch "data-state='quiet'\] \{[^}]*height: 26px" -or $pill -notmatch "data-state='quiet'\] \.mascot \{[^}]*width: 18px")
 Assert-UI 'the cursor within 37px of the pill must wake it' ($geometry -notmatch 'NEAR_RADIUS = 37' -or $main -notmatch 'isCursorNear' -or $main -notmatch 'IPC\.pillNear' -or $rendererTs -notmatch 'onPillNear' -or $preloadTs -notmatch 'pillNear')
 Assert-UI 'quiet must wait 10s before shrinking' ($quietTs -notmatch 'QUIET_AFTER = 10000')
@@ -586,14 +586,14 @@ Assert-UI 'the music rail must use the track token' ($musicCss -notmatch '\.trac
 Assert-UI 'calendar Today must read as an active control' ($calendarCss -notmatch '\.cal-today-btn \{[^}]*color: var\(--foreground\)')
 Assert-UI 'timer actions must be pinned to the panel floor' ($timerCss -notmatch '\.panel-timer \.actions \{[^}]*bottom: var\(--space-2\)')
 Assert-UI 'done and error keep their borders on hover' ($pill -notmatch "data-state='done'\]:hover" -or $pill -notmatch "data-state='error'\]:hover")
-Assert-UI 'capsule uses only 94 rest, 108 music rest, 128 hover, and 26 quiet' ($pill -match 'width: (100|104|132|136|140|176|216)px')
+Assert-UI 'capsule uses only content width, the 108 music cap, the 126 hover step, and 26 quiet' ($pill -match 'width: (94|100|104|118|128|132|136|140|176|216)px')
 Assert-UI 'idle and files must not grow on hover' ($pill -match "data-state='(idle|files)'\]:hover[^{]*\{[^}]*width")
 Assert-UI 'the idle star must dim to 0.7' ($pill -notmatch "data-state='idle'\] \.mascot \{[^}]*opacity: 0\.7")
-Assert-UI 'hover actions must overlay the slot' ($pill -notmatch '\.pill-overlay \{' -or $pill -notmatch 'position: absolute' -or $pill -notmatch '\.pill-action')
-Assert-UI 'music hover must fade the star and the timer action must collapse at rest' ($pill -notmatch "has-controls:hover \.mascot-wrap" -or $pill -notmatch "data-state='timer'\] \.pill-action")
+Assert-UI 'the music hover row must overlay the pill and center four 24px controls' ($pill -notmatch '\.pill-controls \{' -or $pill -notmatch 'position: absolute' -or $pill -notmatch 'justify-content: center' -or $pill -notmatch '\.pill-controls \.icon-btn \{[^}]*width: 24px' -or $pill -notmatch '\.pill-controls \.icon-btn \{[^}]*height: 24px')
+Assert-UI 'music hover must fade the art and title; the timer x must stay outside the row' ($pill -notmatch "data-state='playing'\]:hover \.mascot-wrap" -or $pill -notmatch "data-state='paused'\]\[data-hover='true'\] \.meta" -or $pill -notmatch '\.pill \.pill-x \{')
 Assert-UI 'mascot must not animate on hover' ($pill -match 'scale\(1\.06\)')
-Assert-UI 'hover swap must be scoped; music needs a thumbnail and green/amber/red dots' ($pill -notmatch '\.has-controls' -or $pillTs -notmatch 'state-icon' -or $pillTs -notmatch 'pill-art' -or $pill -notmatch 'media-pip\.paused' -or $pill -notmatch 'media-pip\.danger')
-Assert-UI 'timer and done need their hover actions' ($pillTs -notmatch 'Cancel timer' -or $pillTs -notmatch 'Dismiss' -or $pillTs -notmatch 'pill-overlay')
+Assert-UI 'music needs the hover row, a thumbnail, and green/amber/red dots' ($pill -notmatch '\.pill-controls' -or $pillTs -notmatch 'pill-controls' -or $pillTs -notmatch 'pill-art' -or $pill -notmatch 'media-pip\.paused' -or $pill -notmatch 'media-pip\.danger')
+Assert-UI 'timer and done need their always-visible x actions' ($pillTs -notmatch 'Cancel timer' -or $pillTs -notmatch 'Dismiss' -or $pill -notmatch '\.pill-x')
 Assert-UI 'the missing-filename capsule state must stay removed' ($pillTs -match "'missing'" -or $pillTs -match 'middleTruncate')
 Assert-UI 'music panel must use music-controls only' ($music -notmatch 'class="music-controls"' -or $music -match 'controls music-controls')
 Assert-UI 'music needs square 148px art and a position bar' ($music -notmatch 'track-bar' -or $musicCss -notmatch 'width: 148px' -or $musicCss -notmatch 'height: 148px')
@@ -640,8 +640,8 @@ Assert-UI 'panel bodies must center their content so no tab pools space at the b
 Assert-UI 'tab bar must keep four equal content tabs and a compact Settings button' ($shellCss -notmatch '\.tab-track' -or $shellCss -notmatch '\.tab-settings \{[^}]*width: 28px')
 Assert-UI 'tabs must be flat; no track fill and no selected fill' ($shellCss -match '\.tab-track \{[^}]*background:' -or $shellCss -match "\.tab\[aria-selected='true'\] \{[^}]*background:")
 Assert-UI 'preview tabs must be wired' ($preview -notmatch 'bindPanelTabs')
-Assert-UI 'preview capsule frames must be 94 rest, 108 music rest, 26 quiet, and 128 hover' ($preview -notmatch '\.f-pill \{ width: 94px' -or $preview -notmatch '\.f-pill\.is-music \{ width: 108px' -or $preview -notmatch '\.f-pill\.is-quiet \{ width: 26px' -or $preview -notmatch '\.f-pill\.is-expanded \{ width: 128px')
-Assert-UI 'preview must show timer and done rest and hover' ($preview -notmatch 'data-pill="timerRest"' -or $preview -notmatch 'data-pill="doneRest"' -or $preview -notmatch 'data-pill="timer"' -or $preview -notmatch 'data-pill="done"')
+Assert-UI 'preview frames must hug, quiet to 26, and show the 126 hover row' ($preview -notmatch '\.f-pill \{ display: flex; width: fit-content; height: 30px' -or $preview -notmatch '\.f-pill\.is-quiet \{ width: 26px' -or $preview -notmatch "playing: \{ state: 'playing', hover: true" -or $preview -notmatch '126×30' -or $preview -notmatch '4 × 24px')
+Assert-UI 'preview must show the always-visible timer and done x states' ($preview -notmatch 'data-pill="timer"' -or $preview -notmatch 'data-pill="done"' -or $preview -match 'data-pill="(timerRest|doneRest|timerHover|doneHover)"' -or $preview -notmatch "timer: \{ state: 'timer'" -or $preview -notmatch "done: \{ state: 'done'")
 Assert-UI 'preview window must be 136x42' ($preview -notmatch 'width: 136px; height: 42px')
 Assert-UI 'the 224 window and the 216 music width are gone' ($preview -match 'is-wide|224px|216×32')
 Assert-UI 'preview must be a 452x316 window with a 16px margin and a 30px capsule frame' ($preview -notmatch '\.f-open \{ width: 452px; height: 316px; padding: 16px' -or $preview -notmatch 'compare-window \[data-pill\].*height: 30px')
@@ -689,8 +689,8 @@ try {
   $dragY = [int](($moveRect.Top + $moveRect.Bottom) / 2)
   # A live track turns the hovered pill's middle into prev / play-pause / next, so a press
   # there never starts the window drag. Read the newest music line: with a track, wake the
-  # pill at its centre and press 7 DIP from the window edge (3 DIP inside the 128 hover pill,
-  # left of the overlay controls at 10); with no track the pill has no buttons and the centre
+  # pill at its centre and press 7 DIP from the window edge (2 DIP inside the 126 hover pill,
+  # left of the four-control row at 14); with no track the pill has no buttons and the centre
   # is safe. One retry covers a track appearing or ending between the read and the press.
   $cursorBefore = New-Object BeamScreen+POINT
   [BeamScreen]::GetCursorPos([ref]$cursorBefore) | Out-Null
@@ -1675,6 +1675,7 @@ try {
   $resumeMatch = [regex]::Match($cmdLog, '\[music\] resume (\{.+\})')
   $nextMatch = [regex]::Match($cmdLog, '\[music\] next (\{.+\})')
   $prevMatch = [regex]::Match($cmdLog, '\[music\] prev (\{.+\})')
+  $panelMatch = [regex]::Match($cmdLog, '\[music\] panel (\{.+\})')
   if (-not $hoverMatch.Success) { throw 'the pill never reported its transports' }
   if (-not $toggleMatch.Success) { throw 'the play/pause button never reported' }
   if (-not $nextMatch.Success) { throw 'the next button never reported' }
@@ -1684,10 +1685,18 @@ try {
   $toggle = $toggleMatch.Groups[1].Value | ConvertFrom-Json
   $next = $nextMatch.Groups[1].Value | ConvertFrom-Json
   $prev = $prevMatch.Groups[1].Value | ConvertFrom-Json
+  if (-not $panelMatch.Success) { throw 'the panel button never reported' }
+  $panel = $panelMatch.Groups[1].Value | ConvertFrom-Json
 
-  if (-not $hover.hasControls) { throw 'the pill has no transport overlay while music plays' }
+  if ([int]$hover.w -ne 126) { throw "the hovered pill is $($hover.w)px, expected 126" }
+  if ([int]$hover.rowW -ne 108) { throw "the control row is $($hover.rowW)px, expected 108" }
   if ($hover.opacity -ne '1') { throw "the transports did not fade in on hover (opacity $($hover.opacity))" }
+  if ($hover.pointer -ne 'auto') { throw "the hover row does not take clicks (pointer-events $($hover.pointer))" }
   if ($hover.metaOpacity -ne '0') { throw "the title did not fade out on hover (opacity $($hover.metaOpacity))" }
+  $small = @($hover.buttons | Where-Object { [int]$_.w -ne 24 -or [int]$_.h -ne 24 })
+  if ($small.Count -gt 0) {
+    throw "controls must be 24x24, found $(($small | ForEach-Object { "$($_.action) $($_.w)x$($_.h)" }) -join ', ')"
+  }
   $actions = @($hover.buttons | ForEach-Object { $_.action })
   if ($actions.Count -ne 4 -or $actions -notcontains 'prev' -or $actions -notcontains 'toggle' -or $actions -notcontains 'next' -or $actions -notcontains 'panel') {
     throw "expected prev/toggle/next/panel, found $($actions -join ',')"
@@ -1702,6 +1711,8 @@ try {
   }
   if (-not $next.ok -or $next.from -eq $next.to) { throw "Next did not change the track ('$($next.from)')" }
   if (-not $prev.ok -or $prev.from -eq $prev.to) { throw "Previous did not change the track ('$($prev.from)')" }
+  if (-not $panel.ok) { throw 'the panel button did not open the panel' }
+  if ($panel.selected -ne 'music') { throw "the panel button opened '$($panel.selected)', expected music" }
 
   Stop-BeamApp -App $cmdApp -What 'the pill after the transport check'
 } catch {
@@ -1713,7 +1724,7 @@ try {
 }
 Remove-Item Env:BEAM_MUSIC_TEST, Env:BEAM_MUSIC_CMD_TEST -ErrorAction SilentlyContinue
 Remove-Item -LiteralPath $cmdOut, $cmdErr -ErrorAction SilentlyContinue
-Write-Host "PASS music controls (play/pause $($toggle.from)->$($toggle.to), next '$($next.from)'->'$($next.to)', prev '$($prev.from)'->'$($prev.to)', 4 controls including panel, transports at opacity $($hover.opacity))"
+Write-Host "PASS music controls (play/pause $($toggle.from)->$($toggle.to), next '$($next.from)'->'$($next.to)', prev '$($prev.from)'->'$($prev.to)', 126 pill with a 108 row of 4x24 controls, panel opened $($panel.selected))"
 }
 
 function Format-BeamClock([int]$seconds) {
@@ -1960,7 +1971,11 @@ try {
   $uiOut = $uiQuiet.Log
   $start = Get-UiLog $uiOut 'start'
   if ($start.phase -ne 'quiet') { throw "the quiet phase logged phase '$($start.phase)'" }
-  if ([int]$start.w -ne 94 -or [int]$start.h -ne 30) { throw "the resting pill is $($start.w)x$($start.h), expected 94x30" }
+  if ($start.music) {
+    Write-BeamSkip "quiet phase start (a media session was live: '$($start.label)'; the quiet, near-wake, and 2s return assertions need an idle pill)"
+  } elseif ([int]$start.w -ne 78 -or [int]$start.h -ne 30) {
+    throw "the resting pill is $($start.w)x$($start.h), expected 78x30"
+  }
   $add = Get-UiLog $uiOut 'add'
   if ([int]$add.accepted -ne 3 -or [int]$add.shelf -ne 3) { throw "the shelf took $($add.accepted) of 3 files" }
   $open = Get-UiLog $uiOut 'open'
@@ -1992,8 +2007,9 @@ try {
   $esc = Get-UiLog $uiOut 'esc'
   if (-not $esc.ok) { throw 'Escape did not close the panel' }
   $lastused = Get-UiLog $uiOut 'lastused'
-  if (@($lastused.selected) -notcontains 'calendar') {
-    throw "reopening after the calendar landed on '$(@($lastused.selected) -join ',')'"
+  $wantLast = if ($start.music) { 'music' } else { 'calendar' }
+  if (@($lastused.selected) -notcontains $wantLast) {
+    throw "reopening after the calendar landed on '$(@($lastused.selected) -join ',')', expected $wantLast"
   }
   $clear = Get-UiLog $uiOut 'clear'
   $clearLabelOk = if ($clear.state -eq 'files' -or $clear.state -eq 'idle') {
@@ -2012,8 +2028,12 @@ try {
   if ($chevron.skipped -ne 'quiet-phase') {
     throw "the quiet phase did not record the expected chevron skip (got '$($chevron.skipped)')"
   }
-  $quiet = Get-UiLog $uiOut 'quiet'
-  if ($null -ne $quiet.skipped) {
+  $quietMatch = [regex]::Match($uiOut, '\[ui\] quiet (\{[^\r\n]*\})')
+  $quiet = $null
+  if ($quietMatch.Success) { $quiet = $quietMatch.Groups[1].Value | ConvertFrom-Json }
+  if ($null -eq $quiet) {
+    Write-BeamSkip 'quiet (the phase started with a media session live, so the pill never idled)'
+  } elseif ($null -ne $quiet.skipped) {
     Write-BeamSkip "quiet (a media session was live: $($quiet.skipped))"
   } else {
     if (-not $quiet.ok -or [int]$quiet.w -ne 26 -or [int]$quiet.h -ne 26) {
@@ -2021,7 +2041,7 @@ try {
     }
     $near = Get-UiLog $uiOut 'near'
     if (-not $near.ok -or $near.state -ne 'idle') { throw "the cursor 32px from the centre left the pill '$($near.state)'" }
-    if ([int]$near.w -ne 94) { throw "the near wake left the pill at $($near.w)px, expected 94" }
+    if ([int]$near.w -ne 78) { throw "the near wake left the pill at $($near.w)px, expected 78" }
     $nearleave = Get-UiLog $uiOut 'nearleave'
     if (-not $nearleave.ok -or [int]$nearleave.w -ne 26) {
       throw "the pill did not return to quiet after the cursor left ($($nearleave.state), $($nearleave.w)px)"
@@ -2083,7 +2103,7 @@ try {
 Remove-Item Env:BEAM_UI_TEST -ErrorAction SilentlyContinue
 Remove-Item Env:BEAM_UI_TEST_PHASE -ErrorAction SilentlyContinue
 Remove-Item -LiteralPath $uiQuietOut, $uiQuietErr, $uiChevronOut, $uiChevronErr -ErrorAction SilentlyContinue
-Write-Host 'PASS UI pass (quiet phase: 94x30 rest, shelf add/undo, last-used tab, centered running timer, calendar nav, Esc, 26x26 quiet + near wake + 2s return; chevron phase: live-music chevron opened the panel; margin click-through)'
+Write-Host 'PASS UI pass (quiet phase: 78x30 rest, shelf add/undo, last-used tab, centered running timer, calendar nav, Esc, 26x26 quiet + near wake + 2s return; chevron phase: live-music chevron opened the panel; margin click-through)'
 
 Write-Host '[26/30] helper restart'
 $restartOut = Join-Path $env:TEMP 'beam-restart.out.log'
