@@ -1,68 +1,12 @@
-import {
-  bindArtFallback,
-  bindClearAll,
-  bindFileDrag,
-  bindFilesActions,
-  bindMarquee,
-  bindMusicSeek,
-  bindPanelTabs,
-  formatSize,
-  iconSprite,
-  panel,
-  pill,
-  transportControls,
-  type PanelData,
-  type Tab
-} from './ui';
+import { bindArtFallback, bindMarquee, iconSprite, pill, transportControls, type Tab } from './ui';
 import { MASCOTS } from './ui/shared/mascots';
-import chimeUrl from './assets/beam-chime.wav';
-import { clampMinutes, clock, timerData as buildTimerData, type TimerPreset } from './core/timer';
-import { ENABLED_TABS, pickTab, type LastUsed } from './core/tabs';
-import { shiftMonth } from './core/calendar';
-import { bindDropTarget, FileShelf, fileLabel } from './files';
+import { clock } from './core/timer';
+import { pickTab, type LastUsed } from './core/tabs';
+import { bindDropTarget, fileLabel } from './files';
 import { QuietTimer, QUIET_AFTER, QUIET_RETURN } from './quiet';
-import { MusicSession } from './music';
-import { chordFromEvent, SettingsController } from './settings';
-import type { AddResult, CopyResult, FileChange, HelperState, MusicState, SettingsPatch, SettingsSnapshot, ShelfFile, TimerSnapshot } from '../shared/ipc';
-
-type BeamApi = {
-  getPathForFile(file: File): string;
-  addFiles(paths: string[]): Promise<AddResult>;
-  pickFiles(): Promise<AddResult | null>;
-  copyFiles(paths: string[], source: 'row' | 'all'): Promise<CopyResult>;
-  startFileDrag(paths: string[]): void;
-  removeFile(path: string): Promise<FileChange>;
-  clearFiles(): Promise<FileChange>;
-  openPanel(): void;
-  panelCollapsed(): void;
-  setPillSize(width: number, height: number): void;
-  beginWindowDrag(x: number, y: number): void;
-  moveWindowDrag(x: number, y: number): void;
-  endWindowDrag(x: number, y: number): void;
-  onPanelOpen(callback: (files: ShelfFile[], tab?: 'settings') => void): void;
-  onPanelDismiss(callback: () => void): void;
-  onMusicState(callback: (state: MusicState | null) => void): void;
-  onHelperState(callback: (state: HelperState) => void): void;
-  onPillNear(callback: (near: boolean) => void): void;
-  startTimer(minutes: number): Promise<TimerSnapshot | null>;
-  cancelTimer(): Promise<TimerSnapshot | null>;
-  dismissTimer(): Promise<TimerSnapshot | null>;
-  timerChimed(id: number, ok: boolean): void;
-  onTimerState(callback: (state: TimerSnapshot) => void): void;
-  getSettings(): Promise<SettingsSnapshot>;
-  setSettings(patch: SettingsPatch): Promise<{ ok: boolean; settings: SettingsSnapshot; error?: string }>;
-  resetPosition(): Promise<{ ok: boolean; settings: SettingsSnapshot; error?: string }>;
-  onSettingsState(callback: (state: SettingsSnapshot) => void): void;
-  musicCommand(cmd: 'toggle' | 'next' | 'prev'): Promise<{ ok: boolean; error?: string }>;
-  musicSeek(positionMs: number): Promise<{ ok: boolean; error?: string }>;
-  reportPanelTiming(ms: number, reduced: boolean): void;
-};
-
-declare global {
-  interface Window {
-    beam?: BeamApi;
-  }
-}
+import { chordFromEvent } from './settings';
+import { PanelView } from './panel-view';
+import { TimerView } from './timer-view';
 
 document.body.insertAdjacentHTML('afterbegin', iconSprite());
 document.body.insertAdjacentHTML('afterbegin', '<div class="sr-only" role="status" aria-live="polite" data-live></div>');
@@ -96,117 +40,23 @@ let cursorNear = false;
 const quiet = new QuietTimer(() => idleEligible(), () => renderPill());
 
 let lastUsed: LastUsed | null = null;
-let timerPreset: TimerPreset = '25';
-let timerCustom = '25';
-let timerSnapshot: TimerSnapshot = { phase: 'idle', minutes: 0, remainingMs: 0, id: 0, alert: false };
-let chime: HTMLAudioElement | null = null;
-let chimedId = 0;
-let chimeVolume = 0.6;
-let calendarView = new Date();
 
 function stamp(tab: LastUsed): void {
   lastUsed = tab;
 }
 
-function timerData(): PanelData['timer'] {
-  return buildTimerData(timerSnapshot.phase, timerSnapshot.remainingMs, timerPreset, timerCustom);
-}
+const beam = window.beam;
 
-function patchTimerDigits(): void {
-  const digits = clock(timerSnapshot.remainingMs);
-  const pillDigits = pillEl?.querySelector<HTMLElement>('[data-pill-digits]');
-  if (pillDigits) pillDigits.textContent = digits;
-  const panelDigits = wrapEl?.querySelector<HTMLElement>('.panel-timer [data-timer-digits]');
-  if (panelDigits) panelDigits.textContent = digits;
-  pillEl?.setAttribute('aria-label', `Timer ${digits}, open panel`);
-}
+let timer!: TimerView;
+let view!: PanelView;
 
-function playChime(id: number): void {
-  if (id === chimedId) return;
-  chimedId = id;
-  chime ??= new Audio(chimeUrl);
-  chime.currentTime = 0;
-  chime.volume = chimeVolume;
-  void chime
-    .play()
-    .then(() => beam?.timerChimed(id, true))
-    .catch((error: unknown) => {
-      console.error('[timer] chime failed', error);
-      beam?.timerChimed(id, false);
-    });
-}
-
-function playTestChime(): void {
-  chime ??= new Audio(chimeUrl);
-  chime.currentTime = 0;
-  chime.volume = chimeVolume;
-  void chime.play().catch((error: unknown) => console.error('[settings] test chime failed', error));
-}
-
-function applyTimer(next: TimerSnapshot): void {
-  const previous = timerSnapshot;
-  const phaseChanged = next.phase !== previous.phase;
-  timerSnapshot = next;
-  if (next.phase === 'running') {
-    if (!phaseChanged) {
-      patchTimerDigits();
-      return;
-    }
-    wakePill();
-    renderPill();
-    if (document.body.classList.contains('is-open')) renderPanel();
-    announce(`Timer started for ${next.minutes} ${next.minutes === 1 ? 'minute' : 'minutes'}`);
-    return;
-  }
-  if (next.phase === 'done') {
-    renderPill();
-    if (document.body.classList.contains('is-open')) renderPanel();
-    if (next.alert) {
-      playChime(next.id);
-      announce('Timer finished');
-    }
-    return;
-  }
-  if (phaseChanged) {
-    renderPill();
-    if (document.body.classList.contains('is-open')) renderPanel();
-  }
-}
-
-function startTimer(minutes: number): void {
-  if (!beam) return;
-  stamp('timer');
-  void beam
-    .startTimer(minutes)
-    .then((snapshot) => {
-      if (snapshot) applyTimer(snapshot);
-    })
-    .catch((error: unknown) => console.error('[timer] start failed', error));
-}
-
-function cancelTimer(): void {
-  if (!beam) return;
-  void beam
-    .cancelTimer()
-    .then((snapshot) => {
-      if (snapshot) applyTimer(snapshot);
-    })
-    .catch((error: unknown) => console.error('[timer] cancel failed', error));
-}
-
-function dismissTimer(): void {
-  if (!beam) return;
-  void beam
-    .dismissTimer()
-    .then((snapshot) => {
-      if (snapshot) applyTimer(snapshot);
-    })
-    .catch((error: unknown) => console.error('[timer] dismiss failed', error));
+function isOpen(): boolean {
+  return document.body.classList.contains('is-open');
 }
 
 function openedTab(rows: number): Tab {
-  if (timerSnapshot.phase !== 'idle') return 'timer';
-  if (music.hasMusic) return 'music';
+  if (timer.snapshot.phase !== 'idle') return 'timer';
+  if (view.music.hasMusic) return 'music';
   if (rows > 0) return 'files';
   return pickTab(lastUsed, false, 0);
 }
@@ -238,7 +88,7 @@ function setMark(art: string | null): void {
 
 function renderControls(state: string): void {
   if (!pillEl) return;
-  const track = music.state;
+  const track = view.music.state;
   const show = Boolean(track) && (state === 'playing' || state === 'paused');
   const existing = pillEl.querySelector<HTMLElement>('.pill-controls');
   if (!show) {
@@ -263,7 +113,7 @@ function renderPillSlot(state: string, label: string): void {
       meta.innerHTML = '<div class="digits" data-pill-digits></div>';
       digits = meta.querySelector<HTMLElement>('[data-pill-digits]');
     }
-    if (digits) digits.textContent = clock(timerSnapshot.remainingMs);
+    if (digits) digits.textContent = clock(timer.snapshot.remainingMs);
   } else if (state === 'done') {
     if (!meta.querySelector('.done-label')) meta.innerHTML = '<span class="done-label">Done</span>';
   } else {
@@ -301,8 +151,8 @@ function renderPillX(state: string): void {
 
 function renderPill(): void {
   if (!pillEl) return;
-  const track = music.state;
-  const timerState = timerSnapshot.phase === 'running' ? 'timer' : timerSnapshot.phase === 'done' ? 'done' : null;
+  const track = view.music.state;
+  const timerState = timer.snapshot.phase === 'running' ? 'timer' : timer.snapshot.phase === 'done' ? 'done' : null;
   const idle = !override && !track && shelfCount === 0 && !timerState;
   const quietState = helperOk && idle && quiet.active && !pillHovered;
   const state = helperOk
@@ -312,9 +162,9 @@ function renderPill(): void {
     : 'error';
   const label = helperOk
     ? override?.label ??
-      (timerSnapshot.phase === 'done'
+      (timer.snapshot.phase === 'done'
         ? 'Done'
-        : timerSnapshot.phase === 'running'
+        : timer.snapshot.phase === 'running'
           ? ''
           : track
             ? track.title
@@ -356,7 +206,7 @@ function renderPill(): void {
       : state === 'playing' || state === 'paused'
         ? `${track!.playing ? 'Playing' : 'Paused'} ${track!.title} — open panel`
         : state === 'timer'
-          ? `Timer ${clock(timerSnapshot.remainingMs)} — open panel`
+          ? `Timer ${clock(timer.snapshot.remainingMs)} — open panel`
           : state === 'done'
             ? 'Timer finished — open panel'
             : state === 'files'
@@ -389,14 +239,14 @@ function showShelf(): void {
 function idleEligible(): boolean {
   return (
     helperOk &&
-    !music.hasMusic &&
+    !view.music.hasMusic &&
     shelfCount === 0 &&
-    timerSnapshot.phase === 'idle' &&
+    timer.snapshot.phase === 'idle' &&
     !override &&
     !pillHovered &&
     !cursorNear &&
     !pillEl?.matches(':hover') &&
-    !document.body.classList.contains('is-open')
+    !isOpen()
   );
 }
 
@@ -412,265 +262,44 @@ function resetQuiet(): void {
   quiet.reset();
 }
 
-const beam = window.beam;
-
-const panelData: PanelData = {
-  music: { title: '', subtitle: '', playing: false, positionMs: 0, durationMs: 0 },
-  files: [],
-  timer: { mode: 'idle', digits: '25:00', note: 'Pick a length', preset: '25' },
-  calendar: { view: new Date(), today: new Date() },
-  settings: { startup: false, shortcut: 'Alt + Space', volume: 60, theme: 'dark' },
-  enabledTabs: ENABLED_TABS
-};
-
-let activeTab: Tab = 'music';
-let panelEl: HTMLElement | null = null;
-let wrapEl: HTMLElement | null = null;
-const music = new MusicSession(
-  () => onMusicChange(),
-  () => wrapEl,
-  () => document.body.classList.contains('is-open')
-);
 let reportPillSize: () => void = () => {};
 
-const settings = new SettingsController(
-  () => beam,
+timer = new TimerView({
+  api: () => beam,
+  pill: () => pillEl,
+  wrap: () => view.wrap,
+  render: () => {
+    renderPill();
+    if (isOpen()) view.render();
+  },
+  wake: () => wakePill(),
+  announce: (text) => announce(text),
+  stamp: () => stamp('timer')
+});
+
+view = new PanelView(
   {
-    setVolume: (volume) => {
-      chimeVolume = volume;
+    api: () => beam,
+    stamp: (tab) => stamp(tab),
+    renderPill: () => renderPill(),
+    wake: () => wakePill(),
+    setPill: (state, label) => setPill(state, label),
+    showShelf: () => showShelf(),
+    scheduleQuiet: () => scheduleQuiet(),
+    resetQuiet: () => resetQuiet(),
+    reportPillSize: () => reportPillSize(),
+    focusPill: () => pillEl?.focus({ preventScroll: true }),
+    filesChanged: (files) => {
+      shelfCount = files.length;
+      shelfMissing = files.some((file) => file.missing);
     },
-    apply: (data) => {
-      panelData.settings = data;
-    },
-    render: () => {
-      if (panelEl) renderPanel();
-    }
-  }
+    openedTab: (rows) => openedTab(rows),
+    timer
+  },
+  app
 );
 
-const shelf = new FileShelf(() => beam, {
-  stamp: () => stamp('files'),
-  root: () => wrapEl,
-  rows: (files) => {
-    panelData.files = files.map((file) => ({
-      path: file.path,
-      name: file.name,
-      size: formatSize(file.sizeBytes),
-      kind: file.kind,
-      missing: file.missing
-    }));
-    shelfCount = files.length;
-    shelfMissing = files.some((file) => file.missing);
-    showShelf();
-    renderPanel();
-  },
-  setPill: (state, label) => setPill(state, label),
-  showShelf: () => showShelf()
-});
-
-bindDropTarget(shelf, (state, label) => setPill(state, label), () => showShelf());
-
-function renderPanel(): void {
-  if (!app) return;
-  panelData.music = music.data;
-  panelData.timer = timerData();
-  panelData.calendar = { view: calendarView, today: new Date() };
-  panelData.settings.rebinding = settings.rebinding;
-  if (!wrapEl) {
-    wrapEl = document.createElement('div');
-    wrapEl.className = 'panel-wrap';
-    app.appendChild(wrapEl);
-    bindPanelTabs(wrapEl);
-    bindMusicSeek(wrapEl, (positionMs) => (beam ? music.seek(beam, positionMs) : undefined));
-    wrapEl.addEventListener('click', (event) => {
-      const target = event.target;
-      if (!(target instanceof Element)) return;
-      const root = event.currentTarget as HTMLElement;
-      const tab = target.closest<HTMLElement>('[role="tab"]');
-      if (tab) {
-        activeTab = tab.id.replace('tab-', '') as Tab;
-        if (activeTab !== 'settings') stamp(activeTab);
-      }
-      const preset = target.closest<HTMLElement>('[data-timer-preset]')?.dataset.timerPreset;
-      if (preset) {
-        timerPreset = preset as '5' | '10' | '25' | 'custom';
-        stamp('timer');
-        renderPanel();
-        return;
-      }
-      if (target.closest('[data-timer-set]')) {
-        const input = root.querySelector<HTMLInputElement>('[data-timer-minutes]');
-        timerCustom = String(Math.max(1, Math.min(999, Math.round(Number(input?.value) || 25))));
-        timerPreset = 'custom';
-        stamp('timer');
-        renderPanel();
-        return;
-      }
-      if (target.closest('[data-timer-start]')) {
-        startTimer(timerPreset === 'custom' ? clampMinutes(timerCustom) : Number(timerPreset));
-        return;
-      }
-      if (target.closest('[data-timer-cancel]')) {
-        cancelTimer();
-        return;
-      }
-      if (target.closest('[data-timer-dismiss]')) {
-        dismissTimer();
-        return;
-      }
-      if (target.closest('[data-cal-prev]')) {
-        calendarView = shiftMonth(calendarView, -1);
-        stamp('calendar');
-        renderPanel();
-        return;
-      }
-      if (target.closest('[data-cal-next]')) {
-        calendarView = shiftMonth(calendarView, 1);
-        stamp('calendar');
-        renderPanel();
-        return;
-      }
-      if (target.closest('[data-cal-today]')) {
-        calendarView = new Date();
-        stamp('calendar');
-        renderPanel();
-      }
-      if (!beam) return;
-      const setting = target.closest<HTMLElement>('[data-setting]')?.dataset.setting;
-      if (setting === 'startup') {
-        settings.patch({ startup: !panelData.settings.startup });
-        return;
-      }
-      if (setting === 'theme') {
-        settings.patch({ theme: panelData.settings.theme === 'dark' ? 'light' : 'dark' });
-        return;
-      }
-      if (setting === 'volume-test') {
-        playTestChime();
-        return;
-      }
-      if (setting === 'reset') {
-        settings.reset();
-        return;
-      }
-      if (setting === 'shortcut') {
-        settings.beginRebind();
-        return;
-      }
-      const step = target.closest<HTMLElement>('[data-volume-step]')?.dataset.volumeStep;
-      if (step) {
-        const delta = Number(step);
-        const next = Math.max(0, Math.min(100, panelData.settings.volume + (Number.isFinite(delta) ? delta : 0)));
-        settings.patch({ volume: next });
-      }
-    });
-    wrapEl.addEventListener('keydown', (event) => {
-      if (event.key !== 'ArrowLeft' && event.key !== 'ArrowRight' && event.key !== 'Home' && event.key !== 'End') return;
-      const root = event.currentTarget;
-      if (!(root instanceof HTMLElement)) return;
-      const selected = root.querySelector<HTMLElement>('[role="tab"][aria-selected="true"]');
-      if (selected) {
-        activeTab = selected.id.replace('tab-', '') as Tab;
-        if (activeTab !== 'settings') stamp(activeTab);
-      }
-    });
-    bindClearAll(wrapEl);
-    wrapEl.addEventListener('beam:files:clear', () => {
-      stamp('files');
-      void shelf.clear();
-    });
-    if (beam) {
-      bindFilesActions(wrapEl, (paths, source) => {
-        stamp('files');
-        return beam.copyFiles(paths, source);
-      }, (path) => {
-        stamp('files');
-        void shelf.remove(path);
-      });
-      bindFileDrag(wrapEl, (paths) => beam.startFileDrag(paths));
-      wrapEl.addEventListener('click', (event) => {
-        const target = event.target;
-        if (!(target instanceof Element)) return;
-        if (target.closest('[data-files-undo]')) {
-          shelf.restore();
-          return;
-        }
-        if (!target.closest('[data-add-files]')) return;
-        shelf.pick();
-      });
-      wrapEl.addEventListener('click', (event) => {
-        const target = event.target;
-        if (!(target instanceof Element)) return;
-        const action = target.closest<HTMLElement>('.music-controls [data-action]')?.dataset.action;
-        if (action === 'prev' || action === 'toggle' || action === 'next') {
-          event.stopPropagation();
-          stamp('music');
-          void beam.musicCommand(action).catch((error: unknown) => console.error('[music] command failed', error));
-        }
-      });
-    }
-  }
-  wrapEl.innerHTML = panel(activeTab, panelData);
-  panelEl = wrapEl.querySelector<HTMLElement>('.panel');
-  shelf.renderUndo();
-}
-
-function onMusicChange(): void {
-  panelData.music = music.data;
-  resetQuiet();
-  renderPill();
-  if (wrapEl && document.body.classList.contains('is-open')) renderPanel();
-}
-
-window.setInterval(() => music.tick(), 1000);
-
-let closingTimer: number | undefined;
-let collapseTimer: number | undefined;
-let pillSizeTimer: number | undefined;
-
-function cancelPanelClose(): void {
-  if (closingTimer !== undefined) {
-    window.clearTimeout(closingTimer);
-    closingTimer = undefined;
-  }
-  if (collapseTimer !== undefined) {
-    window.clearTimeout(collapseTimer);
-    collapseTimer = undefined;
-  }
-  if (pillSizeTimer !== undefined) {
-    window.clearTimeout(pillSizeTimer);
-    pillSizeTimer = undefined;
-  }
-  document.body.classList.remove('is-closing');
-}
-
-function dismissPanel(): void {
-  if (!document.body.classList.contains('is-open')) return;
-  cancelPanelClose();
-  document.body.classList.remove('is-open');
-  document.body.classList.add('is-closing');
-  closingTimer = window.setTimeout(() => {
-    closingTimer = undefined;
-    document.body.classList.remove('is-closing');
-    pillEl?.focus({ preventScroll: true });
-  }, 200);
-  collapseTimer = window.setTimeout(() => {
-    collapseTimer = undefined;
-    beam?.panelCollapsed();
-  }, 160);
-  pillSizeTimer = window.setTimeout(() => {
-    pillSizeTimer = undefined;
-    reportPillSize();
-  }, 220);
-  scheduleQuiet();
-}
-
-document.body.addEventListener('click', (event) => {
-  if (!document.body.classList.contains('is-open')) return;
-  const target = event.target;
-  if (!(target instanceof Element) || target.closest('.panel')) return;
-  dismissPanel();
-});
+bindDropTarget(view.shelf, (state, label) => setPill(state, label), () => showShelf());
 
 if (app && beam) {
   let suppressClick = false;
@@ -686,11 +315,11 @@ if (app && beam) {
       return;
     }
     if (action === 'pill-timer-cancel') {
-      cancelTimer();
+      timer.cancel();
       return;
     }
     if (action === 'pill-timer-dismiss') {
-      dismissTimer();
+      timer.dismiss();
       return;
     }
     if (action === 'prev' || action === 'toggle' || action === 'next') {
@@ -698,11 +327,7 @@ if (app && beam) {
       void beam.musicCommand(action).catch((error: unknown) => console.error('[music] command failed', error));
       return;
     }
-    if (
-      !document.body.classList.contains('is-open') &&
-      !document.body.classList.contains('is-closing') &&
-      !(event.target as Element).closest('button')
-    ) {
+    if (!isOpen() && !document.body.classList.contains('is-closing') && !(event.target as Element).closest('button')) {
       beam.openPanel();
     }
   });
@@ -725,7 +350,7 @@ if (app && beam) {
       if (sizeFrame !== 0) return;
       sizeFrame = requestAnimationFrame(() => {
         sizeFrame = 0;
-        if (!pillEl || document.body.classList.contains('is-open')) return;
+        if (!pillEl || isOpen()) return;
         const rect = pillEl.getBoundingClientRect();
         if (rect.width < 1 || rect.height < 1) return;
         beam.setPillSize(Math.round(rect.width), Math.round(rect.height));
@@ -738,7 +363,7 @@ if (app && beam) {
 
     pillEl.addEventListener('pointerdown', (event) => {
       if (event.button !== 0) return;
-      if (document.body.classList.contains('is-open') || document.body.classList.contains('is-closing')) return;
+      if (isOpen() || document.body.classList.contains('is-closing')) return;
       if ((event.target as Element).closest('button')) return;
       wakePill();
       suppressClick = false;
@@ -769,52 +394,16 @@ if (app && beam) {
     pillEl.addEventListener('pointercancel', endPress);
   }
 
-  beam.onPanelOpen((files, tab) => {
-    cancelPanelClose();
-    wakePill();
-    activeTab = tab ?? openedTab(files.length);
-    shelf.apply(files);
-    if (!panelEl) return;
-    const el = panelEl;
-    void el.offsetWidth;
-    requestAnimationFrame(() => {
-      let started = 0;
-      let reported = false;
-      const report = (): void => {
-        if (reported) return;
-        reported = true;
-        el.removeEventListener('transitionrun', begin);
-        el.removeEventListener('transitionend', done);
-        beam.reportPanelTiming(
-          started ? Math.round(performance.now() - started) : 260,
-          window.matchMedia('(prefers-reduced-motion: reduce)').matches
-        );
-      };
-      const begin = (event: TransitionEvent): void => {
-        if (event.target !== el || event.propertyName !== 'transform' || started) return;
-        started = performance.now();
-      };
-      const done = (event: TransitionEvent): void => {
-        if (event.target !== el || event.propertyName !== 'transform') return;
-        report();
-      };
-      el.addEventListener('transitionrun', begin);
-      document.body.classList.add('is-open');
-      el.focus({ preventScroll: true });
-      el.addEventListener('transitionend', done);
-      setTimeout(report, 260);
-    });
-  });
+  beam.onPanelOpen((files, tab) => view.open(files, tab));
 
-  beam.onPanelDismiss(dismissPanel);
+  beam.onPanelDismiss(() => view.dismiss());
 
   beam.onHelperState((state) => {
     helperOk = state.ok;
     if (!helperOk) {
-      music.clear();
-      panelData.music = music.data;
+      view.music.clear();
       quiet.forceIdle();
-      if (wrapEl && document.body.classList.contains('is-open')) renderPanel();
+      if (view.wrap && isOpen()) view.render();
     } else {
       scheduleQuiet();
     }
@@ -830,43 +419,41 @@ if (app && beam) {
     scheduleQuiet(QUIET_RETURN);
   });
 
-  beam.onTimerState(applyTimer);
-  beam.onSettingsState((state) => settings.apply(state));
+  beam.onTimerState((state) => timer.apply(state));
+  beam.onSettingsState((state) => view.settings.apply(state));
   void beam
     .getSettings()
-    .then((state) => settings.apply(state))
+    .then((state) => view.settings.apply(state))
     .catch((error: unknown) => console.error('[settings] load failed', error));
 
-  beam.onMusicState((state) => music.apply(state));
+  beam.onMusicState((state) => view.music.apply(state));
 
   window.addEventListener(
     'keydown',
     (event) => {
-      if (!settings.rebinding) return;
+      if (!view.rebinding) return;
       event.preventDefault();
       event.stopPropagation();
       if (event.key === 'Escape') {
-        settings.cancelRebind();
+        view.settings.cancelRebind();
         return;
       }
-      settings.submit(chordFromEvent(event));
+      view.settings.submit(chordFromEvent(event));
     },
     true
   );
 
   window.addEventListener('keydown', (event) => {
     if (event.key === 'Escape') {
-      dismissPanel();
+      view.dismiss();
       return;
     }
     if (event.key !== 'Enter' && event.key !== ' ') return;
     if (event.target !== pillEl) return;
-    if (document.body.classList.contains('is-open') || document.body.classList.contains('is-closing')) return;
+    if (isOpen() || document.body.classList.contains('is-closing')) return;
     event.preventDefault();
     beam?.openPanel();
   });
 
   scheduleQuiet();
 }
-
-export {};
