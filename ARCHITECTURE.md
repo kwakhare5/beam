@@ -79,6 +79,7 @@ D:\Beam
 │   │   ├── hotkey.ts         default/fallback registration, chord validation, rebind with rollback
 │   │   ├── settings.ts       read/write settings.json, defaults, versioned shape
 │   │   ├── settings-ipc.ts   snapshot, validation, settings IPC handlers
+│   │   ├── app-ipc.ts        drag, files, music, timer, pill-size and panel IPC handlers
 │   │   ├── startup.ts        HKCU Run value read/write for Start with Windows
 │   │   ├── timer.ts          deadline, 200ms ticker, one-shot completion
 │   │   ├── dev/harness.ts    every BEAM_* flag, schedule, and probe (excluded from packaged files)
@@ -108,7 +109,10 @@ D:\Beam
 │   │   │   ├── panel/        shell, body
 │   │   │   ├── controls/     buttons, fields, indicators
 │   │   │   └── tabs/         music, files, timer, calendar, settings
-│   │   ├── renderer.ts       pill rendering, panel wiring, pointer gestures
+│   │   ├── renderer.ts       pill rendering, pointer gestures, beam wiring
+│   │   ├── panel-view.ts     panel state, tab actions, open/dismiss timing
+│   │   ├── timer-view.ts     timer state, chime, start/cancel/dismiss
+│   │   ├── api.ts            BeamApi type + window.beam declaration
 │   │   ├── files.ts          shelf rows, undo, status, drop target
 │   │   ├── music.ts          music view, null hold, local tick, seek
 │   │   ├── quiet.ts          quiet timer
