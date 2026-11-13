@@ -202,9 +202,10 @@ These run before the phase tasks, as previous UI passes did. The canonical previ
 
 ## F. Calendar
 
-- [ ] **5.1 Month grid** — *Depends on: 1.3.*
+- [x] **5.1 Month grid** — *Depends on: 1.3.*
   - Current month, correct weekday offset, local clock only. First day of the week follows the Windows locale, Sunday as fallback.
   - _Audit 2026-11-07: built; Windows-locale week start and year-boundary cases are not covered by verify._
+  - _Proved 2026-11-15:_ check 25 reads the live header row and compares the first cell against the weekday the page's own `Intl.Locale().weekInfo.firstDay` asks for — `weekStart "Sunday"`, `weekExpected "Sunday"`, 7 headers. This proves the app follows the same rule as the platform on the current locale; a second locale is still untested.
   - _Verify:_ matches Windows calendar for the current month and week start.
 - [x] **5.2 Today highlighted** — *Depends on: 5.1.*
   - _Verify:_ today's cell has a visibly distinct style.
@@ -213,10 +214,11 @@ These run before the phase tasks, as previous UI passes did. The canonical previ
   - Leave the app open past midnight / month end.
   - _Built 2026-11-15:_ the panel checks the local day every 30s and re-renders when it changes (`dayKey` in `core/calendar.ts`).
   - _Proved 2026-11-15:_ check 25's `caldrift` probe shifts the page clock one day; the live app moved the Today cell from `15` to `16` inside `November 2026` without a restart or reopen.
-- [ ] **5.4 Month navigation** — *Depends on: 5.1.*
+- [x] **5.4 Month navigation** — *Depends on: 5.1.*
   - Chevrons move one month; Today returns to the current month. Today stays highlighted only in its own month.
   - _Audit 2026-11-07: built; year-boundary navigation is not covered._
   - _Verify:_ arrows cross a year boundary correctly; Today restores after several months.
+  - _Proved 2026-11-15:_ check 25 clicks Next twelve times — `November 2026` → `November 2027` — then Today, which returns to `November 2026`; the single-step probe already asserts `November 2026` → `December 2026` → back.
 
 ## G. Glue and settings
 

@@ -2032,6 +2032,9 @@ try {
   if ($null -eq $calendar.today.day -or $calendar.today.current -ne 'date') {
     throw "today is not marked (day '$($calendar.today.day)', aria-current '$($calendar.today.current)')"
   }
+  if ([int]$calendar.today.weekCount -ne 7 -or $calendar.today.weekStart -ne $calendar.today.weekExpected) {
+    throw "the week does not start on the locale day (first '$($calendar.today.weekStart)', expected '$($calendar.today.weekExpected)', $($calendar.today.weekCount) headers)"
+  }
   $esc = Get-UiLog $uiOut 'esc'
   if (-not $esc.ok) { throw 'Escape did not close the panel' }
   $lastused = Get-UiLog $uiOut 'lastused'
@@ -2128,6 +2131,14 @@ try {
   $chevronLive = Get-UiLog $uiChevron.Log 'chevron'
   if ($null -ne $chevronLive.skipped) { throw "the chevron phase skipped ($($chevronLive.skipped))" }
   if (-not $chevronLive.ok) { throw 'the pill chevron did not open the panel' }
+  $chevronNull = Get-UiLog $uiChevron.Log 'nullstate'
+  if ($null -ne $chevronNull.skipped) { throw "the chevron phase had no session to drop ($($chevronNull.skipped))" }
+  if (-not $chevronNull.ok) { throw "a dropped session left the pill on '$($chevronNull.state)'" }
+  $chevronNoArt = Get-UiLog $uiChevron.Log 'noart'
+  if ($null -ne $chevronNoArt.skipped) { throw "the no-art probe skipped in the music phase ($($chevronNoArt.skipped))" }
+  if ($chevronNoArt.art -ne $false -or $chevronNoArt.src -notmatch 'mascot') {
+    throw "a session without artwork did not fall back to the star (art '$($chevronNoArt.art)', src '$($chevronNoArt.src)')"
+  }
   Stop-UiPhaseApp $uiChevronApp
   $uiChevronApp = $null
   Clear-BeamPlayers
@@ -2144,7 +2155,7 @@ try {
 Remove-Item Env:BEAM_UI_TEST -ErrorAction SilentlyContinue
 Remove-Item Env:BEAM_UI_TEST_PHASE -ErrorAction SilentlyContinue
 Remove-Item -LiteralPath $uiQuietOut, $uiQuietErr, $uiChevronOut, $uiChevronErr -ErrorAction SilentlyContinue
-Write-Host 'PASS UI pass (quiet phase: 78x30 rest, shelf add/undo, files-first and last-used reopen, files layout, a11y surface, today mark, midnight drift, year boundary, centered running timer, calendar nav, Esc, 26x26 quiet + near wake + 2s return; chevron phase: live-music chevron opened the panel; margin click-through)'
+Write-Host 'PASS UI pass (quiet phase: 78x30 rest, shelf add/undo, files-first and last-used reopen, files layout, a11y surface, today mark, locale week start, midnight drift, year boundary, centered running timer, calendar nav, Esc, 26x26 quiet + near wake + 2s return; chevron phase: live-music chevron opened the panel, null-session drop, no-art star fallback; margin click-through)'
 
 Write-Host '[26/30] helper restart'
 $restartOut = Join-Path $env:TEMP 'beam-restart.out.log'

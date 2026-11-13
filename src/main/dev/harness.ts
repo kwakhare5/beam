@@ -808,9 +808,29 @@ export async function runUiTest(ctx: HarnessContext, target: BrowserWindow, phas
   const calToday = (await target.webContents.executeJavaScript(
     `(() => {
       const cell = document.querySelector('#panel-calendar .cal-cell.today');
-      return { day: cell?.textContent ?? null, current: cell?.getAttribute('aria-current') ?? null };
+      const headers = [...document.querySelectorAll('#panel-calendar thead th')].map((th) => th.getAttribute('abbr'));
+      let firstDay = 0;
+      try {
+        const locale = new Intl.Locale(navigator.language);
+        const info = locale.getWeekInfo?.() ?? locale.weekInfo;
+        if (info) firstDay = info.firstDay % 7;
+      } catch {}
+      const expected = new Intl.DateTimeFormat(undefined, { weekday: 'long' }).format(new Date(2024, 0, 7 + firstDay));
+      return {
+        day: cell?.textContent ?? null,
+        current: cell?.getAttribute('aria-current') ?? null,
+        weekStart: headers[0] ?? null,
+        weekExpected: expected,
+        weekCount: headers.length
+      };
     })()`
-  )) as { day: string | null; current: string | null };
+  )) as {
+    day: string | null;
+    current: string | null;
+    weekStart: string | null;
+    weekExpected: string | null;
+    weekCount: number;
+  };
   ui('calendar', { before: calBefore, next: calNext, back: calBack, today: calToday });
 
   const yearStart = (await snap()).calTitle;
@@ -888,6 +908,29 @@ export async function runUiTest(ctx: HarnessContext, target: BrowserWindow, phas
     await wait(300);
   } else {
     ui('nullstate', { skipped: 'no-music' });
+  }
+
+  if (ctx.music()) {
+    target.webContents.send(IPC.musicState, {
+      title: 'No art track',
+      artist: 'Beam verify',
+      playing: true,
+      art: null,
+      positionMs: 1000,
+      durationMs: 60000
+    });
+    await wait(700);
+    const noart = (await target.webContents.executeJavaScript(
+      `(() => {
+        const mark = document.querySelector('.pill .mascot');
+        return { art: mark?.classList.contains('pill-art') ?? null, src: mark?.getAttribute('src') ?? null };
+      })()`
+    )) as { art: boolean | null; src: string | null };
+    ui('noart', noart);
+    ctx.sendMusic();
+    await wait(400);
+  } else {
+    ui('noart', { skipped: 'no-music' });
   }
 
   await openPanel();
