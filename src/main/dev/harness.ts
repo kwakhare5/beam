@@ -773,6 +773,46 @@ export async function runUiTest(ctx: HarnessContext, target: BrowserWindow, phas
   const calBack = (await snap()).calTitle;
   ui('calendar', { before: calBefore, next: calNext, back: calBack });
 
+  const yearStart = (await snap()).calTitle;
+  for (let index = 0; index < 12; index += 1) {
+    await click('#panel-calendar [data-cal-next]');
+    await wait(60);
+  }
+  const yearAfter = (await snap()).calTitle;
+  await click('#panel-calendar [data-cal-today]');
+  await wait(150);
+  const yearBack = (await snap()).calTitle;
+  ui('calyear', { start: yearStart, after: yearAfter, back: yearBack });
+
+  const readToday = async (restore: boolean): Promise<{ day: string | null; title: string | null }> =>
+    (await target.webContents.executeJavaScript(
+      `(() => {
+        const cell = document.querySelector('#panel-calendar .cal-cell.today');
+        const view = { day: cell?.textContent ?? null, title: document.querySelector('#panel-calendar .cal-title')?.textContent ?? null };
+        ${restore ? 'if (window.__beamRealDate) { window.Date = window.__beamRealDate; delete window.__beamRealDate; }' : ''}
+        return view;
+      })()`
+    )) as { day: string | null; title: string | null };
+  const todayBefore = await readToday(false);
+  await target.webContents.executeJavaScript(
+    `(() => {
+      const Real = Date;
+      const shift = 86400000;
+      class ShiftedDate extends Real {
+        constructor(...args) {
+          if (args.length === 0) super(Real.now() + shift);
+          else super(...args);
+        }
+        static now() { return Real.now() + shift; }
+      }
+      window.__beamRealDate = Real;
+      window.Date = ShiftedDate;
+    })()`
+  );
+  await wait(32000);
+  const todayAfter = await readToday(true);
+  ui('caldrift', { before: todayBefore, after: todayAfter });
+
   escape();
   const closed = await until((state) => !state.open, 3000);
   ui('esc', { ok: closed.ok, open: closed.snap.open });
@@ -827,6 +867,14 @@ export async function runUiTest(ctx: HarnessContext, target: BrowserWindow, phas
 
   await openPanel();
   await until((state) => state.open, 3000);
+  await click('#tab-calendar');
+  await wait(150);
+  escape();
+  await until((state) => !state.open, 3000);
+  await wait(200);
+  await openPanel();
+  const reopenedEmpty = await until((state) => state.open, 3000);
+  ui('lastusedempty', { selected: reopenedEmpty.snap.selected });
   await click('#tab-settings');
   await wait(200);
   const settingsUi = (await target.webContents.executeJavaScript(

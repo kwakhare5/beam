@@ -13,3 +13,5 @@ extraResources:
     to: tray.ico
 win:
   target: portable
+  icon: build/icon.png
+artifactName: Beam-${version}.exe

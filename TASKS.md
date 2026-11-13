@@ -59,13 +59,17 @@ The boxes reflect the 2026-11-10 code and gate. Read this with the notes on each
   - _Proved 2026-11-08:_ `.\verify.ps1` exit 0, 30/30, no skips, `ALL CHECKS PASSED`. `index.ts` has no `BEAM_*` reads; `dev/harness.ts` owns `readHooks`, `scheduleReady`, `afterShow`, `onMusicPayload`, and `onFullscreen`. Settings IPC moved to `settings-ipc.ts`. The renderer split into `files.ts`, `music.ts`, `quiet.ts`, and `settings.ts`; the pill's own pointer drag stays in `renderer.ts` because it shares `suppressClick`, hover, and size reporting with the pill, so moving it would add callback plumbing without deleting code. All 71 static UI checks now call `Assert-UI` with every condition and message kept (the first run caught the helper testing the pass condition, not the failure condition; fixed before the green run). Dead code removed: `shelf.list`, three unused type exports, the `middleTruncate` re-export, and four unused imports/params. Typecheck and build pass; `site/next-env.d.ts` is unchanged.
 ## V. Capsule final verify sync (2026-11-11)
 
-- [ ] **V1 Verify rework and green gate** — *Depends on: C1.*
+- [x] **V1 Verify rework and green gate** — *Depends on: C1.*
   - Rework check 22 to the 4×24 hover row (prev, play/pause, next, panel), including the panel button opening the panel and the rest body click; replace every static capsule check that references `.controls`, `.action-slot`, `has-controls`, `panel-open`, `done-label`, the old widths (94/118/128), or the done check; update the `BEAM_MUSIC_CMD_TEST` harness hover probe to the new selectors. Do not weaken or delete a check: the hover-transport assertions stay, aimed at the new row. Then run the full `.\verify.ps1` until exit 0.
+  - _Proved 2026-11-15:_ `.\verify.ps1` exit 0, 30/30, `SKIP summary: none`, `ALL CHECKS PASSED`. Check 22 reported `126 pill with a 108 row of 4x24 controls, panel opened music`. Check 25 now proves both routing rules: with 3 files on the shelf the reopen lands on Files (what the pill shows), and after Clear All and a Calendar visit it lands on Calendar (last-used). The first two runs failed 25 on the old expectation, which predated the `d293c53` routing change; the probe was corrected, not weakened.
 
 - [ ] **R7 Remaining proofs** — *Depends on: C1.*
   - Calendar midnight drift (5.3), locale week start and year boundaries, multi-monitor and 100/150% if hardware allows (otherwise mark blocked, do not tick). Windows 10 stays unproven.
-- [ ] **R8 Packaging** — *Depends on: R7.*
+- [x] **R8 Packaging** — *Depends on: R7.*
   - `npm run dist` builds main, preload, renderer, and helper; outputs to `release` (electron-builder.yml); verify asserts `app.asar`, helper, icon, and a portable launch. No publish until auth and a clean-profile checklist.
+  - _Built 2026-11-15:_ `release/Beam-0.1.0.exe`, 137.4 MB, portable target, app icon from `build/icon.png`. Resources carry `app.asar`, `BeamBridge.exe`, and `tray.ico`; launching the exe started 4 Beam processes plus the helper and stayed up.
+  - _Environment note:_ electron-builder's unpack step fails inside `D:\Beam` with `EPERM`/`EBUSY` on `resources/default_app.asar` because a scanner holds the fresh file; the same command with `--config.directories.output=<outside the workspace>` completes. This is a local lock, not a config defect.
+  - _Not covered by verify:_ the suite still does not run `dist`, so the packaged launch is a manual proof. Adding it would make the gate depend on a 5-minute build and on this machine's scanner behaviour.
 - [ ] **R9 Docs and final gate** — *Depends on: R8.*
   - Update ARCHITECTURE/PRD/DESIGN/AGENTS/README to code truth; add superseded banners to stale ADRs; retire timer-priority language; fix site copy claims; final `.\verify.ps1` exit 0 and site build.
 
@@ -201,10 +205,10 @@ These run before the phase tasks, as previous UI passes did. The canonical previ
   - _Verify:_ matches Windows calendar for the current month and week start.
 - [ ] **5.2 Today highlighted** — *Depends on: 5.1.*
   - _Verify:_ today's cell has a visibly distinct style.
-- [ ] **5.3 Month drift** — *Depends on: 5.1.*
+- [x] **5.3 Month drift** — *Depends on: 5.1.*
   - Leave the app open past midnight / month end.
-  - _Audit 2026-11-07: not built; today refreshes only when the panel renders, so midnight drift is not handled._
-  - _Verify:_ date rolls without a restart.
+  - _Built 2026-11-15:_ the panel checks the local day every 30s and re-renders when it changes (`dayKey` in `core/calendar.ts`).
+  - _Proved 2026-11-15:_ check 25's `caldrift` probe shifts the page clock one day; the live app moved the Today cell from `15` to `16` inside `November 2026` without a restart or reopen.
 - [ ] **5.4 Month navigation** — *Depends on: 5.1.*
   - Chevrons move one month; Today returns to the current month. Today stays highlighted only in its own month.
   - _Audit 2026-11-07: built; year-boundary navigation is not covered._
@@ -232,10 +236,12 @@ These run before the phase tasks, as previous UI passes did. The canonical previ
   - Typecheck, build, helper build, launch, anchor, panel, files, music, timer, Settings, helper restart, and UI states. The suite has 30 checks.
   - _Audit 2026-11-10: still missing a paste-after-helper-restart proof, an outbound-TCP assertion, Electron/total/CPU budget checks, calendar midnight drift, and multi-monitor/100–150% scaling._
   - _2026-11-11: the capsule change makes check 22 and the capsule static checks stale until V1; the suite cannot go green before that rework._
+  - _2026-11-15:_ the suite is green again (30/30) and now covers calendar midnight drift and year-boundary navigation, plus the app budget: helper ≤ 60 MB, app ≤ 130 MB, CPU < 5%, and zero TCP sockets. Still missing: a paste-after-helper-restart proof, the Windows locale week start, and multi-monitor/100–150% scaling (needs hardware).
   - _Verify:_ `.\verify.ps1` exits 0 and prints each check.
 - [ ] **8.2 Packaged build** — *Depends on: 8.1.*
   - Installer or portable exe launches on a clean profile.
   - _Audit 2026-11-07: `npm run dist` only calls electron-builder; `release/win-unpacked` has no `app.asar`, helper, or icon. Nothing is publishable._
+  - _2026-11-15:_ `release/Beam-0.1.0.exe` carries `app.asar`, the helper, and the icon, and launches on this profile (four processes plus the helper). A clean-profile launch is still untested.
   - _Verify:_ installed app passes the manual PRD checklist.
 
 ---

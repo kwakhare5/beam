@@ -5,6 +5,7 @@ out/
 site/out/
 site/public/demo/
 release/
+release2/
 native/**/bin/
 native/**/obj/
 .scratch/

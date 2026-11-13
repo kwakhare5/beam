@@ -518,7 +518,24 @@ if ($helperMb -ge 60) {
   Write-Host "FAIL helper memory: $helperMb MB at idle (cap 60 MB)"
   exit 1
 }
-Write-Host "PASS helper memory ($helperMb MB idle, cap 60 MB)"
+$appProcs = @(Get-Process electron -ErrorAction SilentlyContinue)
+$appMb = [math]::Round((($appProcs | Measure-Object -Property PrivateMemorySize64 -Sum).Sum) / 1MB, 1)
+$cpuStart = [double](($appProcs | Measure-Object -Property CPU -Sum).Sum)
+Start-Sleep -Seconds 2
+$appProcs = @(Get-Process electron -ErrorAction SilentlyContinue)
+$cpuPct = [math]::Round(([double](($appProcs | Measure-Object -Property CPU -Sum).Sum) - $cpuStart) / 2 / [Environment]::ProcessorCount * 100, 1)
+$beamPids = @($appProcs.Id) + @($helper.Id)
+$conns = @(Get-NetTCPConnection -ErrorAction SilentlyContinue | Where-Object { $beamPids -contains $_.OwningProcess })
+$remote = @($conns | Where-Object { $_.State -eq 'Established' -and $_.RemoteAddress -notin @('127.0.0.1', '::1', '0.0.0.0', '::') })
+$listen = @($conns | Where-Object { $_.State -eq 'Listen' })
+if ($appMb -ge 130 -or $cpuPct -ge 5 -or $remote.Count -gt 0 -or $listen.Count -gt 0) {
+  Stop-Process -Id $first.Id -Force -ErrorAction SilentlyContinue
+  Get-Process electron,BeamBridge -ErrorAction SilentlyContinue | Stop-Process -Force
+  $socketNote = if ($remote.Count -gt 0) { "remote $($remote[0].RemoteAddress):$($remote[0].RemotePort)" } elseif ($listen.Count -gt 0) { "listening on $($listen[0].LocalPort)" } else { 'no sockets' }
+  Write-Host "FAIL app budget: $appMb MB (cap 130), $cpuPct% CPU (cap 5), $socketNote"
+  exit 1
+}
+Write-Host "PASS memory (helper $helperMb MB / 60, app $appMb MB / 130, $cpuPct% CPU, 0 sockets)"
 
 Write-Host '[10/30] single instance'
 $second = Start-Process -FilePath $electron -ArgumentList '.' -WorkingDirectory $PSScriptRoot -PassThru
@@ -1966,7 +1983,7 @@ try {
     if (@(Get-BeamSessions).Count -eq 0) { break }
   }
 
-  $uiQuiet = Start-UiPhase 'quiet' $uiQuietOut $uiQuietErr 90
+  $uiQuiet = Start-UiPhase 'quiet' $uiQuietOut $uiQuietErr 130
   $uiApp = $uiQuiet.App
   $uiOut = $uiQuiet.Log
   $start = Get-UiLog $uiOut 'start'
@@ -2007,9 +2024,22 @@ try {
   $esc = Get-UiLog $uiOut 'esc'
   if (-not $esc.ok) { throw 'Escape did not close the panel' }
   $lastused = Get-UiLog $uiOut 'lastused'
-  $wantLast = if ($start.music) { 'music' } else { 'calendar' }
+  $wantLast = if ($start.music) { 'music' } else { 'files' }
   if (@($lastused.selected) -notcontains $wantLast) {
-    throw "reopening after the calendar landed on '$(@($lastused.selected) -join ',')', expected $wantLast"
+    throw "reopening with files on the shelf landed on '$(@($lastused.selected) -join ',')', expected $wantLast"
+  }
+  $lastEmpty = Get-UiLog $uiOut 'lastusedempty'
+  $wantEmpty = if ($start.music) { 'music' } else { 'calendar' }
+  if (@($lastEmpty.selected) -notcontains $wantEmpty) {
+    throw "reopening after Clear All landed on '$(@($lastEmpty.selected) -join ',')', expected $wantEmpty"
+  }
+  $calyear = Get-UiLog $uiOut 'calyear'
+  if ($calyear.start -eq $calyear.after -or $calyear.back -ne $calyear.start) {
+    throw "calendar year navigation went '$($calyear.start)' -> '$($calyear.after)' -> '$($calyear.back)'"
+  }
+  $caldrift = Get-UiLog $uiOut 'caldrift'
+  if ($caldrift.before.day -eq $caldrift.after.day -and $caldrift.before.title -eq $caldrift.after.title) {
+    throw "the calendar did not follow the clock past midnight (day '$($caldrift.before.day)' stayed put)"
   }
   $clear = Get-UiLog $uiOut 'clear'
   $clearLabelOk = if ($clear.state -eq 'files' -or $clear.state -eq 'idle') {
@@ -2080,7 +2110,7 @@ try {
   $uiApp = $null
 
   Start-BeamChromePlayer
-  $uiChevron = Start-UiPhase 'chevron' $uiChevronOut $uiChevronErr 45
+  $uiChevron = Start-UiPhase 'chevron' $uiChevronOut $uiChevronErr 85
   $uiChevronApp = $uiChevron.App
   $chevronStart = Get-UiLog $uiChevron.Log 'start'
   if (-not $chevronStart.music) { throw 'the chevron phase started without a live media session' }
@@ -2103,7 +2133,7 @@ try {
 Remove-Item Env:BEAM_UI_TEST -ErrorAction SilentlyContinue
 Remove-Item Env:BEAM_UI_TEST_PHASE -ErrorAction SilentlyContinue
 Remove-Item -LiteralPath $uiQuietOut, $uiQuietErr, $uiChevronOut, $uiChevronErr -ErrorAction SilentlyContinue
-Write-Host 'PASS UI pass (quiet phase: 78x30 rest, shelf add/undo, last-used tab, centered running timer, calendar nav, Esc, 26x26 quiet + near wake + 2s return; chevron phase: live-music chevron opened the panel; margin click-through)'
+Write-Host 'PASS UI pass (quiet phase: 78x30 rest, shelf add/undo, files-first and last-used reopen, midnight drift, centered running timer, calendar nav, Esc, 26x26 quiet + near wake + 2s return; chevron phase: live-music chevron opened the panel; margin click-through)'
 
 Write-Host '[26/30] helper restart'
 $restartOut = Join-Path $env:TEMP 'beam-restart.out.log'

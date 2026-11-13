@@ -4,7 +4,7 @@ Status: accepted 2026-10-29. Amends ADR-0005, ADR-0008, and ADR-0009. Approved b
 
 The paused capsule used a 12px play glyph that stole 20px from the title, the gold media pip competed with the brand color, and the music panel's transport sat in a narrow column. The panel also had a few dead or ambiguous states. Settled:
 
-- **Capsule artwork**: music states show the 24px album thumbnail with a 6px radius; the star is the fallback when no artwork exists. Paused dims the thumbnail to 70% and drops the play glyph, restoring the 50px title slot.
+- **Capsule artwork**: music states show the 24px album thumbnail with a 6px radius; the star is the fallback when no artwork exists. Paused dims the thumbnail to 70% and drops the play glyph, restoring the title slot (62px since 2026-11-11, formerly 50px).
 - **Dots**: green while playing or while a timer runs, amber when paused, red when a shelf file is missing. Gold stays brand and primary, so a gold dot never signals state.
 - **Music panel**: 148×148 art and the title block sit on the first row; the position bar and one transport row span the full panel width. The selected content tab carries a 2px gold underline inset 8px; the Settings icon keeps the gold treatment without the underline.
 - **Settings**: the theme row names `Dark` or `Light` beside the switch. Keycaps sit directly with no outer kbd box.

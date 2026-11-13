@@ -10,7 +10,7 @@ import {
   type Tab
 } from './ui';
 import { ENABLED_TABS, type LastUsed } from './core/tabs';
-import { shiftMonth } from './core/calendar';
+import { dayKey, shiftMonth } from './core/calendar';
 import { FileShelf } from './files';
 import { MusicSession } from './music';
 import { SettingsController } from './settings';
@@ -51,6 +51,7 @@ export class PanelView {
   private panelEl: HTMLElement | null = null;
   private wrapEl: HTMLElement | null = null;
   private calendarView = new Date();
+  private todayKey = dayKey(new Date());
   private closingTimer: number | undefined;
   private collapseTimer: number | undefined;
   private pillSizeTimer: number | undefined;
@@ -90,6 +91,7 @@ export class PanelView {
       showShelf: deps.showShelf
     });
     window.setInterval(() => this.music.tick(), 1000);
+    window.setInterval(() => this.checkDay(), 30_000);
     document.body.addEventListener('click', (event) => {
       if (!this.isOpen()) return;
       const target = event.target;
@@ -201,6 +203,13 @@ export class PanelView {
 
   private isOpen(): boolean {
     return document.body.classList.contains('is-open');
+  }
+
+  private checkDay(): void {
+    const key = dayKey(new Date());
+    if (key === this.todayKey) return;
+    this.todayKey = key;
+    if (this.wrapEl && this.isOpen()) this.render();
   }
 
   private onMusicChange(): void {
