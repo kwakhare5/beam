@@ -1999,6 +1999,14 @@ try {
   if (-not $open.ok -or @($open.selected) -notcontains $open.want) {
     throw "the panel opened on '$(@($open.selected) -join ',')' after the shelf changed, expected $($open.want)"
   }
+  $a11y = Get-UiLog $uiOut 'a11y'
+  if (@('button', 'group') -notcontains $a11y.role -or [string]::IsNullOrWhiteSpace($a11y.name) -or -not $a11y.live -or $a11y.tablist -ne 'tablist' -or [int]$a11y.tabs -lt 5) {
+    throw "accessibility surface is incomplete (role '$($a11y.role)', name '$($a11y.name)', live $($a11y.live), tablist '$($a11y.tablist)', $($a11y.tabs) tabs)"
+  }
+  $layout = Get-UiLog $uiOut 'layout'
+  if ([int]$layout.rows -ne 3 -or [int]$layout.listTop -gt 12 -or [int]$layout.actionsBottom -gt 12 -or [int]$layout.gap -lt 20) {
+    throw "files layout is off (rows $($layout.rows), list top $($layout.listTop), actions bottom $($layout.actionsBottom), gap $($layout.gap))"
+  }
   $undo = Get-UiLog $uiOut 'undo'
   if ([int]$undo.afterRemove -ne 2 -or [int]$undo.afterUndo -ne 3 -or -not $undo.undoVisible) {
     throw "Undo left $($undo.afterRemove) rows then $($undo.afterUndo)"
@@ -2020,6 +2028,9 @@ try {
   $calendar = Get-UiLog $uiOut 'calendar'
   if ($calendar.before -eq $calendar.next -or $calendar.back -ne $calendar.before) {
     throw "calendar went '$($calendar.before)' -> '$($calendar.next)' -> '$($calendar.back)'"
+  }
+  if ($null -eq $calendar.today.day -or $calendar.today.current -ne 'date') {
+    throw "today is not marked (day '$($calendar.today.day)', aria-current '$($calendar.today.current)')"
   }
   $esc = Get-UiLog $uiOut 'esc'
   if (-not $esc.ok) { throw 'Escape did not close the panel' }
@@ -2133,7 +2144,7 @@ try {
 Remove-Item Env:BEAM_UI_TEST -ErrorAction SilentlyContinue
 Remove-Item Env:BEAM_UI_TEST_PHASE -ErrorAction SilentlyContinue
 Remove-Item -LiteralPath $uiQuietOut, $uiQuietErr, $uiChevronOut, $uiChevronErr -ErrorAction SilentlyContinue
-Write-Host 'PASS UI pass (quiet phase: 78x30 rest, shelf add/undo, files-first and last-used reopen, midnight drift, centered running timer, calendar nav, Esc, 26x26 quiet + near wake + 2s return; chevron phase: live-music chevron opened the panel; margin click-through)'
+Write-Host 'PASS UI pass (quiet phase: 78x30 rest, shelf add/undo, files-first and last-used reopen, files layout, a11y surface, today mark, midnight drift, year boundary, centered running timer, calendar nav, Esc, 26x26 quiet + near wake + 2s return; chevron phase: live-music chevron opened the panel; margin click-through)'
 
 Write-Host '[26/30] helper restart'
 $restartOut = Join-Path $env:TEMP 'beam-restart.out.log'

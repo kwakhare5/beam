@@ -87,6 +87,7 @@ These run before the phase tasks, as previous UI passes did. The canonical previ
   - _Proved 2026-11-07:_ check 25 asserts files auto-pick, Esc/reopen, last-used, and the margin dismissal.
 - [ ] **9.4 Feedback and safety** — *Depends on: 3.3, 3.5.*
   - Visible status for copy/add/remove failures; 5s Undo after a row remove; confirm Quit when the shelf is non-empty; a `Connection lost` pill state when the helper dies; tray Hide.
+  - _2026-11-15:_ Undo (`Restored`), the Missing badge, the armed Clear All warning, and tray Hide are proven by checks 19, 20, and 25. Still unproven: the native quit-confirm dialog and the copy/add/remove failure status text — both need a modal or a forced failure the suite does not drive.
 - [x] **9.5 Quiet idle and chevron** — *Depends on: 1.5, 2.2.*
   - 26×26 star-only quiet after 10s idle; 78×30 on near or hover; 2s return; idle-only. The music hover row carries a 24px panel button beside the three transports.
   - _Proved 2026-11-08 (U1):_ check 25 read 26×26 quiet, woke it from a real cursor at 32px, measured a 2109ms return, and the chevron phase opened the panel with live music.
@@ -96,9 +97,11 @@ These run before the phase tasks, as previous UI passes did. The canonical previ
   - _Proved 2026-11-07:_ check 25's `WindowFromPoint` hit test: pill center belongs to Beam, the 16px margin does not; drag, hover, and panel checks stayed green.
 - [ ] **9.7 Files and Music layout** — *Depends on: 3.3, 2.3.*
   - Files rows start at the top with actions pinned bottom. More breathing room around the Music progress block.
+  - _2026-11-15:_ the Files half is now asserted by check 25 (list top ≤ 12px, actions ≤ 12px off the floor, ≥ 20px of slack under the last row with three rows). The Music half is a visual judgement, still unmeasured.
 - [ ] **9.8 Keyboard and accessibility** — *Depends on: 1.6.*
   - Pill role, name, Enter, focus ring, live region; focus restoration on panel close; Settings tab inside the tablist; calendar focus style. Pull 1.8 forward.
   - _Audit 2026-11-07: built and proven outside the suite; Settings is now a compact fifth button (7.1). Checks 25/30 cover the focus path._
+  - _Proved 2026-11-15:_ check 25 now asserts the surface itself — pill `role` is button/group with a non-empty name, a live region exists, the tab strip is `role="tablist"`, and five tabs carry `role="tab"`; focus restoration on close is the same check's dismiss path.
 - [ ] **9.9 Proof** — *Depends on: 9.1–9.8.*
   - Add runtime checks for the quiet state, chevron, auto-pick, Esc/reopen, margin click-through, Add files, Undo, and quit confirm. Prove 2.4 and 2.5. `.\verify.ps1` exits 0.
   - _Built 2026-11-04:_ check 25 runs a `BEAM_UI_TEST` app and asserts the resting pill (then 94×30; 78×30 after V1), shelf add/undo, files auto-pick, last-used reopen, centered 5-minute timer, calendar nav, Esc, chevron, 26×26 quiet + wake, Clear All, and a real `WindowFromPoint` margin hit test. _2026-11-08: the suite is green and both media states are covered (quiet phase and chevron phase); timer completion, chime, and banner are covered by checks 28–29. Quit confirm and the native Add files dialog remain uncovered._
@@ -203,8 +206,9 @@ These run before the phase tasks, as previous UI passes did. The canonical previ
   - Current month, correct weekday offset, local clock only. First day of the week follows the Windows locale, Sunday as fallback.
   - _Audit 2026-11-07: built; Windows-locale week start and year-boundary cases are not covered by verify._
   - _Verify:_ matches Windows calendar for the current month and week start.
-- [ ] **5.2 Today highlighted** — *Depends on: 5.1.*
+- [x] **5.2 Today highlighted** — *Depends on: 5.1.*
   - _Verify:_ today's cell has a visibly distinct style.
+  - _Proved 2026-11-15:_ check 25 reads the live cell — `class="cal-cell today"` with `aria-current="date"` — and the drift probe watches that same cell move from 15 to 16.
 - [x] **5.3 Month drift** — *Depends on: 5.1.*
   - Leave the app open past midnight / month end.
   - _Built 2026-11-15:_ the panel checks the local day every 30s and re-renders when it changes (`dayKey` in `core/calendar.ts`).

@@ -720,8 +720,42 @@ export async function runUiTest(ctx: HarnessContext, target: BrowserWindow, phas
     want: ctx.music() ? 'music' : 'files',
     chevron: opened.snap.chevron
   });
+
+  const a11y = (await target.webContents.executeJavaScript(
+    `(() => {
+      const pill = document.querySelector('.pill');
+      return {
+        role: pill?.getAttribute('role') ?? null,
+        name: pill?.getAttribute('aria-label') ?? null,
+        live: Boolean(document.querySelector('[data-live][aria-live]')),
+        tablist: document.querySelector('.tabs')?.getAttribute('role') ?? null,
+        tabs: document.querySelectorAll('[role="tab"]').length
+      };
+    })()`
+  )) as { role: string | null; name: string | null; live: boolean; tablist: string | null; tabs: number };
+  ui('a11y', a11y);
   await click('#tab-files');
   await wait(150);
+
+  const layout = (await target.webContents.executeJavaScript(
+    `(() => {
+      const body = document.querySelector('#panel-files');
+      const list = body?.querySelector('.file-list');
+      const rows = body ? [...body.querySelectorAll('.row')] : [];
+      const actions = body?.querySelector('.actions');
+      const b = body?.getBoundingClientRect();
+      const l = list?.getBoundingClientRect();
+      const a = actions?.getBoundingClientRect();
+      const last = rows.length ? rows[rows.length - 1].getBoundingClientRect() : null;
+      return {
+        rows: rows.length,
+        listTop: b && l ? Math.round(l.top - b.top) : null,
+        actionsBottom: b && a ? Math.round(b.bottom - a.bottom) : null,
+        gap: last && a ? Math.round(a.top - last.bottom) : null
+      };
+    })()`
+  )) as { rows: number; listTop: number | null; actionsBottom: number | null; gap: number | null };
+  ui('layout', layout);
 
   const removeAt = await point('#panel-files .row [data-remove-path]');
   if (removeAt) {
@@ -771,7 +805,13 @@ export async function runUiTest(ctx: HarnessContext, target: BrowserWindow, phas
   await click('#panel-calendar [data-cal-today]');
   await wait(150);
   const calBack = (await snap()).calTitle;
-  ui('calendar', { before: calBefore, next: calNext, back: calBack });
+  const calToday = (await target.webContents.executeJavaScript(
+    `(() => {
+      const cell = document.querySelector('#panel-calendar .cal-cell.today');
+      return { day: cell?.textContent ?? null, current: cell?.getAttribute('aria-current') ?? null };
+    })()`
+  )) as { day: string | null; current: string | null };
+  ui('calendar', { before: calBefore, next: calNext, back: calBack, today: calToday });
 
   const yearStart = (await snap()).calTitle;
   for (let index = 0; index < 12; index += 1) {
