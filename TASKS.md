@@ -66,7 +66,7 @@ The boxes reflect the 2026-11-10 code and gate. Read this with the notes on each
 - [ ] **R7 Remaining proofs** — *Depends on: C1.*
   - Calendar midnight drift (5.3), locale week start and year boundaries, multi-monitor and 100/150% if hardware allows (otherwise mark blocked, do not tick). Windows 10 stays unproven.
 - [x] **R8 Packaging** — *Depends on: R7.*
-  - `npm run dist` builds main, preload, renderer, and helper; outputs to `release` (electron-builder.yml); verify asserts `app.asar`, helper, icon, and a portable launch. No publish until auth and a clean-profile checklist.
+  - `npm run dist` packs the already-built `dist/` plus `BeamBridge.exe` and `tray.ico` into a portable exe in `release` (electron-builder.yml); the helper publish and `npm run build` must run first. The proof is manual — the suite does not run dist. No publish until auth and a clean-profile checklist.
   - _Built 2026-11-15:_ `release/Beam-0.1.0.exe`, 137.4 MB, portable target, app icon from `build/icon.png`. Resources carry `app.asar`, `BeamBridge.exe`, and `tray.ico`; launching the exe started 4 Beam processes plus the helper and stayed up.
   - _Environment note:_ electron-builder's unpack step fails inside `D:\Beam` with `EPERM`/`EBUSY` on `resources/default_app.asar` because a scanner holds the fresh file; the same command with `--config.directories.output=<outside the workspace>` completes. This is a local lock, not a config defect.
   - _Not covered by verify:_ the suite still does not run `dist`, so the packaged launch is a manual proof. Adding it would make the gate depend on a 5-minute build and on this machine's scanner behaviour.
@@ -99,7 +99,7 @@ These run before the phase tasks, as previous UI passes did. The canonical previ
 - [ ] **9.7 Files and Music layout** — *Depends on: 3.3, 2.3.*
   - Files rows start at the top with actions pinned bottom. More breathing room around the Music progress block.
   - _2026-11-15:_ the Files half is now asserted by check 25 (list top ≤ 12px, actions ≤ 12px off the floor, ≥ 20px of slack under the last row with three rows). The Music half is a visual judgement, still unmeasured.
-- [ ] **9.8 Keyboard and accessibility** — *Depends on: 1.6.*
+- [x] **9.8 Keyboard and accessibility** — *Depends on: 1.6.*
   - Pill role, name, Enter, focus ring, live region; focus restoration on panel close; Settings tab inside the tablist; calendar focus style. Pull 1.8 forward.
   - _Audit 2026-11-07: built and proven outside the suite; Settings is now a compact fifth button (7.1). Checks 25/30 cover the focus path._
   - _Proved 2026-11-15:_ check 25 now asserts the surface itself — pill `role` is button/group with a non-empty name, a live region exists, the tab strip is `role="tablist"`, and five tabs carry `role="tab"`; focus restoration on close is the same check's dismiss path.

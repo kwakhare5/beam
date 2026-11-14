@@ -37,7 +37,7 @@ To run from source instead: `npm install`, `npm run build`, then `npm start`.
 
 ## Verification
 
-`.\verify.ps1` has 30 checks. The last full green run is 30/30 with no skips (work card 128): check 16 is a real Explorer→pill drag, check 17 retries the Explorer foreground, check 24 follows two live players, check 25 runs a quiet phase and a live-media phase, check 26 force-kills the helper, check 27 proves the 8s timeout, check 28 proves timer start/cancel/replace with one chime and banner, check 29 proves completion behind fullscreen, and check 30 proves the Settings controls and a persisted restart. The last full green run is 2026-11-15 (30/30, no skips) against the capsule final: check 22 asserts the 126px hover pill with the 108px row of four 24px controls and the panel button, and check 25 proves the panel routing (Files when the shelf has rows, last-used after Clear All) plus calendar midnight drift.
+`.\verify.ps1` has 30 checks. The last full green run is 2026-11-15 (30/30, no skips) against the capsule final: check 16 is a real Explorer→pill drag, check 17 retries the Explorer foreground, check 22 asserts the 126px hover pill with the 108px row of four 24px controls and the panel button, check 24 follows two live players, check 25 proves the panel routing (Files when the shelf has rows, last-used after Clear All), the calendar midnight drift, and the a11y surface, check 26 force-kills the helper, check 27 proves the 8s timeout, check 28 proves timer start/cancel/replace with one chime and banner, check 29 proves completion behind fullscreen, and check 30 proves the Settings controls and a persisted restart. Three assertions added after that run — locale week start, year-boundary navigation, and the Music transport geometry — are not yet in a green gate.
 
 ## Commands
 
@@ -51,7 +51,7 @@ npm run typecheck
 npm run measure
 ```
 
-Packaging still needs the helper publish and app build before `npm run dist`. The app uses software rendering to stay under the 130 MB private-byte gate; measured 2026-10-29 at 136×42 with the panel and tray installed: 99 MB private across 5 processes and 0.2% CPU idle.
+`npm run dist` only runs electron-builder, so publish the helper and run `npm run build` first. A portable `release/Beam-0.1.0.exe` (137.4 MB) was built and launched on 2026-11-15. The app uses software rendering to stay under the 130 MB private-byte gate; check 9 measures it every run — last 90.3 MB app, 9.8 MB helper, 0% CPU, 0 sockets.
 
 ## Preview
 

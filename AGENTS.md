@@ -15,7 +15,7 @@ Beam is an offline Windows 11 floating pill that opens 1-click to media controls
 
 **Site:** `site/` is the public Next static export at beamm.vercel.app; the hero iframes the real renderer demo built from `src/renderer/ui` and `src/renderer/styles.css`. No release is published; the site says the Windows build is not published and sends people to the live demo and source. Windows 11 only (10 unproven).
 
-**Current work (2026-11-11):** the capsule final, the site demo first-click fix, V1's verify/harness rework, the docs cleanup, and the read-only audit are in the working tree, not committed. The verify gate has not completed 30/30 since the capsule final, and verification is paused on request. The open queue lives in `TASKS.md` (V1, 9.x, 2.5, 5.x, 8.x, R7–R9, release); evidence cards 132–139 live in `JOURNAL.md`.
+**Current state (2026-11-15):** everything is committed and pushed. `.\verify.ps1` last ran green at 30/30 with no skips against the capsule final; three assertions added after that run (locale week start, year-boundary navigation, Music transport geometry) still need a full gate. A portable `release/Beam-0.1.0.exe` (137.4 MB) exists, but nothing is published. The open queue is 9.2, 9.4, 9.7, 9.9, 2.5, 8.1, 8.2, R7, R9 in `TASKS.md`.
 
 ## 2. Stack
 - Electron + TypeScript + Vite, exact-pinned. Renderer sandboxed, contextIsolation on, nodeIntegration off. The renderer is vanilla TypeScript with shadcn-style tokens and Lucide; no React or Tailwind.
@@ -34,7 +34,7 @@ Beam is an offline Windows 11 floating pill that opens 1-click to media controls
 
 ## 4. Hard Rules & Invariants (What the AI must ALWAYS do)
 - One task at a time from `TASKS.md`, top unchecked box, in the order of its blocks A–H. Never start a task whose `Depends on` line is not done.
-- **Built and gated (2026-11-11):** every Block A/B/C item, all five tabs, Settings, helper reliability, and the capsule final are built. The suite proves real clipboard copy, a real Explorer drop and drag-out, fullscreen hide/restore, timer completion while hidden, session picking, and the Music tab's 148px art, real seek, and 0 network requests. Check 22 hovers the pill and asserts the 126px shell, the 108px row of four 24×24 controls (prev, toggle, next, panel), and that the panel button opens Music. The capsule final is newer than the last 30/30 gate; verification is paused on request, so no task may be ticked on a partial or skipped run.
+- **Built and gated (2026-11-11):** every Block A/B/C item, all five tabs, Settings, helper reliability, and the capsule final are built. The suite proves real clipboard copy, a real Explorer drop and drag-out, fullscreen hide/restore, timer completion while hidden, session picking, and the Music tab's 148px art, real seek, and 0 network requests. Check 22 hovers the pill and asserts the 126px shell, the 108px row of four 24×24 controls (prev, toggle, next, panel), and that the panel button opens Music. The 2026-11-15 run is green at 30/30 with no skips; three assertions added after it still need a full gate, and no task may be ticked on a partial or skipped run.
 - Keep the renderer untrusted. Everything touching Win32 goes through the helper.
 - Read `ARCHITECTURE.md` before touching the window, IPC, or helper seams.
 - Follow `DESIGN.md` tokens exactly. No invented colors, radii, or shadows.
@@ -74,7 +74,7 @@ Beam is an offline Windows 11 floating pill that opens 1-click to media controls
 - The window is clipped to the pill plus a 6px halo with `setShape`, so margin clicks reach the desktop instead of opening the panel; check 25 holds the hit test.
 - Move the window with `setBounds` and a pinned width/height. `setPosition` let Windows re-round the transparent window's height on every pointer move (42 grew to 141 during the first 1.4 test). The window's settled outer bounds are 136×45 at 125%, with a 136×44 content rect; keep that size while dragging.
 - The saved position is the window's outer top-left. Restore only when that rect still intersects a current display; otherwise anchor on the primary display. Multi-monitor and 100/150% scaling remain unproven.
-- Electron RAM is the top project risk. Idle at 136×42 with the panel and tray installed (2026-10-29): 99 MB private summed across 5 processes — main 33.4, renderer 28.1, gpu-process 15.0, utility 11.7, helper 10.8 — and 0.2% CPU, under the 130 MB gate. The helper is also gated separately at 60 MB.
+- Electron RAM is the top project risk. Check 9 now gates it every run: helper ≤60 MB, app ≤130 MB, CPU <5%, zero TCP sockets. Last measured (2026-11-15): helper 9.8 MB, app 90.3 MB, 0% CPU, 0 sockets.
 
 ## 9. Do Not Touch
 - `assets/mascot/` — finalized brand assets.
