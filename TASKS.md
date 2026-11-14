@@ -243,7 +243,7 @@ These run before the phase tasks, as previous UI passes did. The canonical previ
   - Typecheck, build, helper build, launch, anchor, panel, files, music, timer, Settings, helper restart, and UI states. The suite has 30 checks.
   - _Audit 2026-11-10: still missing a paste-after-helper-restart proof, an outbound-TCP assertion, Electron/total/CPU budget checks, calendar midnight drift, and multi-monitor/100–150% scaling._
   - _2026-11-11: the capsule change makes check 22 and the capsule static checks stale until V1; the suite cannot go green before that rework._
-  - _2026-11-15:_ the suite is green again (30/30) and now covers calendar midnight drift and year-boundary navigation, plus the app budget: helper ≤ 60 MB, app ≤ 130 MB, CPU < 5%, and zero TCP sockets. Still missing: a paste-after-helper-restart proof, the Windows locale week start, and multi-monitor/100–150% scaling (needs hardware).
+  - _2026-11-15:_ the suite is green again (30/30) and now covers calendar midnight drift, year-boundary navigation, the locale week start, and the app budget: helper ≤ 60 MB, app ≤ 130 MB, CPU < 5%, and zero TCP sockets. Check 18 now also kills the helper after the first real Ctrl+V, waits for the restart and second pong, confirms the clipboard still holds all 3 paths, and pastes them into a fresh Explorer folder again — written and parse-checked, unproven until the next full gate. Still missing: multi-monitor/100–150% scaling (needs hardware).
   - _Verify:_ `.\verify.ps1` exits 0 and prints each check.
 - [ ] **8.2 Packaged build** — *Depends on: 8.1.*
   - Installer or portable exe launches on a clean profile.

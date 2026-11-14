@@ -1134,6 +1134,7 @@ Remove-Item -LiteralPath $copyOutLog, $copyErrLog -ErrorAction SilentlyContinue
 $env:BEAM_COPY_TEST = '1'
 $copyApp = $null
 $copyPasteDir = Join-Path $env:TEMP ("beam-copy-paste-" + $PID)
+$copyPasteDir2 = $null
 try {
   $copyLaunch = Start-BeamApp -Out $copyOutLog -Err $copyErrLog -Pattern '\[files\] copy=1 source=row ok=true' -Seconds 25 -What 'the copy run'
   $copyApp = $copyLaunch.App
@@ -1217,18 +1218,76 @@ try {
   }
   if ($copyOut -notmatch '\[copy\] done') { throw 'the copy harness never finished' }
 
+  $copyHelper = Get-Process BeamBridge -ErrorAction SilentlyContinue | Sort-Object StartTime -Descending | Select-Object -First 1
+  if (-not $copyHelper) { throw 'no BeamBridge process was running before the restart paste' }
+  Stop-Process -Id $copyHelper.Id -Force
+  $restartStop = (Get-Date).AddSeconds(20)
+  $restartPongs = 0
+  while ((Get-Date) -lt $restartStop) {
+    Start-Sleep -Milliseconds 250
+    $copyOut = Get-Content -LiteralPath $copyOutLog -Raw -ErrorAction SilentlyContinue
+    $restartPongs = ([regex]::Matches($copyOut, '\[bridge\] pong 0\.1\.0')).Count
+    if ($copyOut -match '\[bridge\] restarted' -and $restartPongs -ge 2) { break }
+  }
+  if ($restartPongs -lt 2) { throw "the helper did not answer again after the kill (pongs=$restartPongs)" }
+  $restartPaths = @(Get-DropPaths)
+  $restartMissing = @($copySources | Where-Object { $restartPaths -notcontains $_ })
+  if ($restartPaths.Count -ne 3 -or $restartMissing.Count -ne 0) {
+    throw "the clipboard lost paths after the helper restart ($($restartPaths.Count) left)"
+  }
+
+  $copyPasteDir2 = Join-Path $env:TEMP ("beam-copy-restart-" + $PID)
+  New-Item -ItemType Directory -Path $copyPasteDir2 | Out-Null
+  Start-Process explorer.exe -ArgumentList $copyPasteDir2 | Out-Null
+  $pasteName2 = Split-Path -Leaf $copyPasteDir2
+  $pasteHwnd2 = [IntPtr]::Zero
+  for ($i = 0; $i -lt 60; $i++) {
+    Start-Sleep -Milliseconds 200
+    foreach ($explorerWindow in (New-Object -ComObject Shell.Application).Windows()) {
+      if ($explorerWindow.LocationName -eq $pasteName2) { $pasteHwnd2 = [IntPtr]$explorerWindow.HWND; break }
+    }
+    if ($pasteHwnd2 -ne [IntPtr]::Zero) { break }
+  }
+  if ($pasteHwnd2 -eq [IntPtr]::Zero) { throw 'the restart paste folder never opened' }
+  $pasted2 = $false
+  for ($attempt = 1; $attempt -le 2 -and -not $pasted2; $attempt++) {
+    if (-not [BeamScreen]::ForceForeground($pasteHwnd2)) { throw 'the restart paste folder never took the foreground' }
+    Start-Sleep -Milliseconds 400
+    if ([BeamScreen]::GetForegroundWindow() -ne $pasteHwnd2) { continue }
+    $copyShell.SendKeys('^v')
+    for ($i = 0; $i -lt 60; $i++) {
+      Start-Sleep -Milliseconds 250
+      $landed2 = @($copySources | Where-Object { Test-Path -LiteralPath (Join-Path $copyPasteDir2 (Split-Path -Leaf $_)) })
+      if ($landed2.Count -eq 3) {
+        $pasted2 = $true
+        break
+      }
+    }
+    if (-not $pasted2) {
+      Get-ChildItem -LiteralPath $copyPasteDir2 -File -ErrorAction SilentlyContinue | Remove-Item -Force -ErrorAction SilentlyContinue
+      Write-Host "retrying the restart paste (attempt $attempt lost the foreground or pasted nothing)"
+    }
+  }
+  if (-not $pasted2) { throw 'Ctrl+V after the helper restart pasted nothing' }
+  if ([BeamScreen]::ForceForeground($pasteHwnd2)) {
+    Start-Sleep -Milliseconds 300
+    $copyShell.SendKeys('%{F4}')
+  }
+
   Stop-BeamApp -App $copyApp -What 'the pill after the copy run'
 } catch {
   Stop-BeamAll -App $copyApp
   Remove-Item Env:BEAM_COPY_TEST -ErrorAction SilentlyContinue
+  if ($copyPasteDir2) { Remove-Item -LiteralPath $copyPasteDir2 -Recurse -Force -ErrorAction SilentlyContinue }
   Write-Host "FAIL copy: $($_.Exception.Message)"
   exit 1
 }
 Remove-Item Env:BEAM_COPY_TEST -ErrorAction SilentlyContinue
 Remove-Item -LiteralPath $copyOutLog, $copyErrLog -ErrorAction SilentlyContinue
 Remove-Item -LiteralPath $copyPasteDir -Recurse -Force -ErrorAction SilentlyContinue
+if ($copyPasteDir2) { Remove-Item -LiteralPath $copyPasteDir2 -Recurse -Force -ErrorAction SilentlyContinue }
 Remove-Item -LiteralPath (Join-Path $env:TEMP 'beam-copytest') -Recurse -Force -ErrorAction SilentlyContinue
-Write-Host 'PASS copy (row copy put alpha.txt on the clipboard, Copy All put all 3 paths, Ctrl+V pasted them into Explorer)'
+Write-Host 'PASS copy (row copy put alpha.txt on the clipboard, Copy All put all 3 paths, Ctrl+V pasted them into Explorer, and after a real helper kill the restarted helper still pasted all 3)'
 
 Write-Host '[18/30] drag out'
 $dragOutLog = Join-Path $env:TEMP 'beam-dragout-verify.out.log'
