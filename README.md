@@ -12,6 +12,8 @@ release\Beam-0.1.0.exe
 
 It is built with `npm run dist` (electron-builder, portable target, 137 MB) and carries `app.asar`, the `BeamBridge.exe` helper, and the tray icon in its resources. On a machine where a file scanner locks the freshly unpacked Electron inside the repo, point the output elsewhere: `npx electron-builder --win portable --config.directories.output=%TEMP%\beam-release`.
 
+The exe is unsigned, so Windows SmartScreen shows "Windows protected your PC" on first launch — More info → Run anyway. Nothing is published yet: to ship it, authenticate `gh`, run `gh release create v0.1.0 release\Beam-0.1.0.exe --title "Beam 0.1.0" --notes-file JOURNAL.md`, then link that release from `site/src/content/site.ts` and deploy. Beam needs Windows 11; Windows 10 is untested.
+
 To run from source instead: `npm install`, `npm run build`, then `npm start`.
 
 ## Current state (2026-11-15)
