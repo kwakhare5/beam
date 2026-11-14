@@ -867,8 +867,9 @@ A chronological, append-only record of real product work, completed features, an
 - **Proof:** docs-only change; `git diff --stat` shows AGENTS 6, ARCHITECTURE 10, README 4, TASKS 4 changed lines. No code touched, so no typecheck or gate run was needed or claimed.
 - **Still broken / unproven:** the three newest assertions still need a full gate; 9.2, 9.4, 9.7 (Music half), 9.9, 2.5, 8.1, 8.2, R7, and R9's final gate remain open. Publishing still needs `gh auth login` from Karan.
 
-#### Work card 144: docs tell the gate's truth again
-- **Problem / tension:** ARCHITECTURE, AGENTS, and README still said the gate had not gone 30/30 since the capsule final, cited the 2026-11-10 audit run, called packaging unbuilt, and quoted the 2026-10-29 RAM numbers — all false after 2026-11-15. TASKS R8 claimed `npm run dist` builds the app and helper, which `package.json` contradicts.
-- **Change / decision:** every current-state line now cites the 2026-11-15 green run (30/30, no skips), names the three assertions added after it as unproven, records the exe as built but unpublished, and uses check 9's numbers (helper 9.8 MB / 60, app 90.3 MB / 130, 0% CPU, 0 sockets). R8's text now says dist only packs what `npm run build` and the helper publish produced, and that the proof is manual. 9.8 is ticked on check 25's a11y assertions from the green run.
-- **Proof:** docs-only change; `git diff --stat` shows AGENTS 6, ARCHITECTURE 10, README 4, TASKS 4 changed lines. No code touched, so no typecheck or gate run was needed or claimed.
-- **Still broken / unproven:** the three newest assertions still need a full gate; 9.2, 9.4, 9.7 (Music half), 9.9, 2.5, 8.1, 8.2, R7, and R9's final gate remain open. Publishing still needs `gh auth login` from Karan.
+
+#### Work card 145: paste-after-restart joins the copy check
+- **Problem / tension:** TASKS 8.1 still listed a paste-after-helper-restart proof as missing. Check 26 killed the helper and proved a new pid plus a second pong, and check 18 proved a real copy and Ctrl+V, but nothing joined them.
+- **Change / decision:** check 18 no longer stops after the first paste. It kills the helper that served the copy, waits up to 20s for `[bridge] restarted` and a second pong, asserts `Get-DropPaths` still returns the same three paths, then opens a fresh Explorer folder and pastes with the same real `^v` keystroke, with the same foreground check and one retry. The PASS line now states the restart paste.
+- **Proof:** parse-checked without running the suite: `[Parser]::ParseFile` reports `parse OK`. No gate has run since the edit.
+- **Still broken / unproven:** the new step itself, plus the three assertions added after the green run (locale week start, year boundary, Music transport geometry), need one full gate. The machine has been in use all morning (`idle=0`, Chrome open) and the gate needs ~15 quiet minutes.
