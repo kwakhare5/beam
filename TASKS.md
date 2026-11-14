@@ -82,6 +82,7 @@ These run before the phase tasks, as previous UI passes did. The canonical previ
   - _Superseded 2026-11-04 by ADR-0012; all five tabs are now live and Settings landed at 7.1._
 - [ ] **9.2 Add files picker** — *Depends on: 3.1.*
   - Native `dialog.showOpenDialog` through preload/main; add picked paths to the same shelf; empty state and action row both work. A drop while the panel is open refreshes the Files list.
+  - _2026-11-15, uncovered and unresolved:_ the picker is built (`filesPick` in `app-ipc.ts` calls `dialog.showOpenDialog`; the empty state and the action row both carry `[data-add-files]`). An attempt to drive it from the suite reached the button (found, visible, 94×32, real mouse events) but produced no `[files] pick` log and no window titled `Add files to Beam`, so either the click never reached `shelf.pick()` or the dialog opened under a different title. The attempt was reverted rather than left in the gate unproven. Needs one manual click to settle which it is.
 - [x] **9.3 Panel flow** — *Depends on: 1.3.*
   - Esc resets main's panel state; the panel animates out over 150ms; the 16px margin dismisses; opening picks Files, Music, or the last tab from the pill state. No stuck reopen.
   - _Proved 2026-11-07:_ check 25 asserts files auto-pick, Esc/reopen, last-used, and the margin dismissal.
