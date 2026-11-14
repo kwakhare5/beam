@@ -1824,6 +1824,18 @@ try {
     throw "expected prev/toggle/next in the Music tab, found $($actions -join ',')"
   }
   $wantToggle = if ($payload.playing) { 'Pause' } else { 'Play' }
+  $prevBtn = $first.controls | Where-Object { $_.action -eq 'prev' }
+  $toggleBtn = $first.controls | Where-Object { $_.action -eq 'toggle' }
+  $nextBtn = $first.controls | Where-Object { $_.action -eq 'next' }
+  if (-not $prevBtn -or -not $toggleBtn -or -not $nextBtn) { throw 'the Music tab is missing a transport' }
+  if ([int]$toggleBtn.w -ne 38 -or [int]$prevBtn.w -ne 30 -or [int]$nextBtn.w -ne 30) {
+    throw "transport sizes are off (prev $($prevBtn.w), toggle $($toggleBtn.w), next $($nextBtn.w))"
+  }
+  $gapA = [int]$toggleBtn.left - [int]$prevBtn.right
+  $gapB = [int]$nextBtn.left - [int]$toggleBtn.right
+  if ([math]::Abs($gapA - 16) -gt 1 -or [math]::Abs($gapB - 16) -gt 1) {
+    throw "transport gaps are $gapA and $gapB, expected 16"
+  }
   $tabToggleLabel = ($first.controls | Where-Object { $_.action -eq 'toggle' }).label
   if ($tabToggleLabel -ne $wantToggle) { throw "the Music tab play button reads '$tabToggleLabel', expected '$wantToggle'" }
   if (-not $tabToggleResult.flipped -or -not $tabToggleResult.restored) { throw 'the Music tab play/pause button did not change and restore the live session' }

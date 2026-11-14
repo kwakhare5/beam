@@ -474,10 +474,17 @@ export async function runMusicTabTest(ctx: HarnessContext, target: BrowserWindow
         : null,
       slider: Boolean(panel?.querySelector('input[type="range"], [role="slider"]')),
       times: [...(panel?.querySelectorAll('.track-times span') ?? [])].map((span) => span.textContent),
-      controls: [...(panel?.querySelectorAll('.music-controls [data-action]') ?? [])].map((button) => ({
-        action: button.getAttribute('data-action'),
-        label: button.getAttribute('aria-label')
-      }))
+      controls: [...(panel?.querySelectorAll('.music-controls [data-action]') ?? [])].map((button) => {
+        const rect = button.getBoundingClientRect();
+        return {
+          action: button.getAttribute('data-action'),
+          label: button.getAttribute('aria-label'),
+          w: Math.round(rect.width),
+          h: Math.round(rect.height),
+          left: Math.round(rect.left),
+          right: Math.round(rect.right)
+        };
+      })
     };
   })()`;
 
