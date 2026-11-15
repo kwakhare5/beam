@@ -10,6 +10,7 @@ import {
   type Tab
 } from './ui';
 import { ENABLED_TABS, type LastUsed } from './core/tabs';
+import { beginClose, endClose, SURFACE_CLOSING_MS, SURFACE_COLLAPSE_MS, SURFACE_PILL_SETTLE_MS } from './core/surface';
 import { dayKey, shiftMonth } from './core/calendar';
 import { FileShelf } from './files';
 import { MusicSession } from './music';
@@ -167,21 +168,20 @@ export class PanelView {
   dismiss(): void {
     if (!this.isOpen()) return;
     this.cancelClose();
-    document.body.classList.remove('is-open');
-    document.body.classList.add('is-closing');
+    beginClose(document.body);
     this.closingTimer = window.setTimeout(() => {
       this.closingTimer = undefined;
-      document.body.classList.remove('is-closing');
+      endClose(document.body);
       this.deps.focusPill();
-    }, 200);
+    }, SURFACE_CLOSING_MS);
     this.collapseTimer = window.setTimeout(() => {
       this.collapseTimer = undefined;
       this.deps.api()?.panelCollapsed();
-    }, 160);
+    }, SURFACE_COLLAPSE_MS);
     this.pillSizeTimer = window.setTimeout(() => {
       this.pillSizeTimer = undefined;
       this.deps.reportPillSize();
-    }, 220);
+    }, SURFACE_PILL_SETTLE_MS);
     this.deps.scheduleQuiet();
   }
 
@@ -198,7 +198,7 @@ export class PanelView {
       window.clearTimeout(this.pillSizeTimer);
       this.pillSizeTimer = undefined;
     }
-    document.body.classList.remove('is-closing');
+    endClose(document.body);
   }
 
   private isOpen(): boolean {

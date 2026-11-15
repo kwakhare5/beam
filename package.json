@@ -12,6 +12,8 @@
     "site:build": "npm --prefix site run build",
     "generate:icons": "node scripts/generate-icons.mjs",
     "generate:chime": "node scripts/make-chime.mjs",
+    "ui:snapshot": "node scripts/ui-snapshot.mjs",
+    "ui:check": "node scripts/ui-snapshot.mjs --check",
     "typecheck": "tsc -p tsconfig.json --noEmit && tsc -p tsconfig.renderer.json --noEmit",
     "dist": "electron-builder"
   },

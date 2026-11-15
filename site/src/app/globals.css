@@ -213,16 +213,11 @@ a:hover > .star-logo {
   border: 0;
   background: transparent;
   color-scheme: dark;
-  transition:
-    width 180ms cubic-bezier(0.23, 1, 0.32, 1),
-    height 180ms cubic-bezier(0.23, 1, 0.32, 1);
-  transition-delay: 160ms;
 }
 
 .demo-frame[data-open='true'] {
   width: 452px;
   height: 316px;
-  transition-delay: 0ms;
 }
 
 @media (max-width: 520px) {

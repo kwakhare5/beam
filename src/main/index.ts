@@ -519,7 +519,14 @@ if (!gotLock) {
     globalShortcut.unregisterAll();
     timer.dispose();
     event.preventDefault();
-    void bridge.stop().finally(() => app.quit());
+    const forceExit = setTimeout(() => {
+      console.error('[app] forced exit after stalled helper stop');
+      app.exit(0);
+    }, 2000);
+    void bridge.stop().finally(() => {
+      clearTimeout(forceExit);
+      app.exit(0);
+    });
   });
 
   app.on('window-all-closed', () => {

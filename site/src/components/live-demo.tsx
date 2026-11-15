@@ -3,17 +3,30 @@
 import { useEffect, useRef, useState } from 'react';
 
 const demoPath = process.env.NODE_ENV === 'development' ? '/demo/index.html' : '/demo';
+const INSTANCE = 'hero';
 
 export function LiveDemo() {
   const [open, setOpen] = useState(false);
   const stageRef = useRef<HTMLDivElement>(null);
+  const frameRef = useRef<HTMLIFrameElement>(null);
 
   useEffect(() => {
     const onMessage = (event: MessageEvent) => {
       if (event.origin !== window.location.origin) return;
-      const data = event.data as { source?: string; instance?: string; open?: boolean } | null;
-      if (!data || data.source !== 'beam-demo' || data.instance !== 'hero' || typeof data.open !== 'boolean') return;
-      setOpen(data.open);
+      const data = event.data as { source?: string; instance?: string; type?: string } | null;
+      if (!data || data.source !== 'beam-demo' || data.instance !== INSTANCE) return;
+      if (data.type === 'open-request') {
+        setOpen(true);
+        requestAnimationFrame(() =>
+          requestAnimationFrame(() => {
+            frameRef.current?.contentWindow?.postMessage(
+              { source: 'beam-host', instance: INSTANCE, type: 'resized' },
+              window.location.origin
+            );
+          })
+        );
+      }
+      if (data.type === 'closed') setOpen(false);
     };
     window.addEventListener('message', onMessage);
     return () => window.removeEventListener('message', onMessage);
@@ -37,7 +50,14 @@ export function LiveDemo() {
   return (
     <div className="demo-fit" data-open={open}>
       <div className="demo-stage" data-open={open} ref={stageRef}>
-        <iframe src={`${demoPath}?instance=hero`} title="beam — live app demo" className="demo-frame" data-open={open} loading="lazy" />
+        <iframe
+          src={`${demoPath}?instance=${INSTANCE}`}
+          title="beam — live app demo"
+          className="demo-frame"
+          data-open={open}
+          loading="lazy"
+          ref={frameRef}
+        />
       </div>
     </div>
   );
