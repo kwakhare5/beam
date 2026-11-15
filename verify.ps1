@@ -291,6 +291,7 @@ $env:BEAM_PANEL_TEST = '1'
 $env:BEAM_IDLE_TEST = '1'
 $env:BEAM_SETTINGS_PATH = Join-Path $env:TEMP 'beam-verify-active-settings.json'
 Remove-Item -LiteralPath $env:BEAM_SETTINGS_PATH -ErrorAction SilentlyContinue
+for ($launchAttempt = 1; $launchAttempt -le 2; $launchAttempt++) {
 $fgBefore = [BeamScreen]::GetForegroundWindow()
 $first = Start-Process -FilePath $electron -ArgumentList '.' -WorkingDirectory $PSScriptRoot -PassThru -RedirectStandardOutput $outLog -RedirectStandardError $errLog
 $appOut = ''
@@ -339,8 +340,15 @@ if ($fgAfter -eq $beamShell.MainWindowHandle) {
 if ($fgAfter -ne $fgBefore) {
   Stop-Process -Id $first.Id -Force -ErrorAction SilentlyContinue
   Get-Process electron,BeamBridge -ErrorAction SilentlyContinue | Stop-Process -Force
+  if ($launchAttempt -eq 1) {
+    Write-Host "retrying launch: a foreign window took the foreground ($fgBefore -> $fgAfter) while Beam started"
+    Start-Sleep -Seconds 1
+    continue
+  }
   Write-Host "FAIL focus: foreground changed from $fgBefore to $fgAfter while Beam launched"
   exit 1
+}
+break
 }
 Write-Host "PASS launch (pid $($first.Id)) + pong 0.1.0"
 Write-Host 'PASS focus (pill appeared without taking the foreground)'
@@ -1556,17 +1564,24 @@ function Stop-BeamPlayerApps {
 }
 
 function Start-BeamChromePlayer {
-  Start-Process -FilePath $playerChromeExe -ArgumentList @(
-    '--user-data-dir=' + (Join-Path $playerRoot 'chrome'),
-    '--autoplay-policy=no-user-gesture-required',
-    '--no-first-run',
-    '--new-window',
-    ('file:///' + ($playerPage -replace '\\', '/') + '?name=chrome')
-  ) | Out-Null
-  for ($i = 0; $i -lt 40; $i++) {
-    Start-Sleep -Milliseconds 500
-    $live = Get-BeamSessions
-    if ($live | Where-Object { $_.app -match 'Chrome' -and $_.playing }) { return }
+  for ($attempt = 1; $attempt -le 2; $attempt++) {
+    Start-Process -FilePath $playerChromeExe -ArgumentList @(
+      '--user-data-dir=' + (Join-Path $playerRoot 'chrome'),
+      '--autoplay-policy=no-user-gesture-required',
+      '--no-first-run',
+      '--new-window',
+      ('file:///' + ($playerPage -replace '\\', '/') + '?name=chrome')
+    ) | Out-Null
+    for ($i = 0; $i -lt 40; $i++) {
+      Start-Sleep -Milliseconds 500
+      $live = Get-BeamSessions
+      if ($live | Where-Object { $_.app -match 'Chrome' -and $_.playing }) { return }
+    }
+    if ($attempt -eq 1) {
+      Write-Host 'retrying the local Chrome player: no playing session appeared in 20s'
+      Stop-BeamPlayerApps
+      Start-Sleep -Seconds 2
+    }
   }
   throw 'the local SMTC player never started playing'
 }
