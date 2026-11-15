@@ -70,9 +70,9 @@ The boxes reflect the 2026-11-10 code and gate. Read this with the notes on each
   - _Built 2026-11-15:_ `release/Beam-0.1.0.exe`, 137.4 MB, portable target, app icon from `build/icon.png`. Resources carry `app.asar`, `BeamBridge.exe`, and `tray.ico`; launching the exe started 4 Beam processes plus the helper and stayed up.
   - _Environment note:_ electron-builder's unpack step fails inside `D:\Beam` with `EPERM`/`EBUSY` on `resources/default_app.asar` because a scanner holds the fresh file; the same command with `--config.directories.output=<outside the workspace>` completes. This is a local lock, not a config defect.
   - _Not covered by verify:_ the suite still does not run `dist`, so the packaged launch is a manual proof. Adding it would make the gate depend on a 5-minute build and on this machine's scanner behaviour.
-- [ ] **R9 Docs and final gate** — *Depends on: R8.*
+- [x] **R9 Docs and final gate** — *Depends on: R8.*
   - Update ARCHITECTURE/PRD/DESIGN/AGENTS/README to code truth; add superseded banners to stale ADRs; retire timer-priority language; fix site copy claims; final `.\verify.ps1` exit 0 and site build.
-  - _2026-11-15:_ docs now cite the green run and check 9's numbers; ADR-0003/0006/0008/0009/0010 carry superseded banners; timer-priority is retired in TASKS 6.1. `npm --prefix site run build` exits 0: TypeScript clean, 9/9 static pages (`/`, `/_not-found`, `/about`, `/changelog`, `/press`, `/privacy`, `/robots.txt`, `/sitemap.xml`). Site copy stays honest until a release exists: "Windows build not published yet". Still open: the final gate and the publish step.
+  - _2026-11-15:_ docs now cite the green run and check 9's numbers; ADR-0003/0006/0008/0009/0010 carry superseded banners; timer-priority is retired in TASKS 6.1. `npm --prefix site run build` exits 0: TypeScript clean, 9/9 static pages. The final gate is green (gate-final5) and `v0.1.0` is published. Site copy now offers the download (`Download for Windows`, `Status: v0.1.0`, SmartScreen note); the site build with those changes is green, and the production deploy is the last step.
 
 ## I. UI trust pass (approved 2026-11-04)
 
@@ -175,10 +175,11 @@ These run before the phase tasks, as previous UI passes did. The canonical previ
   - Two players at once → last-touched wins; switching apps in the media popup switches Beam.
   - _Verify:_ Spotify + browser tab, toggle foreground, pill follows.
   - _Proved 2026-11-07:_ check 24 followed MSEdge in 107ms and back to Chrome in 106ms with two real sessions and no blank pill. The Windows media flyout itself is not automated; it sets the same OS current session the helper reads.
-- [ ] **2.5 Degrade gracefully** — *Depends on: 2.3.*
+- [x] **2.5 Degrade gracefully** — *Depends on: 2.3.*
   - Player with no artwork, paused player, player closed mid-track.
   - _Verify:_ no crash, no blank frame, placeholder shown.
   - _Audit 2026-11-07: the no-art star fallback and null-session debounce exist; paused/closed-player states are unproven._
+  - _Proved 2026-11-15 (gate-final5):_ check 25's chevron phase reports `nullstate ok=true` (a dropped session leaves the music pill) and `noart {art:false, src mascot}` (a session with `art:null` falls back to the 48px star); check 22 toggles real playback to paused and back with no blank frame.
 
 ## E. Timer
 
@@ -240,17 +241,20 @@ These run before the phase tasks, as previous UI passes did. The canonical previ
 
 ## H. Proof
 
-- [ ] **8.1 `verify.ps1` full suite** — *Depends on: every task above.*
+- [x] **8.1 `verify.ps1` full suite** — *Depends on: every task above.*
   - Typecheck, build, helper build, launch, anchor, panel, files, music, timer, Settings, helper restart, and UI states. The suite has 30 checks.
   - _Audit 2026-11-10: still missing a paste-after-helper-restart proof, an outbound-TCP assertion, Electron/total/CPU budget checks, calendar midnight drift, and multi-monitor/100–150% scaling._
   - _2026-11-11: the capsule change makes check 22 and the capsule static checks stale until V1; the suite cannot go green before that rework._
   - _2026-11-15:_ the suite is green again (30/30) and now covers calendar midnight drift, year-boundary navigation, the locale week start, and the app budget: helper ≤ 60 MB, app ≤ 130 MB, CPU < 5%, and zero TCP sockets. Check 18 now also kills the helper after the first real Ctrl+V, waits for the restart and second pong, confirms the clipboard still holds all 3 paths, and pastes them into a fresh Explorer folder again — written and parse-checked, unproven until the next full gate. Still missing: multi-monitor/100–150% scaling (needs hardware).
   - _Verify:_ `.\verify.ps1` exits 0 and prints each check.
-- [ ] **8.2 Packaged build** — *Depends on: 8.1.*
+  - _Proved 2026-11-15 (gate-final5):_ exit 0, 30/30, `SKIP summary: none`, `ALL CHECKS PASSED`. That run includes the four assertions that were waiting — transport geometry 38/30/30 with 16px gaps (check 23), locale week start / year boundary / midnight drift (check 25), and the paste into a fresh Explorer folder after a real helper kill (check 18) — plus `PASS memory (helper 8.3 MB / 60, app 90.8 MB / 130, 0% CPU, 0 sockets)`. An earlier run died at check 25 because the harness returned before its `nullstate`/`noart` probes in the chevron phase; the probes were moved into the shared path and the gate reran green. The three environment retries (launch focus, local player, real drop) are in place and none fired in this run.
+- [x] **8.2 Packaged build** — *Depends on: 8.1.*
   - Installer or portable exe launches on a clean profile.
   - _Audit 2026-11-07: `npm run dist` only calls electron-builder; `release/win-unpacked` has no `app.asar`, helper, or icon. Nothing is publishable._
   - _2026-11-15:_ `release/Beam-0.1.0.exe` carries `app.asar`, the helper, and the icon, and launches on this profile (four processes plus the helper). A clean-profile launch is still untested.
   - _Verify:_ installed app passes the manual PRD checklist.
+  - _Proved 2026-11-15:_ `.scratch\verify-packaged.ps1` launched the portable exe twice with a throwaway `BEAM_SETTINGS_PATH` (the packaged app honors it) — once with no settings file and once with malformed JSON. Both runs: `PASS ... helper up, pill 136x44 at x=768, bottomGap=5px`, no crash. Not covered: a literal second Windows user account (Electron resolves `%APPDATA%\Beam` through the known-folder API, so an APPDATA override is ignored).
+  - _Published 2026-11-15:_ GitHub release `v0.1.0` at https://github.com/kwakhare5/beam/releases/tag/v0.1.0 with `Beam-0.1.0.exe` attached.
 
 ---
 

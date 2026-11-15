@@ -85,7 +85,7 @@ export default function HomePage() {
             >
               Build from source
             </a>
-            <span className="text-[13px] text-muted">v0.1.0 preview · Windows build not published yet</span>
+            <span className="text-[13px] text-muted">v0.1.0 · Windows 11 · portable exe</span>
           </div>
         </section>
 
@@ -153,17 +153,15 @@ export default function HomePage() {
           <StarLogo size={40} />
           <h2 className="mt-5 text-2xl font-semibold sm:text-[28px]">get beam.</h2>
           <p className="mt-3 max-w-md text-[15px] leading-relaxed text-muted">
-            The first Windows build is not published yet. Build it from source today, or try the live demo above.
+            Download the portable exe for Windows 11. It is an unsigned early preview, so SmartScreen asks once — More info, then Run anyway.
           </p>
 
           <div className="mt-7 flex flex-wrap items-center gap-3">
             <a
-              href={`${REPO}#commands`}
-              target="_blank"
-              rel="noopener noreferrer"
+              href={`${REPO}/releases/download/v0.1.0/Beam-0.1.0.exe`}
               className="inline-flex items-center gap-1.5 rounded-lg bg-ink px-4 py-2.5 text-sm font-medium text-white transition-colors hover:bg-black"
             >
-              Build from source
+              Download for Windows
               <ArrowUpRight className="h-3.5 w-3.5" strokeWidth={1.75} />
             </a>
             <a
@@ -181,7 +179,7 @@ export default function HomePage() {
             </div>
             <div>
               <dt className="text-muted">Status</dt>
-              <dd className="mt-1">Not published</dd>
+              <dd className="mt-1">v0.1.0</dd>
             </div>
             <div>
               <dt className="text-muted">Shortcut</dt>
