@@ -186,3 +186,10 @@
   outline-offset: 2px;
   border-radius: var(--r-micro);
 }
+
+@media (hover: none) {
+  .row-action {
+    opacity: 1;
+    pointer-events: auto;
+  }
+}
