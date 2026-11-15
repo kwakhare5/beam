@@ -891,3 +891,9 @@ A chronological, append-only record of real product work, completed features, an
 - **Change / decision:** each real drop (3 files, then 51) now runs at most twice. The exact log lines are unchanged: `add=3 accepted=3 count=3 truncated=false` and `add=51 accepted=47 count=50 truncated=true`. Only a fully missed gesture triggers the retry, and it logs that it did. No assertion was relaxed.
 - **Proof:** `[Parser]::ParseFile` reports `parse OK`; `git diff --stat` shows 24 insertions and 10 deletions. The retry has not executed.
 - **Still broken / unproven:** same as before — one full gate must prove the four waiting assertions plus these three retries. The desktop stayed busy (`idle=0`, 12 Chrome processes); a two-minute-idle monitor is armed so the run can start the moment it is free.
+
+#### Work card 149: the Music progress block measured headlessly
+- **Problem / tension:** 9.7's Music half — "more breathing room around the Music progress block" — was the last item resting on a visual judgement. The Files half was asserted weeks earlier.
+- **Change / decision:** served the canonical preview (`npm run ui`, which listens on `::1` only), drove headless Chrome through CDP, and measured the live DOM instead of eyeballing it. No code changed; the numbers were already there.
+- **Proof:** `PAGE {"title":"Beam — app UI preview","boards":5,"filled":5,"musicPanels":6}`; visible Music panel: art 148×148 at y 1373–1521, meta 1380–1419, `.track` 1431–1463 (32px strip), `.music-controls` 1475–1513 (38px). That is 12px between meta and the seek block, 12px between the seek block and the transports, and a right-column center of 1446.5 against the art's 1447. A favicon 404 was the only console error.
+- **Still broken / unproven:** 9.2, 9.4's native-dialog half, 9.9, 2.5, 8.1, 8.2, R7, and R9's final gate remain; the gate still needs an idle desktop.

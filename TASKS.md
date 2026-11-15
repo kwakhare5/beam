@@ -97,9 +97,9 @@ These run before the phase tasks, as previous UI passes did. The canonical previ
 - [x] **9.6 Hit area** — *Depends on: 9.5.*
   - Shape the window to the visible pill with a 6px shadow halo so the transparent margins click through. Re-test drag, hover, panel, and the real-mouse checks.
   - _Proved 2026-11-07:_ check 25's `WindowFromPoint` hit test: pill center belongs to Beam, the 16px margin does not; drag, hover, and panel checks stayed green.
-- [ ] **9.7 Files and Music layout** — *Depends on: 3.3, 2.3.*
+- [x] **9.7 Files and Music layout** — *Depends on: 3.3, 2.3.*
   - Files rows start at the top with actions pinned bottom. More breathing room around the Music progress block.
-  - _2026-11-15:_ the Files half is now asserted by check 25 (list top ≤ 12px, actions ≤ 12px off the floor, ≥ 20px of slack under the last row with three rows). The Music half is a visual judgement, still unmeasured.
+  - _2026-11-15:_ the Files half is asserted by check 25 (list top ≤ 12px, actions ≤ 12px off the floor, ≥ 20px of slack under the last row with three rows). The Music half is now measured in the canonical preview under headless Chrome: meta ends at 1419, the 32px seek block runs 1431–1463, controls run 1475–1513, so the progress block has 12px above and below, and the whole right column centers on the 148px art (group center 1446.5 vs art center 1447).
 - [x] **9.8 Keyboard and accessibility** — *Depends on: 1.6.*
   - Pill role, name, Enter, focus ring, live region; focus restoration on panel close; Settings tab inside the tablist; calendar focus style. Pull 1.8 forward.
   - _Audit 2026-11-07: built and proven outside the suite; Settings is now a compact fifth button (7.1). Checks 25/30 cover the focus path._
