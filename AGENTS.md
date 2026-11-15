@@ -29,8 +29,8 @@ Beam is an offline Windows 11 floating pill that opens 1-click to media controls
 - Run: `npm start`
 - Helper build: `dotnet publish native/BeamBridge/BeamBridge.csproj -c Release -o native/BeamBridge/dist` (the csproj already sets win-x64, self-contained, single file)
 - Typecheck: `npm run typecheck` (two tsconfigs)
-- Verification runner: `.\verify.ps1` (created at 0.1; run via `powershell.exe` from Git Bash)
-- Done check = `.\verify.ps1` exits 0 with pasted raw terminal output.
+- Verification skill: `.agents/skills/verify-beam/` (run via `/verify-beam`)
+- Done check = `/verify-beam` exits 0 with pasted raw terminal output (30/30 passed).
 
 ## 4. Hard Rules & Invariants (What the AI must ALWAYS do)
 - One task at a time from `TASKS.md`, top unchecked box, in the order of its blocks A–H. Never start a task whose `Depends on` line is not done.
