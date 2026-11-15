@@ -897,3 +897,9 @@ A chronological, append-only record of real product work, completed features, an
 - **Change / decision:** served the canonical preview (`npm run ui`, which listens on `::1` only), drove headless Chrome through CDP, and measured the live DOM instead of eyeballing it. No code changed; the numbers were already there.
 - **Proof:** `PAGE {"title":"Beam — app UI preview","boards":5,"filled":5,"musicPanels":6}`; visible Music panel: art 148×148 at y 1373–1521, meta 1380–1419, `.track` 1431–1463 (32px strip), `.music-controls` 1475–1513 (38px). That is 12px between meta and the seek block, 12px between the seek block and the transports, and a right-column center of 1446.5 against the art's 1447. A favicon 404 was the only console error.
 - **Still broken / unproven:** 9.2, 9.4's native-dialog half, 9.9, 2.5, 8.1, 8.2, R7, and R9's final gate remain; the gate still needs an idle desktop.
+
+#### Work card 150: release notes live in the repo
+- **Problem / tension:** README pointed the publish command at `JOURNAL.md`, a proof log with 150 cards — unusable as release notes — while a proper draft only existed in gitignored `.scratch`.
+- **Change / decision:** added `docs/release-notes.md` with the measured facts (137.4 MB portable, 30/30 last run, 90.3 MB app / 9.8 MB helper, 0 sockets, unsigned SmartScreen note, Windows 11 only, single-monitor limits) and pointed README's `gh release create` at it.
+- **Proof:** `docs/release-notes.md` exists; README now reads `--notes-file docs\release-notes.md`. Docs only — no build or gate was run or claimed.
+- **Still broken / unproven:** publishing itself, the final gate, and the desktop-bound items (Add files click, packaged first-run run) remain open.
