@@ -72,6 +72,7 @@ The boxes reflect the 2026-11-10 code and gate. Read this with the notes on each
   - _Not covered by verify:_ the suite still does not run `dist`, so the packaged launch is a manual proof. Adding it would make the gate depend on a 5-minute build and on this machine's scanner behaviour.
 - [ ] **R9 Docs and final gate** — *Depends on: R8.*
   - Update ARCHITECTURE/PRD/DESIGN/AGENTS/README to code truth; add superseded banners to stale ADRs; retire timer-priority language; fix site copy claims; final `.\verify.ps1` exit 0 and site build.
+  - _2026-11-15:_ docs now cite the green run and check 9's numbers; ADR-0003/0006/0008/0009/0010 carry superseded banners; timer-priority is retired in TASKS 6.1. `npm --prefix site run build` exits 0: TypeScript clean, 9/9 static pages (`/`, `/_not-found`, `/about`, `/changelog`, `/press`, `/privacy`, `/robots.txt`, `/sitemap.xml`). Site copy stays honest until a release exists: "Windows build not published yet". Still open: the final gate and the publish step.
 
 ## I. UI trust pass (approved 2026-11-04)
 

@@ -873,3 +873,9 @@ A chronological, append-only record of real product work, completed features, an
 - **Change / decision:** check 18 no longer stops after the first paste. It kills the helper that served the copy, waits up to 20s for `[bridge] restarted` and a second pong, asserts `Get-DropPaths` still returns the same three paths, then opens a fresh Explorer folder and pastes with the same real `^v` keystroke, with the same foreground check and one retry. The PASS line now states the restart paste.
 - **Proof:** parse-checked without running the suite: `[Parser]::ParseFile` reports `parse OK`. No gate has run since the edit.
 - **Still broken / unproven:** the new step itself, plus the three assertions added after the green run (locale week start, year boundary, Music transport geometry), need one full gate. The machine has been in use all morning (`idle=0`, Chrome open) and the gate needs ~15 quiet minutes.
+
+#### Work card 146: the site half of R9 goes green
+- **Problem / tension:** R9 required a site build alongside the final gate, and the site had not been rebuilt since the capsule changelog landed.
+- **Change / decision:** ran `npm --prefix site run build` and recorded the result in TASKS R9, together with the doc/banner status. No site code changed; the "Windows build not published yet" copy is still true.
+- **Proof:** build exits 0 — compiled in 1058ms, TypeScript clean in 2.2s, 9/9 static pages generated (`/`, `/_not-found`, `/about`, `/changelog`, `/press`, `/privacy`, `/robots.txt`, `/sitemap.xml`).
+- **Still broken / unproven:** the final gate and the deploy are still open; publishing the release comes after the gate is green.
