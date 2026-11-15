@@ -10,7 +10,7 @@
 
 ## Current state (2026-11-15)
 
-The app is built and `v0.1.0` is published. The last full suite run was green at 30/30 with no skips; its evidence is in JOURNAL 151 and `docs/release-notes.md`. The old single-file runner is retired; current verification is `.agents/skills/verify-beam/` (feature map: capsule, panel, files, music, timer, settings). Open: 9.2 (one manual Add files click), 9.4 (native quit-confirm and failure text), 9.9 (follows them), R7 (hardware-blocked: multi-monitor, 100/150% scaling, Windows 10). Historical “Proved” lines below record what passed at the time.
+The app is built and `v0.1.0` is published. The last full suite run was green at 30/30 with no skips; its evidence is in JOURNAL 151 and `docs/release-notes.md`. The old single-file runner is retired; current verification is `.agents/skills/verify-beam/` (feature map: capsule, panel, files, music, timer, settings, tray/quit). Open: R7 (hardware-blocked: multi-monitor, 100/150% scaling, Windows 10). Historical “Proved” lines below record what passed at the time.
 
 ## R. Codebase repair (approved 2026-11-07)
 
@@ -76,15 +76,18 @@ These run before the phase tasks, as previous UI passes did. The canonical previ
 - [x] **9.1 Honest surfaces** — *Depends on: 2.3.*
   - Hide Timer, Calendar, Settings, and the pill timer/done actions in the app until their engines land. Keep them in `showcase/app-preview.html`. No dead tab or dead control in the app.
   - _Superseded 2026-11-04 by ADR-0012; all five tabs are now live and Settings landed at 7.1._
-- [ ] **9.2 Add files picker** — *Depends on: 3.1.*
+- [x] **9.2 Add files picker** — *Depends on: 3.1.*
   - Native `dialog.showOpenDialog` through preload/main; add picked paths to the same shelf; empty state and action row both work. A drop while the panel is open refreshes the Files list.
   - _2026-11-15, uncovered and unresolved:_ the picker is built (`filesPick` in `app-ipc.ts` calls `dialog.showOpenDialog`; the empty state and the action row both carry `[data-add-files]`). An attempt to drive it from the suite reached the button (found, visible, 94×32, real mouse events) but produced no `[files] pick` log and no window titled `Add files to Beam`, so either the click never reached `shelf.pick()` or the dialog opened under a different title. The attempt was reverted rather than left in the gate unproven. Needs one manual click to settle which it is.
+  - _Proved 2026-11-15:_ the suite's check was wrong, not the button. A real CDP click on `[data-add-files]` opens the native `Add files to Beam` picker (#32770, owned by the Electron pid; invisible to `MainWindowTitle`). Driving it with UI Automation and real keys (Alt+N, full path, Enter) logged `[files] pick=1 accepted=1 count=1 truncated=false`, and the Files tab showed `pick-alpha.txt` at 7 B (`.scratch/verify/pick-2026-11-15/shot-files-picked.png`). Journey documented in `.agents/skills/verify-beam/features/files.md`.
 - [x] **9.3 Panel flow** — *Depends on: 1.3.*
   - Esc resets main's panel state; the panel animates out over 150ms; the 16px margin dismisses; opening picks Files, Music, or the last tab from the pill state. No stuck reopen.
   - _Proved 2026-11-07:_ check 25 asserts files auto-pick, Esc/reopen, last-used, and the margin dismissal.
-- [ ] **9.4 Feedback and safety** — *Depends on: 3.3, 3.5.*
+- [x] **9.4 Feedback and safety** — *Depends on: 3.3, 3.5.*
   - Visible status for copy/add/remove failures; 5s Undo after a row remove; confirm Quit when the shelf is non-empty; a `Connection lost` pill state when the helper dies; tray Hide.
   - _2026-11-15:_ Undo (`Restored`), the Missing badge, the armed Clear All warning, and tray Hide are proven by checks 19, 20, and 25. Still unproven: the native quit-confirm dialog and the copy/add/remove failure status text — both need a modal or a forced failure the suite does not drive.
+  - _Proved 2026-11-15:_ copy failure: helper pid killed and three kills hit the 3-in-60s limit, so `[files] copy=1 source=all ok=false helper not running` and `Copy failed` stayed in the Files status (`.scratch/verify/pick-2026-11-15/shot-copy-failed.png`), while the pill read `error` — `Connection lost` (`shot-pill-connection-lost.png`, 127×30, red pip). Quit confirm: with 1 file on the shelf, tray → Quit opened the native `Quit Beam?` dialog (`1 file will be cleared`, `Beam keeps only file paths while it runs.`, buttons `Keep Beam open` / `Quit and clear`); `Keep Beam open` left the app answering `beam.mjs state`, and `Quit and clear` ended every `electron.exe` and `BeamBridge.exe` within 2s (`.scratch/verify/quit-2026-11-15/`, `shot-quit-confirm.png`, `shot-tray-menu2.png`). Not forced: add-failure and remove-failure text — the UI only sends shelf paths, so main never refuses; the copy path proves the shared `status()` mechanism. Journey in `.agents/skills/verify-beam/features/quit.md`.
+  - _Edge found:_ with the helper already dead at the restart limit, one `Quit and clear` run closed the window but left 3 Electron processes alive; not reproduced with a live helper, recorded in `quit.md` Gotchas.
 - [x] **9.5 Quiet idle and chevron** — *Depends on: 1.5, 2.2.*
   - 26×26 star-only quiet after 10s idle; 78×30 on near or hover; 2s return; idle-only. The music hover row carries a 24px panel button beside the three transports.
   - _Proved 2026-11-08 (U1):_ check 25 read 26×26 quiet, woke it from a real cursor at 32px, measured a 2109ms return, and the chevron phase opened the panel with live music.
@@ -99,9 +102,10 @@ These run before the phase tasks, as previous UI passes did. The canonical previ
   - Pill role, name, Enter, focus ring, live region; focus restoration on panel close; Settings tab inside the tablist; calendar focus style. Pull 1.8 forward.
   - _Audit 2026-11-07: built and proven outside the suite; Settings is now a compact fifth button (7.1). Checks 25/30 cover the focus path._
   - _Proved 2026-11-15:_ check 25 now asserts the surface itself — pill `role` is button/group with a non-empty name, a live region exists, the tab strip is `role="tablist"`, and five tabs carry `role="tab"`; focus restoration on close is the same check's dismiss path.
-- [ ] **9.9 Proof** — *Depends on: 9.1–9.8.*
+- [x] **9.9 Proof** — *Depends on: 9.1–9.8.*
   - Add runtime checks for the quiet state, chevron, auto-pick, Esc/reopen, margin click-through, Add files, Undo, and quit confirm. Prove 2.4 and 2.5. The verification journey exits 0.
   - _Built 2026-11-04:_ check 25 runs a `BEAM_UI_TEST` app and asserts the resting pill (then 94×30; 78×30 after V1), shelf add/undo, files auto-pick, last-used reopen, centered 5-minute timer, calendar nav, Esc, chevron, 26×26 quiet + wake, Clear All, and a real `WindowFromPoint` margin hit test. _2026-11-08: the suite is green and both media states are covered (quiet phase and chevron phase); timer completion, chime, and banner are covered by checks 28–29. Quit confirm and the native Add files dialog remain uncovered._
+  - _Proved 2026-11-15:_ the last two uncovered paths now have real journeys in the verification skill — Add files (`files.md`, picker opened, file landed on the shelf) and quit confirm (`quit.md`, dialog read, both buttons driven, full exit). The other items stand proven by the green 30/30 run (gate-final5); 2.4/2.5 were proven by check 24 and check 25's `nullstate`/`noart` probes. The retired suite's exit-0 bar is replaced by these skill journeys passing on the real app.
 
 ---
 

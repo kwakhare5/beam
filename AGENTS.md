@@ -15,7 +15,7 @@ Beam is an offline Windows 11 floating pill that opens 1-click to media controls
 
 **Site:** `site/` is the public Next static export at beamm.vercel.app with the `v0.1.0` download live on GitHub; the hero iframes the real renderer demo built from `src/renderer/ui` and `src/renderer/styles.css`. Windows 11 only (10 unproven).
 
-**Current state (2026-11-15):** the app is built, the last full suite run was green at 30/30 with no skips, and `v0.1.0` is published with the site download live. Verification now lives in `.agents/skills/verify-beam/`. The open queue is 9.2 (one manual Add files click), 9.4 (native quit-confirm and failure-status proof), 9.9 (follows them), and R7 (hardware-blocked: multi-monitor, 100/150% scaling, Windows 10).
+**Current state (2026-11-15):** the app is built, the last full suite run was green at 30/30 with no skips, and `v0.1.0` is published with the site download live. Verification now lives in `.agents/skills/verify-beam/`. 9.2, 9.4, and 9.9 are closed by real journeys (Add files picker, quit confirm, copy-failure status, Connection lost). The open queue is R7 only (hardware-blocked: multi-monitor, 100/150% scaling, Windows 10).
 
 ## 2. Stack
 - Electron + TypeScript + Vite, exact-pinned. Renderer sandboxed, contextIsolation on, nodeIntegration off. The renderer is vanilla TypeScript with shadcn-style tokens and Lucide; no React or Tailwind.
