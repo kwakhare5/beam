@@ -13,13 +13,13 @@ Beam is an offline Windows 11 floating pill that opens 1-click to media controls
 
 **Helper:** `native/BeamBridge/` is a windowless C# .NET 10 self-contained single-file helper behind stdio JSON lines; it owns SMTC, clipboard CF_HDROP, and fullscreen detection, and never prints non-protocol lines to stdout. Main restarts it after an unexpected exit (3 times per 60s), rejects a request without a reply after 8s, and caps stdout at 16M chars.
 
-**Site:** `site/` is the public Next static export at beamm.vercel.app; the hero iframes the real renderer demo built from `src/renderer/ui` and `src/renderer/styles.css`. No release is published; the site says the Windows build is not published and sends people to the live demo and source. Windows 11 only (10 unproven).
+**Site:** `site/` is the public Next static export at beamm.vercel.app with the `v0.1.0` download live on GitHub; the hero iframes the real renderer demo built from `src/renderer/ui` and `src/renderer/styles.css`. Windows 11 only (10 unproven).
 
-**Current state (2026-11-15):** everything is committed and pushed. `.\verify.ps1` last ran green at 30/30 with no skips against the capsule final; three assertions added after that run (locale week start, year-boundary navigation, Music transport geometry) still need a full gate. A portable `release/Beam-0.1.0.exe` (137.4 MB) exists, but nothing is published. The open queue is 9.2, 9.4, 9.7, 9.9, 2.5, 8.1, 8.2, R7, R9 in `TASKS.md`.
+**Current state (2026-11-15):** the app is built, the last full suite run was green at 30/30 with no skips, and `v0.1.0` is published with the site download live. Verification now lives in `.agents/skills/verify-beam/`. The open queue is 9.2 (one manual Add files click), 9.4 (native quit-confirm and failure-status proof), 9.9 (follows them), and R7 (hardware-blocked: multi-monitor, 100/150% scaling, Windows 10).
 
 ## 2. Stack
 - Electron + TypeScript + Vite, exact-pinned. Renderer sandboxed, contextIsolation on, nodeIntegration off. The renderer is vanilla TypeScript with shadcn-style tokens and Lucide; no React or Tailwind.
-- `native/BeamBridge/` — windowless C# .NET 10 helper, self-contained single-file publish. Owns SMTC, clipboard, and fullscreen detection (all built; fullscreen is proved by verify check 14 with a real borderless window). Drag-out is app-owned and built at 3.4: the renderer's `dragstart` on a Files row goes to main, which calls `webContents.startDrag` with the real paths.
+- `native/BeamBridge/` — windowless C# .NET 10 helper, self-contained single-file publish. Owns SMTC, clipboard, and fullscreen detection (all built; fullscreen is proved with a real borderless window, recorded in JOURNAL). Drag-out is app-owned and built at 3.4: the renderer's `dragstart` on a Files row goes to main, which calls `webContents.startDrag` with the real paths.
 - No database, no server, no TCP ports. Main ⇄ helper is stdio JSON lines only.
 - Settings live in `%APPDATA%\Beam\settings.json`.
 
@@ -29,12 +29,12 @@ Beam is an offline Windows 11 floating pill that opens 1-click to media controls
 - Run: `npm start`
 - Helper build: `dotnet publish native/BeamBridge/BeamBridge.csproj -c Release -o native/BeamBridge/dist` (the csproj already sets win-x64, self-contained, single file)
 - Typecheck: `npm run typecheck` (two tsconfigs)
-- Verification skill: `.agents/skills/verify-beam/` (run via `/verify-beam`)
-- Done check = `/verify-beam` exits 0 with pasted raw terminal output (30/30 passed).
+- Verification: `.agents/skills/verify-beam/` drives the real app; read its `SKILL.md` and run the affected feature journey.
+- Done check = Typecheck + Build pass and the affected feature journey passes with pasted evidence.
 
 ## 4. Hard Rules & Invariants (What the AI must ALWAYS do)
 - One task at a time from `TASKS.md`, top unchecked box, in the order of its blocks A–H. Never start a task whose `Depends on` line is not done.
-- **Built and gated (2026-11-11):** every Block A/B/C item, all five tabs, Settings, helper reliability, and the capsule final are built. The suite proves real clipboard copy, a real Explorer drop and drag-out, fullscreen hide/restore, timer completion while hidden, session picking, and the Music tab's 148px art, real seek, and 0 network requests. Check 22 hovers the pill and asserts the 126px shell, the 108px row of four 24×24 controls (prev, toggle, next, panel), and that the panel button opens Music. The 2026-11-15 run is green at 30/30 with no skips; three assertions added after it still need a full gate, and no task may be ticked on a partial or skipped run.
+- **Built and gated (2026-11-15):** every Block A/B/C item, all five tabs, Settings, helper reliability, and the capsule final are built. The last full suite run was green at 30/30 with no skips; its evidence is in JOURNAL 151 and `docs/release-notes.md`. The suite is retired in favour of `.agents/skills/verify-beam/`; no task may be ticked without a real journey and pasted evidence.
 - Keep the renderer untrusted. Everything touching Win32 goes through the helper.
 - Read `ARCHITECTURE.md` before touching the window, IPC, or helper seams.
 - Follow `DESIGN.md` tokens exactly. No invented colors, radii, or shadows.
@@ -61,7 +61,8 @@ Beam is an offline Windows 11 floating pill that opens 1-click to media controls
 - `src/shared/`: `ipc.ts` owns the 29 IPC channel names and the payload types shared by main, preload, and renderer.
 - `native/BeamBridge/`: C# helper. No UI.
 - `assets/mascot/`: one locked Puffy Chubby Star file, `beam-mascot.svg`.
-- `showcase/`: brand lab plus the canonical app preview, never shipped.
+- `.agents/skills/verify-beam/`: local verification skill, feature map, and CDP helper; not committed.
+- `showcase/`: the canonical app preview (`app-preview.html`), never shipped.
 
 ## 8. Gotchas & Known Traps
 - `Alt+Space` is the default hotkey (1.8, rebindable) and steals the system window menu while Beam runs. Accepted by the user; fall back to `Ctrl+Shift+Space` if registration fails.
@@ -69,12 +70,12 @@ Beam is an offline Windows 11 floating pill that opens 1-click to media controls
 - Timer counts from a deadline timestamp, never by decrementing. Sleep must not break it.
 - Shelf is wiped on quit by design, and must warn while non-empty.
 - Fullscreen hide needs the helper alive; the hotkey is main-owned. Helper restart logic is max 3 times in 60s.
-- With a track active or a foreign session live, verify prints SKIP for idle dim, the clear/restart pill labels, and the quiet phase start; those facts are asserted from `[files]` logs and `capsule.css` instead. Check 22 skips by name when a foreign player is playing because Windows can hand the session over mid-toggle; check 25 does the same when a foreign session blocks the idle pill. A real Chrome tab running the site demo publishes a session, so close it before a strict gate run. Check 22 pauses/plays real tracks and check 23 toggles playback twice from the Music tab, so a run disturbs playback. The artwork travels as base64 inside `music.changed`, so there is no temp art file; no art in the session shows the 48px star face.
-- CDP `Input.dispatchDragEvent` is broken with Electron 45: every type arrives as a `dragenter` (measured 9 enters, 0 dragover, 0 drop across three dispatches), so check 16 cannot land a synthetic drop and the UI probe fills the shelf through `window.beam.addFiles`. A real OS drag is the honest replacement. `.pill` is pinned to 30px because Windows hands the window a 44 DIP content height; without the pin it rendered 32.
-- The window is clipped to the pill plus a 6px halo with `setShape`, so margin clicks reach the desktop instead of opening the panel; check 25 holds the hit test.
+- With a track active or a foreign session live, the idle pill and quiet checks change; close the site demo tab and other players before a strict run. A foreign session can hand over mid-toggle, so skip that assertion by name and say why. The artwork travels as base64 inside `music.changed`; no art in the session shows the star face.
+- CDP `Input.dispatchDragEvent` is broken with Electron 45: every type arrives as a `dragenter`. Use a real OS drag for drop and drag-out; the verification helper drives clicks and reads DOM, not OS drags. `.pill` is pinned to 30px because Windows hands the window a 44 DIP content height; without the pin it rendered 32.
+- The window is clipped to the pill plus a 6px halo with `setShape`, so margin clicks reach the desktop instead of opening the panel; prove the margin with a real OS click.
 - Move the window with `setBounds` and a pinned width/height. `setPosition` let Windows re-round the transparent window's height on every pointer move (42 grew to 141 during the first 1.4 test). The window's settled outer bounds are 136×45 at 125%, with a 136×44 content rect; keep that size while dragging.
 - The saved position is the window's outer top-left. Restore only when that rect still intersects a current display; otherwise anchor on the primary display. Multi-monitor and 100/150% scaling remain unproven.
-- Electron RAM is the top project risk. Check 9 now gates it every run: helper ≤60 MB, app ≤130 MB, CPU <5%, zero TCP sockets. Last measured (2026-11-15): helper 9.8 MB, app 90.3 MB, 0% CPU, 0 sockets.
+- Electron RAM is the top project risk. Budget: helper ≤60 MB, app ≤130 MB, CPU <5%, zero TCP sockets. Last measured 2026-11-15: helper 9.8 MB, app 90.3 MB, 0% CPU, 0 sockets. A memory journey is not yet in the verification skill; measure with `Get-Process` and `Get-NetTCPConnection` before a release.
 
 ## 9. Do Not Touch
 - `assets/mascot/` — finalized brand assets.

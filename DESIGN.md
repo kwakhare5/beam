@@ -2,7 +2,7 @@
 
 This document defines the two visual systems of Beam:
 1. **Primary: Desktop App UI System (v1 target surface)** — The offline Windows 11 floating capsule and panel. Music, Files, Timer, Calendar, and Settings are all live.
-2. **Reference: Marketing Website & Brand Lab (Post-v1 / Reference Only)** — The showcase and landing page aesthetic.
+2. **Reference: Marketing Website (Post-v1 / Reference Only)** — The showcase and landing page aesthetic.
 
 ---
 
@@ -128,7 +128,7 @@ Light overrides every color token in the `[data-theme='light']` block of `tokens
 
 ---
 
-# PART 2: MARKETING WEBSITE & BRAND LAB (Post-v1 / Reference Only)
+# PART 2: MARKETING WEBSITE (Post-v1 / Reference Only)
 
 > [!NOTE]
 > The marketing website is post-v1 and not part of the desktop app runtime or build. Never ship assets from `showcase/`.
@@ -136,12 +136,12 @@ Light overrides every color token in the `[data-theme='light']` block of `tokens
 ## 8. Marketing Website Direction & Brand Identity
 - **Design Theme:** Notion-like warm paper canvas (`#f7f7f5`) with white surfaces and 1px hairline dividers. No cards on the landing page; sections sit on the paper and separate by hairlines.
 - **Type:** Inter (self-hosted variable, `site/public/fonts/InterVariable.woff2`) for all UI and body text, including numerals. Caveat (self-hosted, `site/public/fonts/Caveat.woff2`) for exactly two hand-drawn accents on the landing page: the hero aside and the demo hint. No system display faces and no mono.
-- **Editorial Tone:** Calm lowercase copy punctuated with periods; short lines, no feature-card grids, no stat blocks. One voice everywhere: lowercase nav/footer links and section heads, sentence-case body, two-sentence feature blurbs, "bar" in visible copy (never "pill"), "See it live" as the primary CTA while no build is published, "Download for Windows" only when a release exists, Windows 11 only. No claim the build does not prove.
+- **Editorial Tone:** Calm lowercase copy punctuated with periods; short lines, no feature-card grids, no stat blocks. One voice everywhere: lowercase nav/footer links and section heads, sentence-case body, two-sentence feature blurbs, "bar" in visible copy (never "pill"), "See it live" as the primary hero CTA, "Download for Windows" in the nav anchor and the download section now that `v0.1.0` is published, Windows 11 only. No claim the build does not prove.
 - **Real UI demo:** the landing page embeds the actual app renderer. `site/demo/main.ts` imports `src/renderer/ui` plus `src/renderer/styles.css`; Vite builds it into `site/public/demo`, and the page iframes it at real sizes (136×42 closed, 452×316 open) with same-origin postMessage resizing and a collapsed stage when closed. Never rebuild the demo as hand-written markup.
 - **Demo audio:** two free-licensed local MP3s — Ovo (Arulo, Mixkit Free Licence) and Carti Bih (Arulo, Mixkit Free Licence) — played by a real `HTMLAudioElement` driving the pill and panel progress. Covers are generated 512px WebP demo art. No YouTube, no streaming, no external requests; credits live in `site/demo/public/CREDITS.txt`.
 - **Hero lockup:** the star sits on the tail of "meet beam." as an overlapping superscript, not as a separate icon. It is inline SVG (`site/src/components/brand.tsx`), not a static image: the wink chevron and the open eye blink on separate loops while the whole star bobs on a 4.6s loop and spring-spins on hover. Copy is "meet beam." / "music, files, time — all in one place." / "no windows to manage." The hint is "go on, click the star." in Notion purple, centred above the pill; the hand-drawn arrow was removed. The four feature chips keep the blue/orange/green/purple tints. Both motion loops respect reduced motion. The navbar is sticky on the paper background and keeps features / demo / faq visible at 390px (github moves to the footer).
 - **Type scale:** hero `clamp(2.2rem, 5.6vw, 3.9rem)` (62.4px at 1440); section h2 24px mobile / 28px desktop; hero subline 20/22px; body 16px; feature body and proof 15px; feature titles 16px; captions, footer and micro copy 13px; Inter only, tabular numerals for times.
-- **Download path:** no release is published yet, so the hero leads with "See it live" and "Build from source"; the nav's "get beam" anchors to the honest download section. A four-item strip (System / Status / Shortcut / Build) states Windows 11, not published, Alt + Space, unsigned preview. When a build ships, point the primary CTA at GitHub `releases/latest`. Packaging ships `BeamBridge.exe` and `tray.ico` through electron-builder `extraResources` and resolves them from `process.resourcesPath` when packaged.
+- **Download path:** `v0.1.0` is published, so the nav's "get beam" anchors to the download section and "Download for Windows" links the GitHub release asset. The hero still leads with "See it live" and "Build from source"; the download section carries the primary download button. The four-item strip (System / Status / Shortcut / Build) states Windows 11, v0.1.0, Alt + Space, unsigned preview. Packaging ships `BeamBridge.exe` and `tray.ico` through electron-builder `extraResources` and resolves them from `process.resourcesPath` when packaged.
 - **FAQ on the page:** the standalone `/faq` route and the `up close.` live-panel section are gone. The home page carries a `questions.` details block (`#faq`, 8 rows) after the features and before the download, using the same hairlines, 16px question and 15px answer, with the plus icon rotating 45° when open. The nav, footer and the unsigned-preview note deep-link to `#faq`.
 - **Panel visibility:** opening the demo panel scrolls it into view only when it would fall below the fold or under the sticky header; reduced motion makes that jump instant. Below 360px the features link leaves the navbar, and the open panel uses 0.72 zoom down to 340px and 0.66 below that. Open demo tabs pause each other over a same-origin `BroadcastChannel`, so only one track plays. Mobile keeps the closed pill at 1× (136×42 iframe) and only zooms the open panel.
 - **Small pages:** a branded `app/not-found.tsx` (`nothing here.`) exports as `404.html`. `/changelog` lists the dated preview work and links the journal. `sitemap.xml` and `robots.txt` are static exports and the sitemap no longer lists `/faq`. A skip link precedes the header, every page has one `h1` and a `main#content`, muted text measures 6.21:1 on paper, and internal `Link`s set `prefetch={false}` to avoid the static-export RSC 404. The Files demo accepts real OS file drops (real names and sizes); copy and drag-out remain app-only.
@@ -169,4 +169,4 @@ Notion tag colours are limited to the four tinted feature icon chips, never body
 Governed by installed skills [`svg-logo-designer`](file:///d:/Beam/.agents/skills/svg-logo-designer/SKILL.md) and [`illustration-style`](file:///d:/Beam/.agents/skills/illustration-style/SKILL.md):
 - **Character:** **Puffy Chubby Star** — Honey Gold (`#FFAA00`) 5-point polar harmonic cubic Bézier spline with 10 perpendicular tangent handles ($C^2$ smooth curvature).
 - **Format:** Pure vector SVG in `assets/mascot/` (`beam-mascot.svg`). Single canonical brand mascot across all views; the five retired `star-*` variants were deleted 2026-10-28.
-- **Brand Lab:** `showcase/index.html` (frozen reference brand lab; never shipped in production).
+- **Brand Lab:** retired 2026-11-15; the frozen `showcase/index.html` was deleted. `assets/mascot/beam-mascot.svg` is the only mascot source and `showcase/app-preview.html` is the canonical app preview.

@@ -4,15 +4,11 @@ Beam is an offline Windows 11 floating capsule for media controls, a file shelf,
 
 ## Get the app
 
-Run the portable Windows exe — no installer, no admin:
+Download `Beam-0.1.0.exe` from the [v0.1.0 release](https://github.com/kwakhare5/beam/releases/tag/v0.1.0) or from [beamm.vercel.app](https://beamm.vercel.app). It is portable — no installer, no admin.
 
-```
-release\Beam-0.1.0.exe
-```
+The exe is unsigned, so Windows SmartScreen shows "Windows protected your PC" on first launch — More info → Run anyway. Beam needs Windows 11; Windows 10 is untested.
 
-It is built with `npm run dist` (electron-builder, portable target, 137 MB) and carries `app.asar`, the `BeamBridge.exe` helper, and the tray icon in its resources. On a machine where a file scanner locks the freshly unpacked Electron inside the repo, point the output elsewhere: `npx electron-builder --win portable --config.directories.output=%TEMP%\beam-release`.
-
-The exe is unsigned, so Windows SmartScreen shows "Windows protected your PC" on first launch — More info → Run anyway. Nothing is published yet: to ship it, run `gh release create v0.1.0 release\Beam-0.1.0.exe --title "Beam 0.1.0" --notes-file docs\release-notes.md`, then link that release from `site/src/content/site.ts` and deploy. Beam needs Windows 11; Windows 10 is untested.
+To build it yourself: `npm install`, `npm run build`, publish the helper, then `npm run dist` (electron-builder, portable target, 137 MB). The exe lands in `release\` and carries `app.asar`, `BeamBridge.exe`, and the tray icon. On a machine where a file scanner locks the freshly unpacked Electron inside the repo, point the output elsewhere: `npx electron-builder --win portable --config.directories.output=%TEMP%\beam-release`.
 
 To run from source instead: `npm install`, `npm run build`, then `npm start`.
 
@@ -26,18 +22,16 @@ To run from source instead: `npm install`, `npm run build`, then `npm start`.
 - **Glue and access:** a rest click opens the panel to what the pill shows (Music, Timer, Files, otherwise last-used), `Alt+Space` (fallback `Ctrl+Shift+Space`), keyboard pill control plus the hover row's four tab stops, one 2px focus ring, a live region, and Beam's own motion regardless of the OS reduced-motion flag.
 - **Landing site:** live at `beamm.vercel.app`, running the real renderer as a browser demo.
 
-**Built, with proof gaps**
-- 2.4, 9.1, 9.3, 9.5, 9.6, 1.7, 1.8, 7.1, U1, U2, and timer 4.1–4.5 are proven and ticked by the green runs. 9.2, 9.4, 9.7, 9.8, and 9.9 still have partial or outside-suite proof; calendar midnight drift is now proven by check 25, while locale week start and year boundaries remain unproven.
-- 2.5 has the no-art star fallback and a null-session debounce; paused and closed-player edge cases are unproven.
-
-**Not built or incomplete**
-- Multi-monitor restore and 100/150% scaling proof.
-- Publishing: the portable exe is built and launches, but nothing is published — no GitHub release and no download link on the site.
-- Windows 10 is untested; Windows 11 is the supported claim.
+**Proof gaps**
+- 9.2 Add files picker: built; one manual click still needed to confirm the native dialog opens.
+- 9.4 native quit-confirm and the copy/add/remove failure text: built; not yet driven.
+- 9.9 follows 9.2 and 9.4.
+- R7 multi-monitor restore, 100/150% scaling, and Windows 10: hardware-blocked.
+- A memory journey is not yet in the verification skill; the budget and the last measurement are in AGENTS.md.
 
 ## Verification
 
-`.\verify.ps1` has 30 checks. The last full green run is 2026-11-15 (30/30, no skips) against the capsule final: check 16 is a real Explorer→pill drag, check 17 retries the Explorer foreground, check 22 asserts the 126px hover pill with the 108px row of four 24px controls and the panel button, check 24 follows two live players, check 25 proves the panel routing (Files when the shelf has rows, last-used after Clear All), the calendar midnight drift, and the a11y surface, check 26 force-kills the helper, check 27 proves the 8s timeout, check 28 proves timer start/cancel/replace with one chime and banner, check 29 proves completion behind fullscreen, and check 30 proves the Settings controls and a persisted restart. Three assertions added after that run — locale week start, year-boundary navigation, and the Music transport geometry — are not yet in a green gate.
+`.agents/skills/verify-beam/` drives the real app through a small CDP helper. Read its `SKILL.md`, run the doctor, and drive only the feature you changed. The last full suite run (2026-11-15) was green at 30/30 with no skips and is recorded in JOURNAL 151; the old single-file runner is retired. The skill's feature map covers the capsule, panel and tabs, Files, Music, Timer, and Settings. OS seams — Explorer drops, clipboard, tray, hotkey, fullscreen, native dialogs — use real Windows input, not CDP.
 
 ## Commands
 
@@ -47,11 +41,11 @@ npm run build
 dotnet publish native/BeamBridge/BeamBridge.csproj -c Release -o native/BeamBridge/dist
 npm start
 npm run typecheck
-.\verify.ps1
-npm run measure
+node .agents\skills\verify-beam\helpers\beam.mjs doctor
+node .agents\skills\verify-beam\helpers\beam.mjs launch
 ```
 
-`npm run dist` only runs electron-builder, so publish the helper and run `npm run build` first. A portable `release/Beam-0.1.0.exe` (137.4 MB) was built and launched on 2026-11-15. The app uses software rendering to stay under the 130 MB private-byte gate; check 9 measures it every run — last 90.3 MB app, 9.8 MB helper, 0% CPU, 0 sockets.
+`npm run dist` only runs electron-builder, so publish the helper and run `npm run build` first. `v0.1.0` was built and launched on 2026-11-15. The app uses software rendering to stay under the 130 MB private-byte budget; last measured 90.3 MB app, 9.8 MB helper, 0% CPU, 0 sockets.
 
 ## Preview
 
@@ -70,5 +64,6 @@ Open the URL Vite prints, then `/showcase/app-preview.html`. The root `/` has no
 - `GLOSSARY.md` — UI vocabulary
 - `JOURNAL.md` — work cards and verification evidence
 - `docs/adr/` — decision records
+- `.agents/skills/verify-beam/` — local verification skill and feature map
 
 `AGENTS.md` holds the project rules; the global rules live at `C:\Users\kwakh\.agents\AGENTS.md`.

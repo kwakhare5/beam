@@ -46,7 +46,7 @@ export const FAQ = [
   {
     question: 'Windows says it’s unsafe. What now?',
     answer:
-      'When the build ships it will be unsigned, so SmartScreen will warn once. Choose More info, then Run anyway. The full source is on GitHub.'
+      'The build is unsigned, so SmartScreen warns once. Choose More info, then Run anyway. The full source is on GitHub.'
   },
   {
     question: 'Alt + Space is already taken.',

@@ -192,7 +192,7 @@ export default function HomePage() {
           </dl>
 
           <p className="mt-6 max-w-md text-[13px] leading-relaxed text-muted">
-            When the build ships it will be unsigned, so Windows may ask once — the{' '}
+            The build is unsigned, so Windows may ask once — the{' '}
             <a href="#faq" className="underline decoration-hairline underline-offset-2 hover:text-ink">
               FAQ
             </a>{' '}

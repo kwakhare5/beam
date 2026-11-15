@@ -1,7 +1,6 @@
 import { icon } from '../../shared/icons';
-import { esc } from '../../shared/html';
+import { esc, panelBody } from '../../shared/html';
 import { MASCOTS } from '../../shared/mascots';
-import { panelBody } from '../panel-body';
 import { middleTruncate } from '../../shared/format';
 
 export interface FileRow {
@@ -14,7 +13,7 @@ export interface FileRow {
 
 type CopyOutcome = { ok: boolean; error?: string };
 
-export function filesPanel(rows: FileRow[], copied = false, active = true): string {
+export function filesPanel(rows: FileRow[], active = true): string {
   if (!rows.length) {
     return panelBody(
       'files',
@@ -41,10 +40,8 @@ export function filesPanel(rows: FileRow[], copied = false, active = true): stri
     .join('');
 
   const allMissing = rows.every((row) => row.missing);
-  const copyIcon = copied ? icon('check') : icon('copy');
-  const copyLabel = copied ? 'Copied' : 'Copy all';
 
-  const actions = `<div class="actions"><div class="shelf-status"><span class="shelf-note" data-files-status role="status" aria-live="polite">${copied ? 'Copied to clipboard' : 'Files clear on quit'}</span><button type="button" class="shelf-undo" data-files-undo hidden>Undo</button></div><button type="button" class="btn primary" data-copy-all${allMissing ? ' disabled' : ''}>${copyIcon}${copyLabel}</button><button type="button" class="btn ghost" data-add-files>${icon('plus')}Add files</button><button type="button" class="btn danger clear-all" data-armed="false">${icon('trash')}<span class="clear-all-label">Clear all</span></button></div>`;
+  const actions = `<div class="actions"><div class="shelf-status"><span class="shelf-note" data-files-status role="status" aria-live="polite">Files clear on quit</span><button type="button" class="shelf-undo" data-files-undo hidden>Undo</button></div><button type="button" class="btn primary" data-copy-all${allMissing ? ' disabled' : ''}>${icon('copy')}Copy all</button><button type="button" class="btn ghost" data-add-files>${icon('plus')}Add files</button><button type="button" class="btn danger clear-all" data-armed="false">${icon('trash')}<span class="clear-all-label">Clear all</span></button></div>`;
 
   return panelBody('files', `<div class="file-list" role="list">${list}</div>${actions}`, 'panel-files-list', active);
 }

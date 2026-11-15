@@ -16,7 +16,7 @@ const FACTS = [
   ['Network', 'None in the app'],
   ['Rest size', 'Hugs its content: 69–127×30 pixels'],
   ['Shortcut', 'Alt + Space (fallback: Ctrl + Shift + Space)'],
-  ['Status', 'Preview; Windows build not published'],
+  ['Status', 'v0.1.0 published'],
   ['Source', 'GitHub']
 ];
 
@@ -65,7 +65,7 @@ export default function AboutPage() {
 
       <h2 className="mt-10 text-2xl font-semibold">status.</h2>
       <p className="mt-3 max-w-2xl text-[15px] leading-relaxed text-muted">
-        Beam is in preview. The Windows build is not published yet. The source is on{' '}
+        Beam is in preview. The Windows 11 build is published as a portable exe. The source is on{' '}
         <a href={REPO} target="_blank" rel="noopener noreferrer" className="underline decoration-hairline underline-offset-2 hover:text-ink">
           GitHub
         </a>

@@ -387,17 +387,11 @@ if (!gotLock) {
             return;
           }
           hidePill();
-          if (hooks) {
-            dev()?.onFullscreen(hooks, true, window, {
-              trayToggle,
-              timerPhase: () => timer.snapshot().phase
-            });
-          }
-          return;
+        } else if (hiddenByFullscreen) {
+          showPill('fullscreen exit');
         }
-        if (hiddenByFullscreen) showPill('fullscreen exit');
         if (hooks) {
-          dev()?.onFullscreen(hooks, false, window, {
+          dev()?.onFullscreen(hooks, active, window, {
             trayToggle,
             timerPhase: () => timer.snapshot().phase
           });

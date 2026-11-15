@@ -1,14 +1,12 @@
 import { icon } from '../../shared/icons';
-import { esc } from '../../shared/html';
+import { esc, panelBody } from '../../shared/html';
 import { MASCOTS } from '../../shared/mascots';
-import { panelBody } from '../panel-body';
 
 export interface MusicData {
   title: string;
   subtitle: string;
   art?: string;
   playing?: boolean;
-  loading?: boolean;
   positionMs?: number;
   durationMs?: number;
 }
@@ -37,7 +35,7 @@ function progress(data: MusicData): string {
   return `<div class="track"><div class="track-bar" data-music-bar data-duration-ms="${Math.round(duration)}" role="slider" tabindex="0" aria-label="Seek" aria-valuemin="0" aria-valuemax="${max}" aria-valuenow="${now}" aria-valuetext="${esc(`${elapsed} of ${total}`)}"><span class="track-rail"><span class="track-fill" style="width:${percent}%"></span></span><span class="track-knob" style="left:${percent}%"></span></div><div class="track-times"><span>${elapsed}</span><span>${total}</span></div></div>`;
 }
 
-function paintBar(bar: HTMLElement, positionMs: number): void {
+export function paintBar(bar: HTMLElement, positionMs: number): void {
   const duration = Number(bar.dataset.durationMs ?? '0');
   const clamped = Math.min(Math.max(positionMs, 0), duration);
   const percent = duration > 0 ? Math.round((clamped / duration) * 100) : 0;
@@ -134,21 +132,6 @@ export function bindMusicSeek(root: Document | Element, seek: (positionMs: numbe
 }
 
 export function musicPanel(data: MusicData, active = true): string {
-  if (data.loading) {
-    const controls = `<div class="music-controls">
-      <button type="button" class="icon-btn" aria-label="Previous" disabled>${icon('prev')}</button>
-      <button type="button" class="icon-btn primary" aria-label="Play" disabled>${icon('play')}</button>
-      <button type="button" class="icon-btn" aria-label="Next" disabled>${icon('next')}</button>
-    </div>`;
-
-    return panelBody(
-      'music',
-      `<div class="art skeleton" aria-hidden="true"></div><div class="panel-music-content"><div class="skeleton-line w-65"></div><div class="skeleton-line w-40"></div><div class="skeleton-line w-25"></div>${controls}</div>`,
-      'panel-music-skeleton',
-      active
-    );
-  }
-
   if (!data.title) {
     return panelBody(
       'music',

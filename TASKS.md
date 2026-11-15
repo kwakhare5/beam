@@ -2,33 +2,19 @@
 
 **Rules:** one task at a time, top unchecked box in the order below. Run the verification. Only tick `[x]` when it exits 0. Log the result in JOURNAL.md.
 
-**Milestone:** a floating pill that reads Spotify, holds files, runs a timer, and passes `.\verify.ps1` with exit code 0.
+**Milestone:** a floating pill that reads Spotify, holds files, runs a timer, and passes its affected verification journey with pasted evidence.
 
 **Sequence rule (2026-10-29):** every step may only depend on steps above it. 0.4c was replaced by 3.4 — a drag-out needs a shelf that holds files first, and the helper OLE drag spun at 100% CPU without dropping anything, so its code was deleted. Drag-out now goes through Electron's `webContents.startDrag`.
 
 **Done before the order:** 0.1 scaffold, 0.2 budget (90 MB / 0.035% CPU), 0.3 helper ping (6.3 MB), 0.4a live SMTC + PNG art, 0.4b CF_HDROP clipboard. Plus UI work outside the phase order: the app UI system, the canonical preview, the focus/cleanup pass (cards 21–35), the 2026-10-28 cleanup (card 43), the segmented-tab redesign (cards 44–54), the 100/136 capsule pass (cards 55–56), the 2026-10-29 audit fix pass (card 64), the 6% capsule scale to 94×30 / 128×30 in a 136×42 window (card 67), and the 2026-11-11 capsule final — content-hugged rest with a centered star+label and a 126px music hover row (cards 133–134, verify sync pending as V1).
 
-## Audit snapshot — 2026-11-11
+## Current state (2026-11-15)
 
-The capsule changed after the last green gate (work card 128). Rest is content-hugged with the star + label centered as one unit (idle 78, files 80–88, music 69–108, timer 122, done 108, drag 88, error 127, quiet 26×26); music alone expands on hover/focus to 126×30 with four 24px controls (prev, play/pause, next, panel); the timer/done × is always visible; a rest click opens the panel to what the pill shows. Preview and demo are synced and measured. `.\verify.ps1` has not been run since; check 22 and the capsule static checks still describe the old row and must be reworked first (V1).
-
-## Audit snapshot — 2026-11-10
-
-The boxes reflect the 2026-11-10 code and gate. Read this with the notes on each task.
-
-- **Done and previously proven:** 1.1, 1.2, 1.3, 1.4 (single display), 1.5, 1.6, 0.5, 1.9, 3.1 (historical run), 3.2, 3.3, 3.4, 3.5, 2.1, 2.2, 2.3.
-- **Built and still unchecked:** 9.2, 9.4, 9.7, 9.8, and 9.9. 9.1 is retired as superseded. 2.4, 9.3, 9.5, 9.6, and 6.1 are ticked; 1.7, 1.8, and 7.1 are ticked by R6; timer 4.1–4.5 and 9.1 are closed.
-- **Partial:** 2.5 has a no-art fallback and null-session debounce; paused/closed-player states are unproven. 9.2's picker, 9.4's quit confirm, and 9.7/9.8/9.9 have outside-suite or partial proof.
-- **Not built:** 5.3 midnight drift and a complete packaged build; V1 and R7–R9 remain.
-- **Gate history:** before R1, check 16 was red (synthetic CDP drag), 17 depended on Explorer keeping the foreground, 24 needed two live players, and 25 could not cover quiet and chevron in one run. R1 resolved all four; see the result line above.
-- **Doc conflict:** resolved 2026-11-07 by R6: 6.2 is retired and ADR-0012 last-used wins in the code.
-- **R1 result (2026-11-07):** `.\verify.ps1` exits 0, 25/25, no SKIPs. 2.4, 9.3, 9.5, and 9.6 are ticked. The real drop exposed a pill title DOM-churn bug (fixed); checks 11 and 20 were stale (quit moved to main; the 5s Undo status precedes the warning) and are corrected.
-- **R2 result (2026-11-07):** `.\verify.ps1` exits 0, 27/27, no SKIPs (checks 26–27). R3 result (same day): exits 0, 29/29; 4.1–4.5 are ticked by checks 25, 28, and 29. The timer deadline, chime, notification, and hidden completion are no longer missing.
-- **Audit cleanup (2026-11-10):** removed dead payload fields and exports, simplified the panel data and settings defaults, fixed the fullscreen-at-launch, tray-Settings, panel-reopen, seek-cancel, and file-action error paths, and corrected the stale docs. `.\verify.ps1` exits 0, 30/30, `SKIP summary: none`, `ALL CHECKS PASSED`; typecheck, app build, helper build, and site build pass.
+The app is built and `v0.1.0` is published. The last full suite run was green at 30/30 with no skips; its evidence is in JOURNAL 151 and `docs/release-notes.md`. The old single-file runner is retired; current verification is `.agents/skills/verify-beam/` (feature map: capsule, panel, files, music, timer, settings). Open: 9.2 (one manual Add files click), 9.4 (native quit-confirm and failure text), 9.9 (follows them), R7 (hardware-blocked: multi-monitor, 100/150% scaling, Windows 10). Historical “Proved” lines below record what passed at the time.
 
 ## R. Codebase repair (approved 2026-11-07)
 
-**Rule:** these run before blocks I and A–H. One item at a time, one commit per item, and the full `.\verify.ps1` once per item before its commit — or every two rounds on a long item (agreed 2026-11-07). Between rounds, run only cheap checks: typecheck, build, or one targeted check. A box is ticked only by a green full run. No feature work inside a health item and no cleanup inside a feature item. Order differs from the grill only where a product fix would otherwise be moved twice: the helper and timer land before the split.
+**Rule:** these run before blocks I and A–H. One item at a time, one commit per item, and the affected verification journey once per item before its commit — or every two rounds on a long item (agreed 2026-11-07). Between rounds, run only cheap checks: typecheck, build, or one targeted journey. A box is ticked only by a real run with pasted evidence. No feature work inside a health item and no cleanup inside a feature item. Order differs from the grill only where a product fix would otherwise be moved twice: the helper and timer land before the split.
 
 - [x] **R1 Gate hardening** — *Depends on: nothing.*
   - Harden, do not weaken. Check 16 becomes a real Explorer→pill mouse drag using the check-18 harness; check 17 forces and verifies Explorer foreground before Ctrl+V with one retry; check 24 switches two real players with real playback instead of forced picks; check 25 splits into a no-session run (quiet) and a live-session run (chevron). Two failed attempts at the real drop stop the item and ask. Full suite exits 0; tick only what the checks prove.
@@ -63,16 +49,25 @@ The boxes reflect the 2026-11-10 code and gate. Read this with the notes on each
   - Rework check 22 to the 4×24 hover row (prev, play/pause, next, panel), including the panel button opening the panel and the rest body click; replace every static capsule check that references `.controls`, `.action-slot`, `has-controls`, `panel-open`, `done-label`, the old widths (94/118/128), or the done check; update the `BEAM_MUSIC_CMD_TEST` harness hover probe to the new selectors. Do not weaken or delete a check: the hover-transport assertions stay, aimed at the new row. Then run the full `.\verify.ps1` until exit 0.
   - _Proved 2026-11-15:_ `.\verify.ps1` exit 0, 30/30, `SKIP summary: none`, `ALL CHECKS PASSED`. Check 22 reported `126 pill with a 108 row of 4x24 controls, panel opened music`. Check 25 now proves both routing rules: with 3 files on the shelf the reopen lands on Files (what the pill shows), and after Clear All and a Calendar visit it lands on Calendar (last-used). The first two runs failed 25 on the old expectation, which predated the `d293c53` routing change; the probe was corrected, not weakened.
 
-- [ ] **R7 Remaining proofs** — *Depends on: C1.*
+- [ ] **R7 Remaining proofs** — *Depends on: C1. Blocked: no multi-monitor or 100/150% hardware; Windows 10 untested.*
   - Calendar midnight drift (5.3), locale week start and year boundaries, multi-monitor and 100/150% if hardware allows (otherwise mark blocked, do not tick). Windows 10 stays unproven.
 - [x] **R8 Packaging** — *Depends on: R7.*
-  - `npm run dist` packs the already-built `dist/` plus `BeamBridge.exe` and `tray.ico` into a portable exe in `release` (electron-builder.yml); the helper publish and `npm run build` must run first. The proof is manual — the suite does not run dist. No publish until auth and a clean-profile checklist.
+  - `npm run dist` packs the already-built `dist/` plus `BeamBridge.exe` and `tray.ico` into a portable exe in `release` (electron-builder.yml); the helper publish and `npm run build` must run first. The proof is manual — the suite does not run dist. Published 2026-11-15 as `v0.1.0`; a rebuild needs the helper publish and `npm run build` first.
   - _Built 2026-11-15:_ `release/Beam-0.1.0.exe`, 137.4 MB, portable target, app icon from `build/icon.png`. Resources carry `app.asar`, `BeamBridge.exe`, and `tray.ico`; launching the exe started 4 Beam processes plus the helper and stayed up.
   - _Environment note:_ electron-builder's unpack step fails inside `D:\Beam` with `EPERM`/`EBUSY` on `resources/default_app.asar` because a scanner holds the fresh file; the same command with `--config.directories.output=<outside the workspace>` completes. This is a local lock, not a config defect.
   - _Not covered by verify:_ the suite still does not run `dist`, so the packaged launch is a manual proof. Adding it would make the gate depend on a 5-minute build and on this machine's scanner behaviour.
 - [x] **R9 Docs and final gate** — *Depends on: R8.*
-  - Update ARCHITECTURE/PRD/DESIGN/AGENTS/README to code truth; add superseded banners to stale ADRs; retire timer-priority language; fix site copy claims; final `.\verify.ps1` exit 0 and site build.
+  - Update ARCHITECTURE/PRD/DESIGN/AGENTS/README to code truth; add superseded banners to stale ADRs; retire timer-priority language; fix site copy claims; final verification run and site build.
   - _2026-11-15:_ docs now cite the green run and check 9's numbers; ADR-0003/0006/0008/0009/0010 carry superseded banners; timer-priority is retired in TASKS 6.1. `npm --prefix site run build` exits 0: TypeScript clean, 9/9 static pages. The final gate is green (gate-final5) and `v0.1.0` is published. Site copy now offers the download (`Download for Windows`, `Status: v0.1.0`, SmartScreen note); the site build with those changes is green, and the production deploy is the last step.
+
+## C2. Deep cleanup (2026-11-15)
+
+- [x] **C2.1 Repo hygiene** — deleted `release2/`, `release/` leftovers and the local exe (the published asset is on GitHub), `site/.next`, `site/out`, `site/public/demo`, `.perch/`, the expired `.env.local`, stale `.scratch` logs, and the retired brand lab `showcase/index.html`; synced `.gitignore` and `.vercelignore`.
+- [x] **C2.2 Dead code and consolidation** — removed the unused `filesCopied` field, the unreachable Music loading/skeleton state and CSS, the two duplicate seek-bar painters (one shared `paintBar`), the 6-line `panel-body` module, and the duplicated fullscreen dev hook.
+- [x] **C2.3 Verification skill** — created `.agents/skills/verify-beam/` with `SKILL.md`, a Node CDP helper, and a six-feature map; `verify.ps1` stays retired.
+- [x] **C2.4 Docs and site truth** — AGENTS, README, ARCHITECTURE, DESIGN, TASKS, release notes, about, press, FAQ, download footnote, and changelog now state the published `v0.1.0` and the new verification path.
+- _Proved 2026-11-15:_ typecheck, app build, and site build exit 0. The new skill's panel journey opened the 420×284 panel on Music, switched to Calendar (`March 2027`), clicked Today (`November 2026`), Next (`December 2026`), Today (`November 2026`), captured `.scratch/verify/proof-2026-11-15/shot-panel-calendar.png`, and Escape closed it. A launch/stop smoke test after the helper fix passed.
+- _Still open:_ 9.2, 9.4, 9.9, R7; the site copy is built but not deployed.
 
 ## I. UI trust pass (approved 2026-11-04)
 
@@ -105,7 +100,7 @@ These run before the phase tasks, as previous UI passes did. The canonical previ
   - _Audit 2026-11-07: built and proven outside the suite; Settings is now a compact fifth button (7.1). Checks 25/30 cover the focus path._
   - _Proved 2026-11-15:_ check 25 now asserts the surface itself — pill `role` is button/group with a non-empty name, a live region exists, the tab strip is `role="tablist"`, and five tabs carry `role="tab"`; focus restoration on close is the same check's dismiss path.
 - [ ] **9.9 Proof** — *Depends on: 9.1–9.8.*
-  - Add runtime checks for the quiet state, chevron, auto-pick, Esc/reopen, margin click-through, Add files, Undo, and quit confirm. Prove 2.4 and 2.5. `.\verify.ps1` exits 0.
+  - Add runtime checks for the quiet state, chevron, auto-pick, Esc/reopen, margin click-through, Add files, Undo, and quit confirm. Prove 2.4 and 2.5. The verification journey exits 0.
   - _Built 2026-11-04:_ check 25 runs a `BEAM_UI_TEST` app and asserts the resting pill (then 94×30; 78×30 after V1), shelf add/undo, files auto-pick, last-used reopen, centered 5-minute timer, calendar nav, Esc, chevron, 26×26 quiet + wake, Clear All, and a real `WindowFromPoint` margin hit test. _2026-11-08: the suite is green and both media states are covered (quiet phase and chevron phase); timer completion, chime, and banner are covered by checks 28–29. Quit confirm and the native Add files dialog remain uncovered._
 
 ---
@@ -241,7 +236,7 @@ These run before the phase tasks, as previous UI passes did. The canonical previ
 
 ## H. Proof
 
-- [x] **8.1 `verify.ps1` full suite** — *Depends on: every task above.*
+- [x] **8.1 Full suite (historical)** — *Depends on: every task above.*
   - Typecheck, build, helper build, launch, anchor, panel, files, music, timer, Settings, helper restart, and UI states. The suite has 30 checks.
   - _Audit 2026-11-10: still missing a paste-after-helper-restart proof, an outbound-TCP assertion, Electron/total/CPU budget checks, calendar midnight drift, and multi-monitor/100–150% scaling._
   - _2026-11-11: the capsule change makes check 22 and the capsule static checks stale until V1; the suite cannot go green before that rework._

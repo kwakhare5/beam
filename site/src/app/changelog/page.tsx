@@ -8,6 +8,15 @@ export const metadata = pageMetadata('changelog', 'What changed in the beam prev
 
 const ENTRIES = [
   {
+    date: '2026-11-15',
+    title: 'the windows build',
+    items: [
+      'v0.1.0 is published as a portable Windows 11 exe — download it, run it, no installer.',
+      'The bar, panel, music, files, timer, calendar, and settings shipped together.',
+      'The live demo stays the fastest way to try it; the app is the same UI in a real window.'
+    ]
+  },
+  {
     date: '2026-11-11',
     title: 'the bar, simplified',
     items: [

@@ -27,13 +27,13 @@
 
 No network. No database. No server. Four parts, three seams.
 
-### Current vs target (2026-11-11)
+### Current vs target (2026-11-15)
 
-Implemented: Electron shell with single-instance lock, the 136×42 window anchored above the taskbar holding a content-hugged capsule (idle 78×30 with the star and label centered as one unit; music and paused 69–108 and expanding once to 126×30 on hover/focus with prev / play-pause / next / panel at 24px each; timer 122 with an always-visible 28px cancel; done 108 with `Done` plus the same ×; quiet 26×26), tray, panel open/collapse at 452×316 with a ~150ms transform, pointer-captured window drag with a saved position (`settings.ts`), the idle star dim asserted from computed style, a 4Hz cursor poll that wakes the quiet nub within 37px of the pill centre and returns it 2s after the cursor leaves, hide-on-fullscreen with tray restore, a file drop shelf (paths only, deduped, 50 cap, pill count), live Files rows with copy and drag-out, a rest click that opens the panel to what the pill shows, a live Music tab with 148px art and a right-column player with a real seek slider, a main-owned timer (`timer.ts`) with a one-shot chime and Windows notification, the live Timer and Calendar tabs, the live Settings tab (startup, shortcut, volume, theme, reset) as a compact icon button beside four equal content tabs with the tray opening it, a registry-backed startup toggle (`startup.ts`), hotkey rebinding with rollback (`hotkey.ts`), split UI modules/styles, the canonical preview, thirty `verify.ps1` checks (including a real-mouse window drag → restart → reset, a real copy paste and a real row drag-out into Explorer, a real borderless fullscreen window, timer completion while hidden, and a real-click Settings pass through a restart), and `measure.ps1`. The 2026-11-15 run exits 0, 30/30 with no skips, covering the capsule final; three assertions added after it (locale week start, year-boundary navigation, Music transport geometry) are not yet in a green gate.
+Implemented: the Electron shell and single-instance lock; the 136×42 window anchored above the taskbar; the content-hugged capsule (idle 78×30, files 80–88, music/paused 69–108, timer 122, done 108, drag 88, error 127, quiet 26×26; music expands once to 126×30 with prev / play-pause / next / panel at 24px); tray; the 452×316 panel with a ~150ms transform; pointer-captured window drag with a saved position; the 4Hz near poll; hide-on-fullscreen with tray restore; the paths-only file shelf (drop, picker, copy, drag-out, missing badge, Undo, Clear All, 50 cap); the Music tab with 148px art and a real seek slider; the main-owned timer with one chime and a Windows notification; the live Calendar and Settings tabs; startup, hotkey rebinding, volume, and theme; the canonical preview; and the local verification skill (`.agents/skills/verify-beam/`) with a CDP helper and a six-feature map. The last full suite run (2026-11-15) was green at 30/30 with no skips; its evidence is in JOURNAL 151. The old single-file runner and `measure.ps1` are retired.
 
 Built in the helper: stdio client, SMTC read with PNG artwork, CF_HDROP clipboard, fullscreen detection, ping, and test-only session listing plus title/index picks (`music.sessions` / `music.pick`, behind the sessions test flag).
 
-Landed 2026-11-07 by R4: main is split into `geometry.ts`, `shelf.ts`, `panel.ts`, `music.ts`, `hotkey.ts`, `timer.ts`, and `dev/harness.ts` (excluded from packaged files); the renderer's shared core lives in `src/renderer/core/` and the site demo imports the same modules. R6 added `startup.ts` and filled the Settings screen. Landed 2026-11-08 by C1: settings IPC lives in `settings-ipc.ts`; `dev/harness.ts` also owns every `BEAM_*` flag and its scheduling (`readHooks`, `scheduleReady`, `afterShow`, `onMusicPayload`, `onFullscreen`), so `index.ts` has no env reads; the renderer split into `files.ts`, `music.ts`, `quiet.ts`, and `settings.ts`, leaving `renderer.ts` with rendering, panel wiring, and gestures. Still target: the packaged build (R8).
+Landed 2026-11-07 by R4: main is split into `geometry.ts`, `shelf.ts`, `panel.ts`, `music.ts`, `hotkey.ts`, `timer.ts`, and `dev/harness.ts` (excluded from packaged files); the renderer's shared core lives in `src/renderer/core/` and the site demo imports the same modules. R6 added `startup.ts` and filled the Settings screen. Landed 2026-11-08 by C1: settings IPC lives in `settings-ipc.ts`; `dev/harness.ts` also owns every `BEAM_*` flag and its scheduling (`readHooks`, `scheduleReady`, `afterShow`, `onMusicPayload`, `onFullscreen`), so `index.ts` has no env reads; the renderer split into `files.ts`, `music.ts`, `quiet.ts`, and `settings.ts`, leaving `renderer.ts` with rendering, panel wiring, and gestures. The packaged build shipped as `v0.1.0` on 2026-11-15.
 
 ---
 
@@ -61,8 +61,7 @@ D:\Beam
 ├── vite.config.mts
 ├── vite.preview.mts
 ├── electron-builder.yml
-├── verify.ps1                the one proof command
-├── measure.ps1               memory/CPU proof
+├── .agents/skills/verify-beam/  local verification skill, CDP helper, feature map
 ├── README.md
 ├── GLOSSARY.md               UI vocabulary
 ├── docs/adr/                 0001–0012 UI decisions
@@ -93,7 +92,6 @@ D:\Beam
 │   │   │   │   └── pill.ts   one capsule, state data
 │   │   │   ├── panel/
 │   │   │   │   ├── panel.ts  shell + tab host
-│   │   │   │   ├── panel-body.ts tabpanel wrapper
 │   │   │   │   ├── tab-nav.ts    tab click + keyboard behavior
 │   │   │   │   ├── tab-meta.ts   Tab type + tab registry
 │   │   │   │   └── tabs/     music, files, timer, calendar, settings
@@ -101,7 +99,7 @@ D:\Beam
 │   │   │   │   ├── icons.ts  Lucide sprite + icon()
 │   │   │   │   ├── icons.generated.ts
 │   │   │   │   ├── mascots.ts
-│   │   │   │   ├── html.ts
+│   │   │   │   ├── html.ts  escaping + tabpanel wrapper
 │   │   │   │   └── format.ts
 │   │   │   └── index.ts      public component API
 │   │   ├── styles.css        CSS entry (@import)
@@ -120,12 +118,12 @@ D:\Beam
 │   │   └── assets.d.ts       .svg/.woff2 module declarations
 │   └── shared/
 │       └── ipc.ts            channel names + payload types
-├── native/BeamBridge/        built at 0.3–0.4b: .NET 10 console, stdio JSON lines, ping, SMTC music events + PNG art, CF_HDROP clipboard, 10.8 MB private idle (2026-10-29)
+├── native/BeamBridge/        .NET 10 console, stdio JSON lines, ping, SMTC music events + PNG art, CF_HDROP clipboard, fullscreen detection; 9.8 MB private idle (2026-11-15)
 ├── assets/
 │   ├── mascot/*.svg          shipped
 │   ├── fonts/                InterVariable.woff2 + OFL.txt
 │   └── tray.ico              shipped (16/20/24/32 PNG entries)
-└── showcase/                 brand lab, never shipped
+└── showcase/                 canonical app preview, never shipped
 ```
 
 ---
@@ -297,16 +295,16 @@ helper's WinEventHook sees a foreground change or the foreground window resize/m
 | 2026-10-27 | Helper ships self-contained, no .NET prerequisite | Must run on a fresh Windows install |
 | 2026-10-27 | Pill starts on the primary monitor, follows across monitors when dragged, snaps back to primary if that monitor disappears | Prevents an offscreen window |
 | 2026-10-27 | Shelf stays in-memory; quitting drops contents; shelf shows a warning while non-empty | Matches PRD; silent loss would be worse |
-| 2026-10-27 | Timer deadline is owned by main, not the renderer | Chromium throttles hidden windows; the alarm must fire while the pill is hidden. Implemented 2026-11-07 by R3 (`src/main/timer.ts`); checks 28–29 prove it. |
+| 2026-10-27 | Timer deadline is owned by main, not the renderer | Chromium throttles hidden windows; the alarm must fire while the pill is hidden. Implemented 2026-11-07 by R3 (`src/main/timer.ts`); the 2026-11-15 run proved it. |
 | 2026-10-27 | (superseded 2026-10-29: helper drag deleted) `files.drag` runs on a dedicated STA thread in the helper | A blocking `DoDragDrop` on the stdio loop would freeze SMTC reads for the whole drag |
 | 2026-10-27 | Budget split: Electron ≤130 MB, helper ≤60 MB, total always reported | One combined number hides which side regressed |
 | 2026-10-27 | Single instance: a second launch wakes the existing pill and exits | Two pills would fight over the hotkey, tray icon, and settings file |
 | 2026-10-27 | settings.json carries `version: 1`; unknown keys are preserved | Migration needs something to compare against, and a downgrade must not wipe settings |
-| 2026-10-27 | `verify.ps1` is created at task 0.1 and grows every phase | Phases 0–7 would otherwise have no runnable proof, which breaks the project's own done rule |
+| 2026-10-27 | `verify.ps1` is created at task 0.1 and grows every phase (superseded 2026-11-15 by `.agents/skills/verify-beam/`) | A single 2,500-line runner became its own maintenance problem; the local skill drives the real app feature by feature |
 | 2026-10-27 | One window size in scaled units; Chromium handles DPI | Separate layouts per scale are work with no gain; verify at 100/125/150 instead |
 | 2026-10-27 | Fullscreen detection = foreground change + `EVENT_OBJECT_LOCATIONCHANGE` + 1s poll | A video going fullscreen in an already-focused window fires no foreground event |
 | 2026-10-27 | Artwork lives in `%TEMP%\Beam\art\`, overwritten per track, wiped on quit | The shelf rule bans file copies, not a thumbnail cache; leaving it unbounded is worse. **Superseded 2026-11-04: the PNG rides inside `music.changed` as base64 (ADR-0012).** |
-| 2026-10-27 | Clipboard stays helper-owned; helper crash breaks paste until restart | Moving `CF_HDROP` ownership to main means reimplementing the same thing; test the restart instead. **Built 2026-11-07: the helper restarts (3/60s) and check 26 verifies a new pid plus a second pong; paste-after-restart is still unproven.** |
+| 2026-10-27 | Clipboard stays helper-owned; helper crash breaks paste until restart | Moving `CF_HDROP` ownership to main means reimplementing the same thing; test the restart instead. **Built 2026-11-07: the helper restarts (3/60s) and a new pid plus a second pong were verified; paste-after-restart was proved 2026-11-15 (JOURNAL 151).** |
 | 2026-10-27 | Renderer picks the contextual tab; `beam:tab:force` removed | The renderer already holds music and timer state; a second decider causes flicker |
 | 2026-10-27 | App ships light and dark themes, toggled in settings | User request 2026-10-27; light palette is the Notion set, dark palette is the solid dark set |
 | 2026-10-27 | Pill is a transparent CSS capsule, not Windows acrylic | Tested 2026-10-27: acrylic paints the window rectangle and ignores the CSS pill radius; at 32px tall the capsule shape matters more than blur |
@@ -332,7 +330,7 @@ helper's WinEventHook sees a foreground change or the foreground window resize/m
 | 2026-11-04 | The preload is bundled by Vite (`vite.preload.mts`) and imports the shared channel constants at build time | A sandboxed preload can only require `electron` and builtins, so the shared-IPC import failed at runtime and `window.beam` never loaded; bundling keeps one channel source without weakening the sandbox |
 | 2026-11-04 | The panel opens to the last feature used this session — drop/picker, Files action, transport, timer, calendar, or tab visit — falling back to music → files → music | A state-based pick ignored what the user actually touched; session-only because the shelf and the live track do not survive quit |
 | 2026-11-04 | The timer counts down from a deadline in the renderer and the calendar keeps a month offset; both tabs are live, and the preview shows the same four tabs (Settings deferred) | Neither needs the helper or a network, and dead tabs broke the app/preview sync rule. Timer half superseded 2026-11-07 by R3: the deadline moved to main; the calendar half stands |
-| 2026-11-07 | The timer deadline, tick push, and completion move to main; the renderer only displays snapshots, plays the bundled chime once per timer id, and acks it over `beam:timer:chimed`; main fires an Electron Notification with a tray balloon fallback | Hidden windows throttle renderer timers and a completion must fire exactly once regardless of visibility. Checks 28–29 hold start/cancel/replace, the done face, one chime, one banner, and completion behind a fullscreen window |
+| 2026-11-07 | The timer deadline, tick push, and completion move to main; the renderer only displays snapshots, plays the bundled chime once per timer id, and acks it over `beam:timer:chimed`; main fires an Electron Notification with a tray balloon fallback | Hidden windows throttle renderer timers and a completion must fire exactly once regardless of visibility. The 2026-11-15 run held start/cancel/replace, the done face, one chime, one banner, and completion behind a fullscreen window |
 | 2026-11-08 | The capsule mark/art shrink to 20px, music and paused rest at 108×30, quiet shrinks to a 26×26 nub; main polls the cursor at 4Hz and wakes quiet within 37px, returning it 2s after the cursor leaves; Settings becomes a labeled fifth tab (superseded 2026-11-10 by the compact-button row) | The 24px mark squeezed a 44px title slot into two characters, the 30px quiet nub still read as a surface, and moving the cursor to the nub only woke it on a true hover. Settings as a lone icon broke the tab bar's five-column rhythm. Near wakes the label but never reveals actions, so a passing cursor cannot trigger a transport. Check 25 moves the real cursor and measures the 2s return |
 | 2026-11-08 | The Music tab becomes a right-column player (148px art left; title, artist+dot, seek slider, and transports right) and the bar becomes a real slider: pointer drag/click, ←/→ 5s, Home/End, `beam:music:seek` → `music.seek` → `TryChangePlaybackPositionAsync`; a refusal silently repaints the last position | The 148px meta column clipped most song names and the full-width read-only bar could not be used. Keeping the helper as the only WinRT caller preserves the seam, and updating the tick only after the helper accepts keeps the bar honest. Check 23 clicks 70% and proves both the bar and the real player land at 420s of 600s |
 | 2026-11-10 | Settings moves out of the five-column track into a 28px icon-only button; the four content tabs share the remaining width. The light theme becomes warm greige (`#eceae6` card, `#dfddd8` control, `#5f5d59` muted, `#7a4e00` gold text, `#a61b12` red). | The full “Settings” label spent a whole column on a utility action, and `#f4f4f2` read as white against a dark desktop. Four ~90px content tabs fit better, and the darker greige keeps muted text at 5.5:1 and gold at 6.0:1 without glare. |
@@ -342,35 +340,29 @@ UI decisions: ADR-0001 (component boundaries), ADR-0002 (original mascot), ADR-0
 
 ## 8. Status
 
-Last status audit: 2026-11-11 for the capsule; 2026-11-10 for the rest of the app. The task-by-task notes live in `TASKS.md` under “Audit snapshot — 2026-11-11”; the evidence cards are JOURNAL 133–139.
+Last status audit: 2026-11-15.
 
-**Built and previously proven:** shell anchor, no focus steal, tray, panel open/close, drag + position save/restore/reset (single display), idle dim, fullscreen detection and hide, single instance; the file shelf (drop, copy, drag-out, missing badge, remove, Clear All), music pill/transports/Music tab, and the Settings screen with startup, hotkey rebind, volume, theme, and reset.
+**Built and proven:** every feature in TASKS blocks A–F and Settings; the 2026-11-15 suite run was green at 30/30 with no skips (JOURNAL 151). The packaged `v0.1.0` exe launched with absent and malformed settings and is published on GitHub; the site offers the download.
 
-**Built on 2026-11-11, not yet accepted by the gate:** the final capsule model (hugged rest, centered star+label, music-only hover row of four 24px controls, always-visible timer/done ×, pill-driven panel routing). It is measured in the preview and the built demo; `verify.ps1` check 22 and the capsule static checks still describe the old row and must be reworked before the next green run (TASKS V1).
+**Built, proof pending:** 9.2 (one manual Add files click), 9.4 (native quit-confirm and the failure-status text), 9.9 (follows them).
 
-**Built and working, not accepted by the gate:** 9.2, 9.4, 9.7, 9.8, 9.9, the calendar engine, Undo, the Add files picker, keyboard access, and the landing site. 2.4, 9.1 (retired as superseded), 9.3, 9.5, 9.6, timer 4.1–4.5, 1.7/1.8/7.1, U1, U2, and C1 are accepted by green runs; the 2026-11-10 audit gate is green.
+**Blocked:** R7 multi-monitor restore, 100/150% scaling, and Windows 10; no hardware for the first two.
 
-**Partial:** 2.5 has a no-art fallback and null-session debounce; paused and closed-player cases are unproven. Quit confirm and the native Add files dialog have no verify check; the chime and toast are asserted by the audio ack and the main log path, not recorded; the Settings chime test button is wired but no check clicks it.
+**Verification:** `.agents/skills/verify-beam/` is the current proof path: `SKILL.md`, a feature map (capsule, panel and tabs, files, music, timer, settings), and a Node CDP helper. The old 30-check single-file runner is retired; its green run remains historical evidence.
 
-**Missing:** multi-monitor/100–150% proof (hardware), Windows 10, a clean-profile run, the native quit-confirm and failure-status proof, and a green gate over the three newest assertions.
-
-**Verification:** 30 checks. The 2026-11-15 run exits 0, 30/30, with no skips. Check 9 gates helper ≤60 MB, app ≤130 MB, CPU <5%, and zero TCP sockets; 16 is a real Explorer→pill drag; 17 retries the Explorer foreground; 22 asserts the 126px hover pill with four 24px controls; 24 proves playback-driven session switching; 25 runs separate quiet and chevron phases; 26 force-kills the helper and asserts a new pid plus a second pong; 27 proves a hung request rejects after 8s; 28 proves timer start/cancel/replace, the done face, one chime, one banner, and dismiss; 29 proves completion behind fullscreen with the pill hidden; 30 clicks the real Settings controls, presses the captured chord with SendKeys, writes/removes the Run entry, and proves the values survive a restart.
-
-**Packaging:** `extraResources` lists `BeamBridge.exe` and `tray.ico`, and `src/main/paths.ts` resolves them when packaged. `npm run dist` only calls electron-builder, so the helper publish and `npm run build` must run first. A portable `release/Beam-0.1.0.exe` (137.4 MB) was built and launched on 2026-11-15. Nothing is published: no GitHub release and no site download.
-
-**Open conflicts:** resolved 2026-11-07 by R6: TASKS 6.2 is retired and ADR-0012 last-used wins in the code. README and TASKS previously drifted from the code and now carry the 2026-11-10 cleanup notes.
+**Packaging:** `extraResources` lists `BeamBridge.exe` and `tray.ico`, and `src/main/paths.ts` resolves them when packaged. `npm run dist` only calls electron-builder, so the helper publish and `npm run build` must run first. `v0.1.0` (137.4 MB) is published at https://github.com/kwakhare5/beam/releases/tag/v0.1.0 and linked from the site. The local `release/` output was deleted after publishing; rebuild it when needed.
 
 ## 9. Known Risks
 
 | Risk | Honest read | Mitigation |
 |---|---|---|
-| RAM budget | Electron ≤130 MB, helper ≤60 MB. Gated every run by check 9; last measured 2026-11-15: helper 9.8 MB, app 90.3 MB, 0% CPU, 0 TCP sockets. | Both under cap. Over either cap → stop and report before building more. |
+| RAM budget | Electron ≤130 MB, helper ≤60 MB. Last measured 2026-11-15: helper 9.8 MB, app 90.3 MB, 0% CPU, 0 TCP sockets. Not yet automated in the verification skill. | Both under cap. Measure with `Get-Process` and `Get-NetTCPConnection` before a release; over either cap → stop and report. |
 | Rest margins | Fixed 2026-11-04: `setShape` clips the window to the visible pill plus a 6px halo, so margin clicks reach the desktop. | Keep the shape in sync with pill width/height whenever a state changes. |
-| DOM churn during drag | Replacing the pill title node on every drag event turned each `dragover` into a fresh `dragenter`; real OS drops never fired. Fixed 2026-11-07 by updating the title in place. | Check 16 holds a real Explorer→pill drop; do not replace the node under the cursor during a drag. |
+| DOM churn during drag | Replacing the pill title node on every drag event turned each `dragover` into a fresh `dragenter`; real OS drops never fired. Fixed 2026-11-07 by updating the title in place. | The Files journey uses a real Explorer drop; never replace the node under the cursor during a drag. |
 | `Alt+Space` steal | Registering it kills the system window menu for every app while Beam runs | Accepted by user 2026-10-27 |
 | Multi-file drag-out | Solved 2026-10-29: helper OLE drag spun at 100% CPU; Electron's `webContents.startDrag` with a `files` array is the path | Prove with a real drop into Explorer at 3.4 |
 | SMTC on some players | Some apps publish partial metadata, no artwork | Show text without art, never crash |
-| Helper death | Fixed 2026-11-07: requests reject after 8s, a dead helper is restarted up to 3 times in 60s, and a spawn error resets the child. Paste after a restart is still unproven. | Checks 26 and 27 hold the restart and timeout; 8.1 still needs a paste-after-restart proof. |
-| Timer ownership | Fixed 2026-11-07 (R3): the deadline, tick push, and one-shot completion live in `src/main/timer.ts`; the renderer only displays snapshots. Checks 28–29 prove replace, done face, chime, notification, and completion behind fullscreen. | Keep every new alert path behind that engine; never reintroduce a renderer clock. |
-| Packaging | `npm run dist` skips prerequisite builds; the release folder is incomplete and no exe is published. | Build main, renderer, preload, and the helper first, verify `app.asar` + `extraResources`, test on a clean profile, then publish. |
-| Doc drift | README/TASKS/ARCHITECTURE had stale claims about built features. | Keep the 2026-11-07 audit notes current; tick a box only after a green verify. |
+| Helper death | Fixed 2026-11-07: requests reject after 8s, a dead helper is restarted up to 3 times in 60s, and a spawn error resets the child. The 2026-11-15 run proved a paste after a real helper kill (JOURNAL 151). | Keep the restart and timeout logic; re-prove after touching the helper. |
+| Timer ownership | Fixed 2026-11-07 (R3): the deadline, tick push, and one-shot completion live in `src/main/timer.ts`; the renderer only displays snapshots. The 2026-11-15 run proved replace, done face, chime, notification, and completion behind fullscreen. | Keep every new alert path behind that engine; never reintroduce a renderer clock. |
+| Packaging | `npm run dist` skips prerequisite builds; `v0.1.0` is published, and a rebuild needs the helper publish and `npm run build` first. | Build main, renderer, preload, and the helper first, verify `app.asar` + `extraResources`, then replace the release. |
+| Doc drift | README/TASKS/ARCHITECTURE had stale claims about published state and old checks. | Tick a box only after a real journey and pasted evidence; update the docs in the same change. |

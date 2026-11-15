@@ -10,7 +10,6 @@ import { timerPanel, type TimerData } from './tabs/timer';
 export interface PanelData {
   music: MusicData;
   files: FileRow[];
-  filesCopied?: boolean;
   timer: TimerData;
   calendar: { view: Date; today: Date };
   settings: SettingsData;
@@ -40,7 +39,7 @@ export function panel(tab: Tab, data: PanelData): string {
 
   const bodies = [
     enabled.includes('music') ? musicPanel(data.music, active === 'music') : '',
-    enabled.includes('files') ? filesPanel(data.files, data.filesCopied, active === 'files') : '',
+    enabled.includes('files') ? filesPanel(data.files, active === 'files') : '',
     enabled.includes('timer') ? timerPanel(data.timer, active === 'timer') : '',
     enabled.includes('calendar') ? calendarPanel(today, active === 'calendar', view) : '',
     enabled.includes('settings') ? settingsPanel(data.settings, active === 'settings') : ''

@@ -13,7 +13,7 @@ const FACTS = [
   ['Maker', 'Karan Wakhare'],
   ['Platform', 'Windows 11'],
   ['Price', 'Free'],
-  ['Status', 'Preview; Windows build not published'],
+  ['Status', 'v0.1.0 published'],
   ['Size', '69–127×30 pixels at rest, hugged'],
   ['Account', 'Not required'],
   ['Network', 'None in the app'],
@@ -83,7 +83,16 @@ export default function PressPage() {
         <a href={REPO} target="_blank" rel="noopener noreferrer" className="underline decoration-hairline underline-offset-2 hover:text-ink">
           GitHub
         </a>
-        . The Windows build is not published yet.
+        . The Windows build is on the{' '}
+        <a
+          href={`${REPO}/releases/tag/v0.1.0`}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="underline decoration-hairline underline-offset-2 hover:text-ink"
+        >
+          releases page
+        </a>
+        .
       </p>
     </Subpage>
   );

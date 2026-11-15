@@ -29,7 +29,7 @@ The exe is unsigned, so Windows SmartScreen shows "Windows protected your PC" on
 
 ## Built and measured
 
-- Headless verification suite: 30 checks, last full run green at 30/30 with no skips. It drives real Explorer drags, real clipboard copies and pastes, a real SMTC player, a real fullscreen window, and a real timer.
+- Verification: 30 checks, last full run green at 30/30 with no skips. It drove real Explorer drags, real clipboard copies and pastes, a real SMTC player, a real fullscreen window, and a real timer. The single-file suite is now retired in favour of the local `.agents/skills/verify-beam/` skill.
 - Idle cost on the reference machine: 90.3 MB across the app, 9.8 MB for the helper, 0% CPU, 0 sockets.
 - Portable exe: 137.4 MB.
 

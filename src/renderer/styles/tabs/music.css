@@ -143,21 +143,3 @@
   text-overflow: ellipsis;
   white-space: nowrap;
 }
-
-.panel-music-skeleton {
-  flex-direction: row;
-  align-items: center;
-  gap: var(--space-3);
-}
-
-.panel-music-skeleton .art {
-  width: 148px;
-  height: 148px;
-  flex: none;
-  border-radius: var(--r-card);
-}
-
-.panel-music-skeleton .panel-music-content {
-  min-height: 134px;
-  justify-content: space-between;
-}

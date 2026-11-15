@@ -7,8 +7,8 @@ import {
   bindPanelTabs,
   formatSize,
   iconSprite,
-  musicClock,
   panel,
+  paintBar,
   pill
 } from '../../src/renderer/ui';
 import type { PanelData, Tab } from '../../src/renderer/ui';
@@ -164,23 +164,10 @@ function closePanel(): void {
 }
 
 function updateProgress(): void {
-  const duration = trackDuration();
-  if (duration <= 0) return;
+  if (trackDuration() <= 0) return;
   const bar = panelWrap.querySelector<HTMLElement>('.panel-music [data-music-bar]');
   if (!bar) return;
-  const position = Math.min(positionMs(), duration);
-  bar.setAttribute('aria-valuenow', String(Math.round(position / 1000)));
-  bar.setAttribute('aria-valuetext', `${musicClock(position)} of ${musicClock(duration)}`);
-  const percent = Math.round((position / duration) * 100);
-  const fill = bar.querySelector<HTMLElement>('.track-fill');
-  if (fill) fill.style.width = `${percent}%`;
-  const knob = bar.querySelector<HTMLElement>('.track-knob');
-  if (knob) knob.style.left = `${percent}%`;
-  const times = bar.parentElement?.querySelectorAll<HTMLElement>('.track-times span');
-  if (times?.length === 2) {
-    times[0]!.textContent = musicClock(position);
-    times[1]!.textContent = musicClock(duration);
-  }
+  paintBar(bar, positionMs());
 }
 
 function loadTrack(index: number, play: boolean): void {

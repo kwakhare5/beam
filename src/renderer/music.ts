@@ -1,5 +1,5 @@
 import type { MusicState } from '../shared/ipc';
-import { musicClock } from './ui';
+import { paintBar } from './ui';
 
 export interface MusicPanelData {
   title: string;
@@ -107,24 +107,9 @@ export class MusicSession {
   }
 
   private paint(elapsed: number): void {
-    const view = this.view;
-    if (!view || view.durationMs <= 0) return;
-    const duration = view.durationMs;
-    const clamped = Math.min(duration, Math.max(0, elapsed));
+    if (!this.view || this.view.durationMs <= 0) return;
     const bar = this.root()?.querySelector<HTMLElement>('.panel-music [data-music-bar]');
     if (!bar) return;
-    const percent = Math.round((clamped / duration) * 100);
-    bar.setAttribute('aria-valuenow', String(Math.round(clamped / 1000)));
-    bar.setAttribute('aria-valuetext', `${musicClock(clamped)} of ${musicClock(duration)}`);
-    const fill = bar.querySelector<HTMLElement>('.track-fill');
-    if (fill) fill.style.width = `${percent}%`;
-    const knob = bar.querySelector<HTMLElement>('.track-knob');
-    if (knob) knob.style.left = `${percent}%`;
-    const times = bar.parentElement?.querySelectorAll<HTMLElement>('.track-times span');
-    if (times && times.length === 2) {
-      const [elapsedEl, totalEl] = times;
-      if (elapsedEl) elapsedEl.textContent = musicClock(clamped);
-      if (totalEl) totalEl.textContent = musicClock(duration);
-    }
+    paintBar(bar, elapsed);
   }
 }

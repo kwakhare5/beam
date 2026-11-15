@@ -83,34 +83,6 @@ body.is-closing .panel {
   opacity: 0;
 }
 
-.skeleton {
-  background: var(--control);
-  border-radius: var(--r-control);
-  animation: skeleton-pulse 1400ms ease-in-out infinite;
-}
-
-.skeleton-line {
-  height: 12px;
-  width: 60%;
-  background: var(--control);
-  border-radius: var(--r-micro);
-  animation: skeleton-pulse 1400ms ease-in-out infinite;
-}
-
-.skeleton-line.w-65 { width: 65%; }
-.skeleton-line.w-40 { width: 40%; }
-.skeleton-line.w-25 { width: 25%; }
-
-@keyframes skeleton-pulse {
-  0%,
-  100% {
-    opacity: 0.45;
-  }
-  50% {
-    opacity: 0.85;
-  }
-}
-
 .sr-only {
   position: absolute;
   width: 1px;
