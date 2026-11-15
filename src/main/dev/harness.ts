@@ -688,6 +688,39 @@ export async function runUiTest(ctx: HarnessContext, target: BrowserWindow, phas
   });
   if (ctx.music()) ui('quiet', { skipped: 'music' });
 
+  if (ctx.music()) {
+    target.webContents.send(IPC.musicState, null);
+    const nullDropped = await until((state) => state.state !== 'playing' && state.state !== 'paused', 2000);
+    ui('nullstate', { ok: nullDropped.ok, state: nullDropped.snap.state });
+    ctx.sendMusic();
+    await wait(300);
+  } else {
+    ui('nullstate', { skipped: 'no-music' });
+  }
+
+  if (ctx.music()) {
+    target.webContents.send(IPC.musicState, {
+      title: 'No art track',
+      artist: 'Beam verify',
+      playing: true,
+      art: null,
+      positionMs: 1000,
+      durationMs: 60000
+    });
+    await wait(700);
+    const noart = (await target.webContents.executeJavaScript(
+      `(() => {
+        const mark = document.querySelector('.pill .mascot');
+        return { art: mark?.classList.contains('pill-art') ?? null, src: mark?.getAttribute('src') ?? null };
+      })()`
+    )) as { art: boolean | null; src: string | null };
+    ui('noart', noart);
+    ctx.sendMusic();
+    await wait(400);
+  } else {
+    ui('noart', { skipped: 'no-music' });
+  }
+
   if (phase === 'chevron') {
     const musicStop = Date.now() + 5000;
     while (!ctx.music() && Date.now() < musicStop) await wait(100);
@@ -906,39 +939,6 @@ export async function runUiTest(ctx: HarnessContext, target: BrowserWindow, phas
   escape();
   await until((state) => !state.open, 3000);
   await wait(250);
-
-  if (ctx.music()) {
-    target.webContents.send(IPC.musicState, null);
-    const dropped2 = await until((state) => state.state !== 'playing' && state.state !== 'paused', 2000);
-    ui('nullstate', { ok: dropped2.ok, state: dropped2.snap.state });
-    ctx.sendMusic();
-    await wait(300);
-  } else {
-    ui('nullstate', { skipped: 'no-music' });
-  }
-
-  if (ctx.music()) {
-    target.webContents.send(IPC.musicState, {
-      title: 'No art track',
-      artist: 'Beam verify',
-      playing: true,
-      art: null,
-      positionMs: 1000,
-      durationMs: 60000
-    });
-    await wait(700);
-    const noart = (await target.webContents.executeJavaScript(
-      `(() => {
-        const mark = document.querySelector('.pill .mascot');
-        return { art: mark?.classList.contains('pill-art') ?? null, src: mark?.getAttribute('src') ?? null };
-      })()`
-    )) as { art: boolean | null; src: string | null };
-    ui('noart', noart);
-    ctx.sendMusic();
-    await wait(400);
-  } else {
-    ui('noart', { skipped: 'no-music' });
-  }
 
   await openPanel();
   await until((state) => state.open, 3000);
