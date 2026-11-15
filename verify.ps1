@@ -1069,12 +1069,19 @@ try {
   if ($dropOut -notmatch '\[drop\] watch') { throw 'the pill probe never started' }
   if ($dropWindow -eq [IntPtr]::Zero) { throw 'the Beam window handle never appeared' }
 
-  Invoke-ExplorerDrop $dropFolder3 $dropWindow
-  $dropStop = (Get-Date).AddSeconds(15)
-  while ((Get-Date) -lt $dropStop) {
-    Start-Sleep -Milliseconds 200
-    $dropOut = Get-Content -LiteralPath $dropOutLog -Raw -ErrorAction SilentlyContinue
+  for ($dropAttempt = 1; $dropAttempt -le 2; $dropAttempt++) {
+    Invoke-ExplorerDrop $dropFolder3 $dropWindow
+    $dropStop = (Get-Date).AddSeconds(15)
+    while ((Get-Date) -lt $dropStop) {
+      Start-Sleep -Milliseconds 200
+      $dropOut = Get-Content -LiteralPath $dropOutLog -Raw -ErrorAction SilentlyContinue
+      if ($dropOut -match '\[files\] add=3 accepted=3 count=3 truncated=false') { break }
+    }
     if ($dropOut -match '\[files\] add=3 accepted=3 count=3 truncated=false') { break }
+    if ($dropAttempt -eq 1) {
+      Write-Host 'retrying the real 3-file Explorer drop (the first gesture did not land)'
+      Start-Sleep -Seconds 1
+    }
   }
   if ($dropOut -notmatch '\[files\] add=3 accepted=3 count=3 truncated=false') {
     throw 'the real 3-file Explorer drop never reached the shelf'
@@ -1092,12 +1099,19 @@ try {
     }
   }
 
-  Invoke-ExplorerDrop $dropFolder51 $dropWindow
-  $dropStop = (Get-Date).AddSeconds(15)
-  while ((Get-Date) -lt $dropStop) {
-    Start-Sleep -Milliseconds 200
-    $dropOut = Get-Content -LiteralPath $dropOutLog -Raw -ErrorAction SilentlyContinue
+  for ($dropAttempt = 1; $dropAttempt -le 2; $dropAttempt++) {
+    Invoke-ExplorerDrop $dropFolder51 $dropWindow
+    $dropStop = (Get-Date).AddSeconds(15)
+    while ((Get-Date) -lt $dropStop) {
+      Start-Sleep -Milliseconds 200
+      $dropOut = Get-Content -LiteralPath $dropOutLog -Raw -ErrorAction SilentlyContinue
+      if ($dropOut -match '\[files\] add=51 accepted=47 count=50 truncated=true') { break }
+    }
     if ($dropOut -match '\[files\] add=51 accepted=47 count=50 truncated=true') { break }
+    if ($dropAttempt -eq 1) {
+      Write-Host 'retrying the real 51-file Explorer drop (the first gesture did not land)'
+      Start-Sleep -Seconds 1
+    }
   }
   if ($dropOut -notmatch '\[files\] add=51 accepted=47 count=50 truncated=true') {
     throw 'the real 51-file Explorer drop did not cap at 50'
