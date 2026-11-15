@@ -31,15 +31,6 @@ export default function HomePage() {
               faq
             </a>
             <a
-              href={REPO}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="hidden items-center gap-1 transition-colors hover:text-ink sm:flex"
-            >
-              github
-              <ArrowUpRight className="h-3.5 w-3.5" strokeWidth={1.75} />
-            </a>
-            <a
               href="#download"
               className="rounded-lg bg-ink px-3 py-1.5 font-medium text-white transition-colors hover:bg-black sm:px-3.5"
             >
@@ -61,10 +52,8 @@ export default function HomePage() {
             />
           </h1>
 
-          <p className="mt-3 text-[20px] font-medium text-ink sm:text-[22px]">music, files, time — all in one place.</p>
-
-          <p className="mt-1 text-[15px] text-muted">
-            Opens with <span className="font-medium text-ink">Alt + Space</span>, from anywhere.
+          <p className="mt-3 text-[20px] font-medium text-ink sm:text-[22px]">
+            music, files, time — all using Alt + Space.
           </p>
 
           <p className="mt-2 font-hand text-2xl text-orange sm:text-3xl">no windows to manage.</p>
@@ -87,14 +76,6 @@ export default function HomePage() {
               className="inline-flex items-center gap-2 rounded-lg bg-ink px-4 py-2.5 text-sm font-medium text-white transition-colors hover:bg-black"
             >
               See it live
-            </a>
-            <a
-              href={`${REPO}#commands`}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="rounded-lg border border-hairline bg-surface px-4 py-2.5 text-sm font-medium transition-colors hover:bg-hover"
-            >
-              Build from source
             </a>
             <span className="text-[13px] text-muted">v0.1.0 · Windows 11 · portable exe</span>
           </div>
@@ -137,58 +118,6 @@ export default function HomePage() {
           <p className="py-8 text-[15px] leading-relaxed text-muted">
             That&apos;s the whole app. It hugs its content, opens with Alt + Space, and makes no network requests.
           </p>
-        </section>
-
-        <section id="project" className="border-t border-hairline py-14">
-          <h2 className="text-2xl font-semibold sm:text-[28px]">the project.</h2>
-          <p className="mt-3 max-w-lg text-[15px] leading-relaxed text-muted">
-            Beam is built in public by one person. Every decision, bug, and fix is written down.
-          </p>
-
-          <div className="mt-8 grid gap-x-10 gap-y-7 sm:grid-cols-2">
-            <div>
-              <h3 className="text-[15px] font-semibold">Built in public</h3>
-              <p className="mt-1 text-[14px] leading-relaxed text-muted">
-                The journal records each change with its proof.{' '}
-                <a
-                  href={`${REPO}/blob/main/JOURNAL.md`}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="underline decoration-hairline underline-offset-2 hover:text-ink"
-                >
-                  Read the journal
-                </a>
-                .
-              </p>
-            </div>
-            <div>
-              <h3 className="text-[15px] font-semibold">Open source</h3>
-              <p className="mt-1 text-[14px] leading-relaxed text-muted">
-                The app, the helper, and this site are in one repo.{' '}
-                <a
-                  href={REPO}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="underline decoration-hairline underline-offset-2 hover:text-ink"
-                >
-                  github.com/kwakhare5/beam
-                </a>
-                .
-              </p>
-            </div>
-            <div>
-              <h3 className="text-[15px] font-semibold">Offline by design</h3>
-              <p className="mt-1 text-[14px] leading-relaxed text-muted">
-                No account, no cloud, no network requests. Settings stay on your machine.
-              </p>
-            </div>
-            <div>
-              <h3 className="text-[15px] font-semibold">Small on purpose</h3>
-              <p className="mt-1 text-[14px] leading-relaxed text-muted">
-                One window and a tiny helper. No database, no server, nothing listening.
-              </p>
-            </div>
-          </div>
         </section>
 
         <section id="faq" className="border-t border-hairline py-14">
@@ -278,7 +207,7 @@ export default function HomePage() {
           <div className="flex items-center gap-2">
             <StarLogo size={14} />
             <span className="font-semibold text-ink">beam.</span>
-            <span>© 2026 Karan · built in public</span>
+            <span>© 2026 Karan Wakhare · built in public</span>
           </div>
           <div className="flex flex-wrap items-center gap-x-5 gap-y-2">
             <Link href="/about" prefetch={false} className="py-1 transition-colors hover:text-ink">
@@ -321,7 +250,7 @@ export default function HomePage() {
           <p className="border-t border-hairline pt-4 text-[12px] text-muted">
             Built by{' '}
             <Link href="/about" prefetch={false} className="font-medium text-ink underline decoration-hairline underline-offset-2 hover:no-underline">
-              Karan
+              Karan Wakhare
             </Link>
             .
           </p>
