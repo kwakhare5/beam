@@ -1,7 +1,7 @@
 import Link from 'next/link';
 import type { Metadata } from 'next';
 import { ArrowUpRight, Plus } from 'lucide-react';
-import { FAQ, FEATURES, REPO } from '../content/site';
+import { FAQ, FEATURES, REPO, DOWNLOAD_URL, VERSION } from '../content/site';
 import { StarLogo } from '../components/brand';
 import { faqGraph } from '../components/structured-data';
 import { LiveDemo } from '../components/live-demo';
@@ -31,10 +31,10 @@ export default function HomePage() {
               faq
             </a>
             <a
-              href="#download"
+              href={DOWNLOAD_URL}
               className="rounded-lg bg-ink px-3 py-1.5 font-medium text-white transition-colors hover:bg-black sm:px-3.5"
             >
-              get beam
+              Download
             </a>
           </div>
         </nav>
@@ -65,7 +65,7 @@ export default function HomePage() {
 
           <div className="mt-8 flex flex-wrap items-center gap-3">
             <a
-              href={`${REPO}/releases/download/v0.1.0/Beam-0.1.0.exe`}
+              href={DOWNLOAD_URL}
               className="inline-flex items-center gap-1.5 rounded-lg border border-hairline bg-surface px-4 py-2.5 text-sm font-medium transition-colors hover:bg-hover"
             >
               Download
@@ -77,7 +77,7 @@ export default function HomePage() {
             >
               See it live
             </a>
-            <span className="text-[13px] text-muted">v0.1.0 · Windows 11 · portable exe</span>
+            <span className="text-[13px] text-muted">{VERSION} · Windows 11 · installer</span>
           </div>
         </section>
 
@@ -145,15 +145,15 @@ export default function HomePage() {
           <StarLogo size={40} />
           <h2 className="mt-5 text-2xl font-semibold sm:text-[28px]">get beam.</h2>
           <p className="mt-3 max-w-md text-[15px] leading-relaxed text-muted">
-            Download the portable exe for Windows 11. It is an unsigned early preview, so SmartScreen asks once — More info, then Run anyway.
+            Download the installer for Windows 11. It installs per-user with no admin prompt, and adds Beam to your Start Menu. It is an unsigned early preview, so SmartScreen asks once — More info, then Run anyway.
           </p>
 
           <div className="mt-7 flex flex-wrap items-center gap-3">
             <a
-              href={`${REPO}/releases/download/v0.1.0/Beam-0.1.0.exe`}
+              href={DOWNLOAD_URL}
               className="inline-flex items-center gap-1.5 rounded-lg bg-ink px-4 py-2.5 text-sm font-medium text-white transition-colors hover:bg-black"
             >
-              Download for Windows
+              Download
               <ArrowUpRight className="h-3.5 w-3.5" strokeWidth={1.75} />
             </a>
             <a
@@ -171,7 +171,7 @@ export default function HomePage() {
             </div>
             <div>
               <dt className="text-muted">Status</dt>
-              <dd className="mt-1">v0.1.0</dd>
+              <dd className="mt-1">{VERSION}</dd>
             </div>
             <div>
               <dt className="text-muted">Shortcut</dt>

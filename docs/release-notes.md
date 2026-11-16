@@ -1,3 +1,18 @@
+# Beam release notes
+
+## Beam 0.1.1 — the installed app (2026-11-16)
+
+Same app as 0.1.0, now delivered like a normal Windows app.
+
+- **One-click installer:** `Beam-Setup-0.1.1.exe` installs per-user with no admin prompt, adds Start Menu and desktop shortcuts, and an entry in Windows Apps → Installed apps for uninstall. Settings in `%APPDATA%\Beam` survive an uninstall unless you delete the folder yourself.
+- **First launch opens the panel once**, so a new install shows the whole app instead of just the bar.
+- **English-only build** cuts about 50 MB of installed size. Download is about 141 MB; installed about 423 MB. Beam's own code is under 1 MB — the rest is the browser engine and the Windows helper runtime.
+- **Website copy:** every Download button downloads, every page shares one header and footer, and the FAQ answers uninstall and size.
+
+Measured on the reference machine (125% scaling, Windows 11): helper 48.2 MB working set, app ~101 MB, 0% CPU idle, 0 TCP sockets. Unsigned, so SmartScreen asks once: More info → Run anyway. Windows 11 only; Windows 10 untested.
+
+---
+
 # Beam 0.1.0 — early preview
 
 A small floating bar for Windows 11 that holds media controls, a file shelf, a timer, and a month calendar. One click opens the panel; everything stays on your machine.

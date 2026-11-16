@@ -4,9 +4,9 @@ Beam is an offline Windows 11 floating capsule for media controls, a file shelf,
 
 ## Get the app
 
-Download `Beam-0.1.0.exe` from the [v0.1.0 release](https://github.com/kwakhare5/beam/releases/tag/v0.1.0) or from [beamm.vercel.app](https://beamm.vercel.app). It is portable — no installer, no admin.
+Download `Beam-Setup-0.1.1.exe` from the [v0.1.1 release](https://github.com/kwakhare5/beam/releases/tag/v0.1.1) or from [beamm.vercel.app](https://beamm.vercel.app). It is a one-click installer — no admin prompt — that adds Beam to your Start Menu and desktop.
 
-The exe is unsigned, so Windows SmartScreen shows "Windows protected your PC" on first launch — More info → Run anyway. Beam needs Windows 11; Windows 10 is untested.
+The installer is unsigned, so Windows SmartScreen shows "Windows protected your PC" on first launch — More info → Run anyway. Beam needs Windows 11; Windows 10 is untested.
 
 To build it yourself: `npm install`, `npm run build`, publish the helper, then `npm run dist` (electron-builder, per-user one-click NSIS installer). `Beam-Setup-<version>.exe` lands in `release\` and carries `app.asar`, `BeamBridge.exe`, and the tray icon; installing creates Start Menu and desktop shortcuts and an entry in Windows Apps. On a machine where a file scanner locks the freshly unpacked Electron inside the repo, point the output elsewhere: `npx electron-builder --config.directories.output=%TEMP%\beam-release`.
 

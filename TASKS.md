@@ -72,7 +72,8 @@ The app is built and `v0.1.0` is published. The last full suite run was green at
 ## C3. Installed-app distribution (2026-11-16, directed by Karan)
 
 - [x] **C3.1 Installer build** — replace the portable exe with a per-user one-click NSIS installer (`electron-builder.yml`): Start Menu + desktop shortcut, Apps list entry, launches after install. A fresh install opens the panel once (`isFirstRun()` in `settings.ts`, packaged builds only) so the pill is never the only thing a new user sees.
-- [ ] **C3.2 Publish v0.1.1** — bump the version, rebuild, publish `Beam-Setup-0.1.1.exe` to GitHub, and update the site download link, changelog, and status copy from "portable exe" to the installer in the same step. Not started; needs Karan's go for the release and push.
+- [x] **C3.2 Publish v0.1.1** — bump the version, rebuild, publish `Beam-Setup-0.1.1.exe` to GitHub, and update the site download link, changelog, and status copy from "portable exe" to the installer in the same step.
+- _Proved 2026-11-16:_ release https://github.com/kwakhare5/beam/releases/tag/v0.1.1 carries `Beam-Setup-0.1.1.exe` (140,818,841 B ≈ 141 MB). Silent `/S` install proved: shortcuts target the installed exe, HKCU uninstall entry `Beam 0.1.1`, first-run panel opens (`is-open`, Music), settings hint reads "Move the bar back to its default spot". Clean idle measure: helper 48.2 MB, app ~101 MB, 0% CPU, 0 sockets, 0 processes left after kill. Installed footprint 422,801,836 B ≈ 423 MB. Site copy flipped to installer (nav/hero/section CTAs all "Download", FAQ uninstall + size answers, changelog 2026-11-16 entry); 17/17 rendered copy checks pass against the rebuilt export.
 
 ## I. UI trust pass (approved 2026-11-04)
 

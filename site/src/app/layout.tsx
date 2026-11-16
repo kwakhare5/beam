@@ -1,6 +1,7 @@
 import type { Metadata, Viewport } from 'next';
 import { Analytics } from '@vercel/analytics/next';
 import { siteGraph } from '../components/structured-data';
+import { OG_ALT } from '../lib/page-meta';
 import './globals.css';
 
 const site = 'https://beamm.vercel.app';
@@ -19,7 +20,7 @@ export const metadata: Metadata = {
     siteName: 'beam.',
     title,
     description,
-    images: [{ url: '/og.png', width: 1200, height: 630, alt: 'beam. — music, files, time — all in one place.' }],
+    images: [{ url: '/og.png', width: 1200, height: 630, alt: OG_ALT }],
   },
   twitter: {
     card: 'summary_large_image',

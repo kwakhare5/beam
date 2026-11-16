@@ -1,5 +1,5 @@
 import Link from 'next/link';
-import { REPO } from '../content/site';
+import { REPO, DOWNLOAD_URL } from '../content/site';
 import { StarLogo } from './brand';
 
 export function Subpage({ children }: { children: React.ReactNode }) {
@@ -16,19 +16,11 @@ export function Subpage({ children }: { children: React.ReactNode }) {
               demo
             </Link>
             <a
-              href={REPO}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="hidden transition-colors hover:text-ink min-[420px]:block"
-            >
-              github
-            </a>
-            <Link
-              href="/#download"
+              href={DOWNLOAD_URL}
               className="rounded-lg bg-ink px-3 py-1.5 font-medium text-white transition-colors hover:bg-black sm:px-3.5"
             >
-              get beam
-            </Link>
+              Download
+            </a>
           </div>
         </nav>
       </header>

@@ -2,6 +2,9 @@ import { CalendarDays, FolderOpen, Music2, Timer } from 'lucide-react';
 
 export const REPO = 'https://github.com/kwakhare5/beam';
 
+export const VERSION = 'v0.1.1';
+export const DOWNLOAD_URL = `${REPO}/releases/download/v0.1.1/Beam-Setup-0.1.1.exe`;
+
 export const FEATURES = [
   {
     icon: Music2,
@@ -58,7 +61,13 @@ export const FAQ = [
   },
   {
     question: 'How do I remove it?',
-    answer: 'Delete the exe. To clear the saved position too, delete %APPDATA%\\Beam.'
+    answer:
+      'Open Settings, then Apps, then Installed apps, find Beam, and choose Uninstall. Your saved settings stay in %APPDATA%\\Beam until you delete that folder yourself.'
+  },
+  {
+    question: 'How big is it?',
+    answer:
+      'About 141 MB to download and 423 MB installed. Beam ships a browser engine and a small Windows helper inside it; the app’s own code is under 1 MB. While running it uses about 100 MB of memory and no network.'
   },
   {
     question: 'Does the demo send anything?',

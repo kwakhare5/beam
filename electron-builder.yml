@@ -1,5 +1,7 @@
 appId: com.beam.app
 productName: Beam
+electronLanguages:
+  - en-US
 directories:
   output: release
 files:
