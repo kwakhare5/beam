@@ -12,6 +12,14 @@ extraResources:
   - from: assets/tray.ico
     to: tray.ico
 win:
-  target: portable
+  target: nsis
   icon: build/icon.png
-artifactName: Beam-${version}.exe
+artifactName: Beam-Setup-${version}.${ext}
+nsis:
+  oneClick: true
+  perMachine: false
+  createDesktopShortcut: true
+  createStartMenuShortcut: true
+  shortcutName: Beam
+  runAfterFinish: true
+  deleteAppDataOnUninstall: false

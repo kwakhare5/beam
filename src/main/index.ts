@@ -3,7 +3,7 @@ import { join } from 'node:path';
 import { Bridge, type HelperEvent } from './bridge';
 import { BeamTimer } from './timer';
 import { IPC, type TimerSnapshot } from '../shared/ipc';
-import { getSettingsPath, loadSettings, saveSettings, SETTINGS_DEFAULTS, type BeamSettings } from './settings';
+import { getSettingsPath, isFirstRun, loadSettings, saveSettings, SETTINGS_DEFAULTS, type BeamSettings } from './settings';
 import { helperPath, trayIconPath } from './paths';
 import { createTray } from './tray';
 import {
@@ -317,6 +317,15 @@ if (!gotLock) {
         near = false;
         pollNear();
       });
+      if (app.isPackaged && isFirstRun()) {
+        window.webContents.once('did-finish-load', () => {
+          setTimeout(() => {
+            if (window.isDestroyed() || hiddenByFullscreen || hiddenByUser) return;
+            console.log('[panel] first run welcome');
+            openPanel();
+          }, 400);
+        });
+      }
       window.once('closed', () => clearInterval(nearPoll));
       const showPill = (source: string): void => {
         if (window.isDestroyed()) return;

@@ -52,7 +52,7 @@ The app is built and `v0.1.0` is published. The last full suite run was green at
 - [ ] **R7 Remaining proofs** — *Depends on: C1. Blocked: no multi-monitor or 100/150% hardware; Windows 10 untested.*
   - Calendar midnight drift (5.3), locale week start and year boundaries, multi-monitor and 100/150% if hardware allows (otherwise mark blocked, do not tick). Windows 10 stays unproven.
 - [x] **R8 Packaging** — *Depends on: R7.*
-  - `npm run dist` packs the already-built `dist/` plus `BeamBridge.exe` and `tray.ico` into a portable exe in `release` (electron-builder.yml); the helper publish and `npm run build` must run first. The proof is manual — the suite does not run dist. Published 2026-11-15 as `v0.1.0`; a rebuild needs the helper publish and `npm run build` first.
+  - `npm run dist` packs the already-built `dist/` plus `BeamBridge.exe` and `tray.ico` into a portable exe in `release` (electron-builder.yml); the helper publish and `npm run build` must run first. The proof is manual — the suite does not run dist. Published 2026-11-15 as `v0.1.0`; a rebuild needs the helper publish and `npm run build` first. Superseded 2026-11-16 by C3.1: the target is now a per-user NSIS installer.
   - _Built 2026-11-15:_ `release/Beam-0.1.0.exe`, 137.4 MB, portable target, app icon from `build/icon.png`. Resources carry `app.asar`, `BeamBridge.exe`, and `tray.ico`; launching the exe started 4 Beam processes plus the helper and stayed up.
   - _Environment note:_ electron-builder's unpack step fails inside `D:\Beam` with `EPERM`/`EBUSY` on `resources/default_app.asar` because a scanner holds the fresh file; the same command with `--config.directories.output=<outside the workspace>` completes. This is a local lock, not a config defect.
   - _Not covered by verify:_ the suite still does not run `dist`, so the packaged launch is a manual proof. Adding it would make the gate depend on a 5-minute build and on this machine's scanner behaviour.
@@ -67,7 +67,12 @@ The app is built and `v0.1.0` is published. The last full suite run was green at
 - [x] **C2.3 Verification skill** — created `.agents/skills/verify-beam/` with `SKILL.md`, a Node CDP helper, and a six-feature map; `verify.ps1` stays retired.
 - [x] **C2.4 Docs and site truth** — AGENTS, README, ARCHITECTURE, DESIGN, TASKS, release notes, about, press, FAQ, download footnote, and changelog now state the published `v0.1.0` and the new verification path.
 - _Proved 2026-11-15:_ typecheck, app build, and site build exit 0. The new skill's panel journey opened the 420×284 panel on Music, switched to Calendar (`March 2027`), clicked Today (`November 2026`), Next (`December 2026`), Today (`November 2026`), captured `.scratch/verify/proof-2026-11-15/shot-panel-calendar.png`, and Escape closed it. A launch/stop smoke test after the helper fix passed.
-- _Still open:_ 9.2, 9.4, 9.9, R7; the site copy is built but not deployed.
+- _Still open at the time:_ 9.2, 9.4, 9.9, R7. All three 9.x items were closed later that day with real journeys (JOURNAL 154–157); the site is deployed from `main`.
+
+## C3. Installed-app distribution (2026-11-16, directed by Karan)
+
+- [x] **C3.1 Installer build** — replace the portable exe with a per-user one-click NSIS installer (`electron-builder.yml`): Start Menu + desktop shortcut, Apps list entry, launches after install. A fresh install opens the panel once (`isFirstRun()` in `settings.ts`, packaged builds only) so the pill is never the only thing a new user sees.
+- [ ] **C3.2 Publish v0.1.1** — bump the version, rebuild, publish `Beam-Setup-0.1.1.exe` to GitHub, and update the site download link, changelog, and status copy from "portable exe" to the installer in the same step. Not started; needs Karan's go for the release and push.
 
 ## I. UI trust pass (approved 2026-11-04)
 

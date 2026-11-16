@@ -25,6 +25,12 @@ export const SETTINGS_DEFAULTS = {
   theme: 'dark' as Theme
 };
 
+let firstRun = false;
+
+export function isFirstRun(): boolean {
+  return firstRun;
+}
+
 export function getSettingsPath(): string {
   const override = process.env.BEAM_SETTINGS_PATH;
   if (override && override.length > 0) return override;
@@ -66,7 +72,8 @@ export function loadSettings(): BeamSettings {
     };
   } catch (error) {
     const code = (error as NodeJS.ErrnoException).code;
-    if (code !== 'ENOENT') console.log('[settings] unreadable, starting from defaults');
+    if (code === 'ENOENT') firstRun = true;
+    else console.log('[settings] unreadable, starting from defaults');
     return defaults;
   }
 }
