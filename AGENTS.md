@@ -7,7 +7,7 @@ Global rules: read C:\Users\kwakh\.agents\AGENTS.md first. This file adds projec
 - Capsule (2026-11-11 final): Every state hugs its content with equal 8px padding and the star + label centered as one unit; idle 78×30, files 80–88, music/paused 69–108, timer 122 with always-visible 28px cancel, done 108 with Done + ×, drag 88, error 127, quiet 26×26. Music snaps to 126×30 on hover/focus with four 24px controls (prev, play/pause, next, panel); art/title fade. Quiet shrinks after 10s idle; cursor within 37px wakes it, quiets 2s after leaving. Fullscreen hides pill; tray restores it.
 - Panel: 452×316 (420×284 body) opens with ~150ms grow, closes on Esc, outside click, tray click, or 16px margin. Five tabs: Music (148px art, player with seek slider), Files (drop/picker, stat rows, copy, drag-out, remove/Undo, Clear All), Timer (presets/custom, main-owned deadline, chime + notification), Calendar (month nav, Today), and Settings (theme, chime volume, startup, hotkey rebind, reset).
 - Helper: `native/BeamBridge/` is a windowless C# .NET 10 self-contained single-file helper behind stdio JSON lines; owns SMTC, clipboard CF_HDROP, and fullscreen detection.
-- Site: `site/` is the public Next static export at beamm.vercel.app with the `v0.1.1` installer download live on GitHub.
+- Site: `site/` is the public Next static export at beamm.vercel.app with the `v0.1.1` installer download live on GitHub; the release carries `SHA256SUMS.txt` (sha256 `b35d680fdc85a389202f31322668ad7e8ded62b947771e1765e356d6f9d4b27f`) and the FAQ, README, and release notes explain how to verify it.
 - What is out of scope: Cloud sync, user accounts, networking, TCP ports, Windows 10 multi-monitor unproven scaling.
 
 ## 2. Stack and commands
@@ -66,7 +66,7 @@ Global rules: read C:\Users\kwakh\.agents\AGENTS.md first. This file adds projec
 - `showcase/`: Canonical app preview (`app-preview.html`).
 
 ## 8. Open decisions
-- Queue R7: Hardware-blocked testing (multi-monitor, 100/150% scaling, Windows 10).
+- Queue R7: Hardware-blocked testing (multi-monitor, 100/150% scaling, Windows 10); the display journey was attempted 2026-11-17 and aborted because Windows reported one display.
 
 ## 9. Do not touch
 - `assets/mascot/` — Finalized brand assets.

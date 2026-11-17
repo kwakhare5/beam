@@ -51,6 +51,7 @@ The app is built and `v0.1.0` is published. The last full suite run was green at
 
 - [ ] **R7 Remaining proofs** — *Depends on: C1. Blocked: no multi-monitor or 100/150% hardware; Windows 10 untested.*
   - Calendar midnight drift (5.3), locale week start and year boundaries, multi-monitor and 100/150% if hardware allows (otherwise mark blocked, do not tick). Windows 10 stays unproven.
+  - _Attempted 2026-11-17:_ the display journey (`verify-beam/features/displays.md`) aborted with `NO SECOND DISPLAY` — Windows reported only DISPLAY1 (1536×864 DIP), so the second monitor was not connected or not set to Extend. Scaling change not attempted (needs a display-settings change). Midnight drift, week start, and year boundaries were already proven 2026-11-15. R7 stays blocked; rerun displays.md once the second display is visible.
 - [x] **R8 Packaging** — *Depends on: R7.*
   - `npm run dist` packs the already-built `dist/` plus `BeamBridge.exe` and `tray.ico` into a portable exe in `release` (electron-builder.yml); the helper publish and `npm run build` must run first. The proof is manual — the suite does not run dist. Published 2026-11-15 as `v0.1.0`; a rebuild needs the helper publish and `npm run build` first. Superseded 2026-11-16 by C3.1: the target is now a per-user NSIS installer.
   - _Built 2026-11-15:_ `release/Beam-0.1.0.exe`, 137.4 MB, portable target, app icon from `build/icon.png`. Resources carry `app.asar`, `BeamBridge.exe`, and `tray.ico`; launching the exe started 4 Beam processes plus the helper and stayed up.

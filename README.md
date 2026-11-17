@@ -8,6 +8,8 @@ Download `Beam-Setup-0.1.1.exe` from the [v0.1.1 release](https://github.com/kwa
 
 The installer is unsigned, so Windows SmartScreen shows "Windows protected your PC" on first launch — More info → Run anyway. Beam needs Windows 11; Windows 10 is untested.
 
+Check your download: the release carries `SHA256SUMS.txt`. Run `Get-FileHash .\Beam-Setup-0.1.1.exe -Algorithm SHA256` and compare; the expected hash is `b35d680fdc85a389202f31322668ad7e8ded62b947771e1765e356d6f9d4b27f`.
+
 To build it yourself: `npm install`, `npm run build`, publish the helper, then `npm run dist` (electron-builder, per-user one-click NSIS installer). `Beam-Setup-<version>.exe` lands in `release\` and carries `app.asar`, `BeamBridge.exe`, and the tray icon; installing creates Start Menu and desktop shortcuts and an entry in Windows Apps. On a machine where a file scanner locks the freshly unpacked Electron inside the repo, point the output elsewhere: `npx electron-builder --config.directories.output=%TEMP%\beam-release`.
 
 To run from source instead: `npm install`, `npm run build`, then `npm start`.

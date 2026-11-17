@@ -11,6 +11,8 @@ Same app as 0.1.0, now delivered like a normal Windows app.
 
 Measured on the reference machine (125% scaling, Windows 11): helper 48.2 MB working set, app ~101 MB, 0% CPU idle, 0 TCP sockets. Unsigned, so SmartScreen asks once: More info → Run anyway. Windows 11 only; Windows 10 untested.
 
+Verify the download: `SHA256SUMS.txt` is attached to the release. Run `Get-FileHash .\Beam-Setup-0.1.1.exe -Algorithm SHA256`; the expected hash is `b35d680fdc85a389202f31322668ad7e8ded62b947771e1765e356d6f9d4b27f`.
+
 ---
 
 # Beam 0.1.0 — early preview

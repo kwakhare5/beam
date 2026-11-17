@@ -70,6 +70,11 @@ export const FAQ = [
       'About 141 MB to download and 423 MB installed. Beam ships a browser engine and a small Windows helper inside it; the app’s own code is under 1 MB. While running it uses about 100 MB of memory and no network.'
   },
   {
+    question: 'How do I check my download?',
+    answer:
+      'The release page includes SHA256SUMS.txt. In PowerShell, run Get-FileHash .\\Beam-Setup-0.1.1.exe -Algorithm SHA256 and compare the result with the hash in that file; they must match exactly. The current hash is b35d680fdc85a389202f31322668ad7e8ded62b947771e1765e356d6f9d4b27f.'
+  },
+  {
     question: 'Does the demo send anything?',
     answer: 'No. The demo runs the app’s panel in this page with two local audio files, and dropped files stay in the browser. The site uses Vercel’s cookie-free analytics; every other request is for the site’s own files.'
   },
