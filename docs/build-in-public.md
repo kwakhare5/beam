@@ -7,18 +7,31 @@ keeps its real context. Each post is under 280 characters (checked mechanically)
 How to use
 - One post per day at most. Silence beats filler.
 - Attach the proof named in each post. Where it says "capture needed", take it before posting.
+- Proof images are committed in `docs/build-in-public/` and linked from each post that has one.
+  Click a link to view or download the file, then attach it to the post.
 - Links go in the first reply only, and only where the post gives a reason to download.
   Release: https://github.com/kwakhare5/beam/releases/tag/v0.1.1
   Site:    https://beamm.vercel.app
 - Never claim users, downloads, stars, or feedback — none are evidenced yet.
 - End-of-post limit lines are part of the post. Do not cut them to save characters.
 
+Attached images (7 files, all in docs/build-in-public/):
+- site-faq-size.png — post 1 (captured live 2026-11-17)
+- install-first-launch.png — posts 3 and 4
+- pill-connection-lost.png — post 16
+- pill-idle.png — post 17 (idle state only)
+- site-demo-hero.png — post 21
+- add-files-picked.png — post 24
+- og-card.png — post 26
+Everything else is text-only or marked "capture needed"; the early scratch screenshots were
+deleted in the 2026-11-06 and 2026-11-15 cleanups, so those stories cite numbers, not images.
+
 Already drafted this session and unchanged: posts 1, 2, 3.
 
 
 === POST 1 — the honest size story ===
 source: JOURNAL 159 · v0.1.1 release · 140,818,841-byte installer, 0.33 MB app code
-attach: screenshot of the live FAQ "How big is it?" answer on beamm.vercel.app (capture needed)
+attach: [docs/build-in-public/site-faq-size.png](build-in-public/site-faq-size.png) — live FAQ "How big is it?" answer, captured 2026-11-17
 limit line: unsigned — SmartScreen warns once
 first reply (optional): https://beamm.vercel.app
 score: 9/10
@@ -49,7 +62,7 @@ still 141 MB to download.
 
 === POST 3 — it installs like a real app now ===
 source: JOURNAL 158–159 · v0.1.1 · first-run panel proof
-attach: 5–15s silent recording of install → first launch; fallback .scratch/verify/installer/shot-firstrun-panel.png
+attach: [docs/build-in-public/install-first-launch.png](build-in-public/install-first-launch.png) — the installed app's first-run panel, 452×316 on Music; a 5–15s install → launch recording would be better
 limit line: windows 11 only; other display scales untested
 first reply: https://github.com/kwakhare5/beam/releases/tag/v0.1.1 and ask if the first screen makes sense
 score: 8/10 (9 with the recording)
@@ -65,7 +78,7 @@ windows 11 only; other display scales untested.
 
 === POST 4 — the installed app that exited on launch ===
 source: JOURNAL 158 · stray dev instance held the single-instance lock
-attach: none needed (text story); screenshot of the first-run panel works as support
+attach: [docs/build-in-public/install-first-launch.png](build-in-public/install-first-launch.png) — the panel that opened once the lock was free
 limit line: the trap is structural — dev and packaged builds share one folder name
 score: 8/10
 
@@ -245,7 +258,7 @@ fixed with a 2s watchdog that ends the process if the helper won't stop. 0 proce
 
 === POST 16 — the hung helper ===
 source: JOURNAL 117 · 8s rejection measured at 8010ms; restart max 3 per 60s
-attach: none needed
+attach: [docs/build-in-public/pill-connection-lost.png](build-in-public/pill-connection-lost.png) — the bar's state when the helper is dead and copy fails
 limit line: a wedged helper is replaced, not diagnosed
 score: 8/10
 
@@ -260,7 +273,7 @@ a deliberately hung helper was rejected in 8010ms.
 
 === POST 17 — one rule instead of a width table ===
 source: JOURNAL 132–134 · measured: idle 78, files 80–88, music 69–108, timer 122, done 108
-attach: screenshot of the canonical preview capsule row (capture needed: npm run ui)
+attach: [docs/build-in-public/pill-idle.png](build-in-public/pill-idle.png) — the idle state; the full width row still needs a `npm run ui` preview capture
 limit line: measured on one display, at 125%
 score: 9/10
 
@@ -320,7 +333,7 @@ a 6px ring still belongs to beam.
 
 === POST 21 — the demo is the real code ===
 source: JOURNAL 100, 156 · site demo imports src/renderer/ui + styles.css
-attach: screenshot of the demo and the app side by side
+attach: [docs/build-in-public/site-demo-hero.png](build-in-public/site-demo-hero.png) — the live demo on the landing page, built from the app's own UI code
 limit line: desktop-only features are labelled, not faked
 score: 9/10
 
@@ -365,7 +378,7 @@ fix: skip the render when markup is unchanged. other re-render paths deserve the
 
 === POST 24 — the dialog your tests can't see ===
 source: JOURNAL 154 · native #32770 dialog owned by the Electron pid
-attach: .scratch/verify/pick-2026-11-15/shot-files-picked.png (exists)
+attach: [docs/build-in-public/add-files-picked.png](build-in-public/add-files-picked.png) — one file added through the real native picker
 limit line: the check needs a real desktop
 score: 8/10
 
@@ -395,7 +408,7 @@ deploy ready in 18s.
 
 === POST 26 — social card from real html ===
 source: JOURNAL 129 · real pill markup at exact 2x, 216×60
-attach: the OG image itself
+attach: [docs/build-in-public/og-card.png](build-in-public/og-card.png) — the card itself
 limit line: it's a static render
 score: 7/10
 
