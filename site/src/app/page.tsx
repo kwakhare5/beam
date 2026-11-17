@@ -45,11 +45,12 @@ export default function HomePage() {
           <p className="text-[15px] text-muted">Beam is a free, offline Windows 11 app that sits above your taskbar.</p>
 
           <h1 className="relative mt-8 inline-block text-[clamp(2.2rem,5.6vw,3.9rem)] font-semibold leading-[1] sm:mt-9">
-            meet beam.
+            meet
             <StarLogo
-              size={56}
-              className="star-logo absolute -right-1 -top-4 h-10 w-10 sm:-right-2 sm:-top-6 sm:h-14 sm:w-14"
+              size={44}
+              className="mx-1 inline-block h-[0.72em] w-[0.72em] align-[-0.06em]"
             />
+            beam.
           </h1>
 
           <p className="mt-3 text-[20px] font-medium text-ink sm:text-[22px]">
