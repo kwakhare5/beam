@@ -31,7 +31,6 @@ Global rules: read C:\Users\kwakh\.agents\AGENTS.md first. This file adds projec
   - Shelf wiped on quit by design; must warn while non-empty.
   - Fullscreen hide needs helper alive. Helper restarts max 3 times in 60s, rejects after 8s, caps stdout at 16M chars.
   - Track active or foreign session changes idle pill & quiet checks; artwork travels as base64 in `music.changed`.
-  - Music ignores social/video session apps (instagram, tiktok, youtube, facebook) and browser sessions that do not report both artist and album; a current ignored session falls through to the newest allowed playing session. Proved 2026-11-18: Spotify Web and YouTube Music pass, regular YouTube videos and songs do not.
   - Window clipped to pill + 6px halo with `setShape`. Window bounds settled outer: 136×45 at 125% with 136×44 content rect. Move with `setBounds`, never `setPosition`.
   - Saved position is outer top-left; restore only if intersecting current display, else anchor primary display.
   - RAM budget: helper ≤60 MB, app ≤130 MB, CPU <5%, zero TCP sockets.
