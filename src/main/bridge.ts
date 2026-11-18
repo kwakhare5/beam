@@ -1,4 +1,5 @@
 import { spawn, type ChildProcess } from 'node:child_process';
+import type { SearchResult } from '../shared/ipc';
 
 const REQUEST_TIMEOUT_MS = 8000;
 const MAX_BUFFER_CHARS = 16 * 1024 * 1024;
@@ -13,6 +14,9 @@ type HelperReply = {
   ok?: boolean;
   error?: string;
   sessions?: MusicSessionRow[];
+  results?: unknown[];
+  indexing?: boolean;
+  count?: number;
 };
 
 export type MusicSessionRow = { index: number; app: string; title: string; playing: boolean; current: boolean };
@@ -115,6 +119,32 @@ export class Bridge {
     const request = { app, ...(index === undefined ? {} : { index }), ...(title === undefined ? {} : { title }) };
     const reply = await this.send('music.pick', request);
     if (reply.ok !== true) throw new Error(reply.error ?? 'helper refused to pick that session');
+  }
+
+  async search(query: string): Promise<{ results: SearchResult[]; indexing: boolean; count: number }> {
+    const reply = await this.send('search.query', { query });
+    const results: SearchResult[] = [];
+    if (Array.isArray(reply.results)) {
+      for (const row of reply.results) {
+        if (!row || typeof row !== 'object') continue;
+        const candidate = row as { kind?: unknown; name?: unknown; detail?: unknown; launch?: unknown };
+        const kind = candidate.kind === 'app' || candidate.kind === 'file' || candidate.kind === 'folder' ? candidate.kind : null;
+        if (!kind) continue;
+        if (typeof candidate.name !== 'string' || typeof candidate.detail !== 'string') continue;
+        if (typeof candidate.launch !== 'string' || candidate.launch.length === 0) continue;
+        results.push({ kind, name: candidate.name, detail: candidate.detail, launch: candidate.launch });
+      }
+    }
+    return {
+      results,
+      indexing: reply.indexing === true,
+      count: typeof reply.count === 'number' ? reply.count : 0
+    };
+  }
+
+  async searchRefresh(): Promise<void> {
+    const reply = await this.send('search.refresh');
+    if (reply.ok !== true) throw new Error(reply.error ?? 'helper refused the refresh');
   }
 
   stop(): Promise<void> {

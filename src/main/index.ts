@@ -83,7 +83,10 @@ if (!gotLock) {
   }
   let fullscreenActive = false;
   const shelf = new Shelf();
-  const panel = new PanelController(() => win, () => pillPosition, () => shelf.rows(), applyWindowShape);
+  let refreshSearch = (): void => {};
+  const panel = new PanelController(() => win, () => pillPosition, () => shelf.rows(), applyWindowShape, () =>
+    refreshSearch()
+  );
   const openPanel = (tab?: 'settings'): void => panel.show(tab);
   const closePanel = (): void => panel.hide();
   let settings: BeamSettings = { version: 1, position: null, ...SETTINGS_DEFAULTS };
@@ -191,6 +194,12 @@ if (!gotLock) {
         });
     }
   );
+
+  refreshSearch = () => {
+    void bridge.searchRefresh().catch((error: unknown) => {
+      console.error(`[search] refresh failed ${error instanceof Error ? error.message : String(error)}`);
+    });
+  };
 
   const harnessCtx: import('./dev/harness').HarnessContext = {
     window: () => win,

@@ -1,4 +1,4 @@
-import type { AddResult, CopyResult, FileChange, HelperState, MusicState, SettingsPatch, SettingsSnapshot, ShelfFile, TimerSnapshot } from '../shared/ipc';
+import type { AddResult, CopyResult, FileChange, HelperState, MusicState, SearchReply, SettingsPatch, SettingsSnapshot, ShelfFile, TimerSnapshot } from '../shared/ipc';
 
 export type BeamApi = {
   getPathForFile(file: File): string;
@@ -30,6 +30,8 @@ export type BeamApi = {
   onSettingsState(callback: (state: SettingsSnapshot) => void): void;
   musicCommand(cmd: 'toggle' | 'next' | 'prev'): Promise<{ ok: boolean; error?: string }>;
   musicSeek(positionMs: number): Promise<{ ok: boolean; error?: string }>;
+  search(query: string): Promise<SearchReply>;
+  openSearchResult(launch: string, reveal: boolean): Promise<{ ok: boolean; error?: string }>;
   reportPanelTiming(ms: number, reduced: boolean): void;
 };
 

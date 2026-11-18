@@ -167,7 +167,7 @@ Rules: helper never prints anything else to stdout (stderr is for logs). Any mal
 
 ## 5. Seam B — Main ⇄ Renderer (IPC)
 
-All channels prefixed `beam:`. Renderer can call, main can push. The 29 channel names and payload types (`ShelfFile`, `AddResult`, `CopyResult`, `FileChange`, `MusicState`, `HelperState`, `TimerSnapshot`, `SettingsSnapshot`, `SettingsPatch`, `SettingsResult`) live in `src/shared/ipc.ts`; `main/index.ts`, `preload/index.ts`, and the renderer import them, so a channel rename fails the typecheck instead of drifting.
+All channels prefixed `beam:`. Renderer can call, main can push. The 31 channel names and payload types (`ShelfFile`, `AddResult`, `CopyResult`, `FileChange`, `MusicState`, `HelperState`, `TimerSnapshot`, `SettingsSnapshot`, `SettingsPatch`, `SettingsResult`, `SearchResult`, `SearchReply`) live in `src/shared/ipc.ts`; `main/index.ts`, `preload/index.ts`, and the renderer import them, so a channel rename fails the typecheck instead of drifting.
 
 | Direction | Channel | Purpose | State |
 |---|---|---|---|

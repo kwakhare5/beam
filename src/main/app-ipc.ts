@@ -1,6 +1,7 @@
-import { BrowserWindow, dialog, ipcMain, nativeImage } from 'electron';
+import { BrowserWindow, dialog, ipcMain, nativeImage, shell } from 'electron';
 import { statSync } from 'node:fs';
-import { IPC, type AddResult, type CopyResult, type ShelfFile, type TimerSnapshot } from '../shared/ipc';
+import { spawn } from 'node:child_process';
+import { IPC, type AddResult, type CopyResult, type SearchReply, type SearchResultKind, type ShelfFile, type TimerSnapshot } from '../shared/ipc';
 import { MAX_SHELF, type Shelf } from './shelf';
 import { trayIconPath } from './paths';
 import type { Bridge } from './bridge';
@@ -34,6 +35,60 @@ function readPoint(x: unknown, y: unknown): { x: number; y: number } | null {
 
 export function registerAppIpc(deps: AppIpcDeps): void {
   const { window, shelf, bridge, timer, music } = deps;
+  let searchLaunches = new Map<string, SearchResultKind>();
+
+  ipcMain.handle(IPC.searchQuery, async (event, query: unknown): Promise<SearchReply> => {
+    if (event.sender !== window.webContents) {
+      return { results: [], indexing: false, count: 0, error: 'untrusted sender' };
+    }
+    const text = typeof query === 'string' ? query.slice(0, 200) : '';
+    try {
+      const reply = await bridge.search(text);
+      searchLaunches = new Map(reply.results.map((result) => [result.launch, result.kind]));
+      console.log(`[search] query chars=${text.length} rows=${reply.results.length} count=${reply.count} indexing=${reply.indexing}`);
+      return reply;
+    } catch (error) {
+      const message = error instanceof Error ? error.message : String(error);
+      searchLaunches = new Map();
+      console.error(`[search] query failed ${message}`);
+      return { results: [], indexing: false, count: 0, error: message };
+    }
+  });
+
+  ipcMain.handle(IPC.searchOpen, async (event, payload: unknown): Promise<{ ok: boolean; error?: string }> => {
+    if (event.sender !== window.webContents) return { ok: false, error: 'untrusted sender' };
+    const data = payload as { launch?: unknown; reveal?: unknown } | null;
+    const launch = typeof data?.launch === 'string' ? data.launch : '';
+    const reveal = data?.reveal === true;
+    const kind = searchLaunches.get(launch);
+    if (!kind) {
+      console.error('[search] open rejected: result is not from the latest search');
+      return { ok: false, error: 'result is not from the latest search' };
+    }
+    try {
+      if (kind === 'app') {
+        if (!reveal) {
+          if (launch.toLowerCase().endsWith('.lnk')) {
+            const failure = await shell.openPath(launch);
+            if (failure) throw new Error(failure);
+          } else {
+            spawn('explorer.exe', [`shell:AppsFolder\\${launch}`], { detached: true, stdio: 'ignore' }).unref();
+          }
+        }
+      } else if (reveal) {
+        shell.showItemInFolder(launch);
+      } else {
+        const failure = await shell.openPath(launch);
+        if (failure) throw new Error(failure);
+      }
+      console.log(`[search] open kind=${kind} reveal=${reveal} ok=true`);
+      return { ok: true };
+    } catch (error) {
+      const message = error instanceof Error ? error.message : String(error);
+      console.error(`[search] open kind=${kind} reveal=${reveal} ok=false ${message}`);
+      return { ok: false, error: message };
+    }
+  });
 
   ipcMain.on(IPC.windowDragStart, (event, x: unknown, y: unknown) => {
     const point = readPoint(x, y);

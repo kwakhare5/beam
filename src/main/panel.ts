@@ -9,7 +9,8 @@ export class PanelController {
     private readonly window: () => BrowserWindow | null,
     private readonly pillBounds: () => Rectangle,
     private readonly rows: () => ShelfFile[],
-    private readonly shape: (target: BrowserWindow) => void
+    private readonly shape: (target: BrowserWindow) => void,
+    private readonly onOpen: () => void = () => {}
   ) {}
 
   get open(): boolean {
@@ -34,6 +35,7 @@ export class PanelController {
     console.log(`[panel] bounds=${bounds.x},${bounds.y},${bounds.width},${bounds.height}`);
     window.focus();
     window.webContents.send(IPC.panelOpen, this.rows(), tab);
+    this.onOpen();
   }
 
   hide(): void {

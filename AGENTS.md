@@ -22,7 +22,7 @@ Global rules: read C:\Users\kwakh\.agents\AGENTS.md first. This file adds projec
 - Environment variable names: None (offline). `BEAM_*` test harness flags owned in `src/main/dev/harness.ts`.
 
 ## 3. Project rules
-- Data contract: Main ⇄ helper is stdio JSON lines only. `src/shared/ipc.ts` owns the 29 IPC channels and payload types.
+- Data contract: Main ⇄ helper is stdio JSON lines only. `src/shared/ipc.ts` owns the 31 IPC channels and payload types.
 - Invariants and gotchas:
   - Keep renderer untrusted: Context isolation on, nodeIntegration off. Everything touching Win32 goes through the helper.
   - Alt+Space default hotkey steals system window menu while Beam runs; fallback to Ctrl+Shift+Space on error.

@@ -18,6 +18,22 @@ export type CopyResult = { ok: boolean; error?: string };
 
 export type FileChange = { ok: boolean; files: ShelfFile[] };
 
+export type SearchResultKind = 'app' | 'file' | 'folder';
+
+export type SearchResult = {
+  kind: SearchResultKind;
+  name: string;
+  detail: string;
+  launch: string;
+};
+
+export type SearchReply = {
+  results: SearchResult[];
+  indexing: boolean;
+  count: number;
+  error?: string;
+};
+
 export type MusicState = {
   title: string;
   artist: string;
@@ -66,6 +82,8 @@ export const IPC = {
   musicCommand: 'beam:music:command',
   musicSeek: 'beam:music:seek',
   musicState: 'beam:music:state',
+  searchQuery: 'beam:search:query',
+  searchOpen: 'beam:search:open',
   helperState: 'beam:helper:state',
   timerStart: 'beam:timer:start',
   timerCancel: 'beam:timer:cancel',

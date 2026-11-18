@@ -6,6 +6,7 @@ import {
   type FileChange,
   type HelperState,
   type MusicState,
+  type SearchReply,
   type SettingsPatch,
   type SettingsResult,
   type SettingsSnapshot,
@@ -60,5 +61,8 @@ contextBridge.exposeInMainWorld('beam', {
   musicCommand: (cmd: 'toggle' | 'next' | 'prev'): Promise<{ ok: boolean; error?: string }> =>
     ipcRenderer.invoke(IPC.musicCommand, cmd),
   musicSeek: (positionMs: number): Promise<{ ok: boolean; error?: string }> =>
-    ipcRenderer.invoke(IPC.musicSeek, positionMs)
+    ipcRenderer.invoke(IPC.musicSeek, positionMs),
+  search: (query: string): Promise<SearchReply> => ipcRenderer.invoke(IPC.searchQuery, query),
+  openSearchResult: (launch: string, reveal: boolean): Promise<{ ok: boolean; error?: string }> =>
+    ipcRenderer.invoke(IPC.searchOpen, { launch, reveal })
 });
