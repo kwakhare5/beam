@@ -125,7 +125,7 @@ Light overrides every color token in the `[data-theme='light']` block of `tokens
 - **Motion Scale:** 120ms capsule hover color and art/title fade, the music expansion snaps with no width animation, a 1.4s-delayed title marquee that pauses on hover, 150ms panel grow, 100ms press (`scale(0.96)`). Beam always runs its own motion and ignores `prefers-reduced-motion`, because this machine has Windows animations off and honoring it made the panel open read as a hard snap (decision 2026-10-29).
 - **Public API:** `src/renderer/ui/index.ts` exports the pure HTML component functions (`pill`, `transportControls`, `panel`, `iconSprite`) and the bind helpers (`bindMarquee`, `bindPanelTabs`, `bindMusicSeek`, and the Files bindings). `middleTruncate` lives in `ui/shared/format.ts` and is not re-exported.
 - **Code Architecture:** `ui/capsule/` owns the capsule, `ui/panel/` owns the shell and tab navigation, `ui/panel/tabs/` owns one module per tab, and `ui/shared/` owns escaping, formatting, icons, and the mascot path. `src/shared/ipc.ts` owns the 31 IPC channel names and the payload types shared by main, preload, and renderer.
-- **Styles Architecture:** One file per component under `src/renderer/styles/`: `tokens.css`, `base.css`, `capsule.css`, `panel/shell.css`, `panel/body.css`, `controls/buttons.css`, `controls/fields.css`, `controls/indicators.css`, and one file per tab under `tabs/`.
+- **Styles Architecture:** One file per component under `src/renderer/styles/`: `tokens.css`, `base.css`, `capsule.css`, `panel/shell.css`, `panel/body.css`, `panel/search.css`, `controls/buttons.css`, `controls/fields.css`, `controls/indicators.css`, and one file per tab under `tabs/`.
 
 ---
 

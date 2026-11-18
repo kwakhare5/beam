@@ -1,6 +1,6 @@
 # Beam
 
-Beam is an offline Windows 11 floating capsule for media controls, a file shelf, a timer, and a calendar. No cloud, no accounts, no network.
+Beam is an offline Windows 11 floating capsule for media controls, a file shelf, a timer, a calendar, and instant search. No cloud, no accounts, no network.
 
 ## Get the app
 
@@ -21,7 +21,8 @@ To run from source instead: `npm install`, `npm run build`, then `npm start`.
 - **Files:** drop or Add files, per-row copy, drag-out to Explorer, missing badge, row remove with 5s Undo, armed Clear All, 50-entry in-memory cap.
 - **Music:** live SMTC title, art, dot, the expanded hover row, and the Music tab with a real seek slider. Sessions are picked automatically and last-touched switching is proven by check 24; any SMTC source shows, including regular YouTube songs and videos (no source filter).
 - **Timer and Calendar:** 5/10/25/custom countdown on the tab and pill with a main-owned deadline, cancel and replace, done face with one chime and one Windows notification (fires while the pill is hidden), month grid with arrows and Today. The deadline and alert path are proven by checks 28–29; the calendar locale, week-start, and midnight cases are proven by check 25.
-- **Glue and access:** a rest click opens the panel to what the pill shows (Music, Timer, Files, otherwise last-used), `Alt+Space` (fallback `Ctrl+Shift+Space`), keyboard pill control plus the hover row's four tab stops, one 2px focus ring, a live region, and Beam's own motion regardless of the OS reduced-motion flag.
+- **Search:** `Alt+Space` opens the panel with a focused field; one ranked list shows installed apps plus files and folders from Desktop, Documents, Downloads, Pictures, Videos, and Music (names and paths only, cap 8). Up/Down selects, Enter opens, Shift+Enter reveals a file, Esc returns to the tabs and a second Esc closes. A background in-memory index rebuilds at launch and again when the panel opens; Windows Search is not used. Proven 2026-11-18 (JOURNAL 167–170).
+- **Glue and access:** a rest click opens the panel to what the pill shows (Music, Timer, Files, otherwise last-used), `Alt+Space` opens search (fallback `Ctrl+Shift+Space`), keyboard pill control plus the hover row's four tab stops, one 2px focus ring, a live region, and Beam's own motion regardless of the OS reduced-motion flag.
 - **Landing site:** live at `beamm.vercel.app`, running the real renderer as a browser demo.
 
 **Proof gaps**
@@ -29,7 +30,7 @@ To run from source instead: `npm install`, `npm run build`, then `npm start`.
 
 ## Verification
 
-`.agents/skills/verify-beam/` drives the real app through a small CDP helper. Read its `SKILL.md`, run the doctor, and drive only the feature you changed. The last full suite run (2026-11-15) was green at 30/30 with no skips and is recorded in JOURNAL 151; the old single-file runner is retired. The skill's feature map covers the capsule, panel and tabs, Files, Music, Timer, and Settings. OS seams — Explorer drops, clipboard, tray, hotkey, fullscreen, native dialogs — use real Windows input, not CDP.
+`.agents/skills/verify-beam/` drives the real app through a small CDP helper. Read its `SKILL.md`, run the doctor, and drive only the feature you changed. The last full suite run (2026-11-15) was green at 30/30 with no skips and is recorded in JOURNAL 151; the old single-file runner is retired. The skill's feature map covers the capsule, panel and tabs, Files, Music, Search, Timer, and Settings. OS seams — Explorer drops, clipboard, tray, hotkey, fullscreen, native dialogs — use real Windows input, not CDP.
 
 ## Commands
 

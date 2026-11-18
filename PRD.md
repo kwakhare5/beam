@@ -59,15 +59,25 @@ Beam is a lightweight floating Windows 11 capsule that keeps media controls, a m
   - 100% offline, zero account sign-ins, zero sync requirements.
 
 ### 6. Smart Contextual Tab Switching
-- **User Flow:** User clicks the pill or hits the global hotkey → Beam opens to what the pill shows: Timer while a countdown runs or is done, Music while a session exists, Files when the shelf holds rows, otherwise the last-used tab.
+- **User Flow:** User clicks the pill or the tray → Beam opens to what the pill shows: Timer while a countdown runs or is done, Music while a session exists, Files when the shelf holds rows, otherwise the last-used tab. `Alt+Space` always opens search with the field focused.
 - **Acceptance Criteria:**
   - Panel automatically displays the active tab without requiring manual tab navigation.
+  - The global hotkey opens search, never a tab; a pill or tray click never starts in search.
+
+---
+
+### 7. Search
+- **User Flow:** Press `Alt+Space` anywhere in Windows and type a name. One ranked list shows installed apps plus files and folders from Desktop, Documents, Downloads, Pictures, Videos, and Music. Up/Down selects, Enter opens, Shift+Enter reveals a file in Explorer, Esc returns to the tabs and a second Esc closes the panel.
+- **Acceptance Criteria:**
+  - Results update while typing from an in-memory index built at launch; a file added later is found after the panel reopens.
+  - One list capped at 8 rows; exact, starts-with, word-start, and contains match in that order; apps win ties.
+  - Empty, no-results, indexing, and helper-down states each show their own line.
+  - Names and folder paths only — file contents are never read and Windows Search is never used. Zero network.
 
 ---
 
 ## 4. What We Are NOT Building (Out of Scope for v1)
-- **App Launcher / Switcher:** Promoted into v1 by Karan on 2026-11-18; spec pending.
-- **File Search (Name & Content):** Promoted into v1 by Karan on 2026-11-18; spec pending.
+- **File Content Search:** Search indexes names and paths only; reading inside files is out of scope.
 - **Clipboard History Manager:** Cut to future releases.
 - **Cloud Accounts, Sync & Multi-Device Sharing:** Fully out of scope; Beam is 100% offline.
 - **Music Scrubbing / Timeline Seeker:** Delivered on 2026-11-08 (U2); seeking goes through SMTC and the bar reports the accepted position.

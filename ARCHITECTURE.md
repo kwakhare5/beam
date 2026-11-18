@@ -94,6 +94,7 @@ D:\Beam
 │   │   │   │   ├── panel.ts  shell + tab host
 │   │   │   │   ├── tab-nav.ts    tab click + keyboard behavior
 │   │   │   │   ├── tab-meta.ts   Tab type + tab registry
+│   │   │   │   ├── search.ts    search layer, ranked rows, empty states
 │   │   │   │   └── tabs/     music, files, timer, calendar, settings
 │   │   │   ├── shared/
 │   │   │   │   ├── icons.ts  Lucide sprite + icon()
@@ -104,7 +105,7 @@ D:\Beam
 │   │   │   └── index.ts      public component API
 │   │   ├── styles.css        CSS entry (@import)
 │   │   ├── styles/           tokens, base, capsule
-│   │   │   ├── panel/        shell, body
+│   │   │   ├── panel/        shell, body, search
 │   │   │   ├── controls/     buttons, fields, indicators
 │   │   │   └── tabs/         music, files, timer, calendar, settings
 │   │   ├── renderer.ts       pill rendering, pointer gestures, beam wiring
@@ -113,12 +114,13 @@ D:\Beam
 │   │   ├── api.ts            BeamApi type + window.beam declaration
 │   │   ├── files.ts          shelf rows, undo, status, drop target
 │   │   ├── music.ts          music view, null hold, local tick, seek
+│   │   ├── search.ts         search mode: query, arrows, open, exit
 │   │   ├── quiet.ts          quiet timer
 │   │   ├── settings.ts       settings state, chord capture, rebind
 │   │   └── assets.d.ts       .svg/.woff2 module declarations
 │   └── shared/
 │       └── ipc.ts            channel names + payload types
-├── native/BeamBridge/        .NET 10 console, stdio JSON lines, ping, SMTC music events + PNG art, CF_HDROP clipboard, fullscreen detection; 9.8 MB private idle (2026-11-15)
+├── native/BeamBridge/        .NET 10 console, stdio JSON lines, ping, SMTC music events + PNG art, CF_HDROP clipboard, fullscreen detection, in-memory app/file search index; 9.8 MB private idle (2026-11-15)
 ├── assets/
 │   ├── mascot/*.svg          shipped
 │   ├── fonts/                InterVariable.woff2 + OFL.txt
@@ -144,6 +146,8 @@ Requests (main → helper), each with an `id`:
 | `music.pick` | `app: string` | ok / error; sends a real play/pause to that player so Windows marks it current; only when `BEAM_MUSIC_SESSIONS_TEST=1` |
 | `files.copy` | `paths: string[]` | ok / error |
 | `fullscreen.get` | — | `{ active, rect }` |
+| `search.query` | `query: string` | `{ results: [{ kind, name, detail, launch }], indexing, count }`; cap 8 |
+| `search.refresh` | — | ok / error; rebuilds the index in the background |
 | `ping` | — | `{ pong, version }` |
 
 Events (helper → main), unsolicited, no `id`:
@@ -162,6 +166,8 @@ Rules: helper never prints anything else to stdout (stderr is for logs). Any mal
 **Clipboard:** Windows keeps `CF_HDROP` alive only while the owning process lives. The helper owns the clipboard, so a helper crash breaks paste until it restarts. Accepted; covered by a restart test in task 8.1. Built at 0.4b: `DROPFILES` + double-null UTF-16 paths in moveable global memory, five clipboard-open retries; data is rendered immediately, so it survives the helper exiting.
 
 **Fullscreen:** detection listens to foreground changes, `EVENT_OBJECT_LOCATIONCHANGE` on the foreground window, and a 1s fallback poll. Foreground events alone miss a video that goes fullscreen inside an already-focused window. Built at 0.5 in `native/BeamBridge/FullscreenWatcher.cs` on its own message-loop thread: both hooks are out-of-context, the foreground window's DWM frame bounds are compared to its monitor with a 2px tolerance, and maximized, cloaked, shell, and own-process windows are ignored so a maximized window never counts. It emits `fullscreen.changed { active }` on a flip only, and answers `fullscreen.get` from a live probe. Proved 2026-10-31 with a real borderless window grown from 600×400 to 1920×1080 and back: `active:true` then `false` with the same foreground handle throughout (verify check 14).
+
+**Search:** `native/BeamBridge/SearchIndex.cs` builds an in-memory list at helper start in the background: Store apps through `PackageManager` app-list entries, Start-menu shortcuts from both Programs folders, and every file and folder under Desktop, Documents, Downloads, Pictures, Videos, and Music (hidden, system, and reparse entries skipped). Matching is by name: exact, starts-with, word-start, contains, then folder path; apps win ties; the reply caps at 8. `search.refresh` rebuilds the list, and main fires it when the panel goes from closed to open so a new download is findable. Main keeps the latest launches and rejects a `beam:search:open` for any row it did not just show; apps launch through `explorer.exe shell:AppsFolder\<AUMID>`, files and folders through `shell.openPath`, and Shift+Enter reveals a file with `shell.showItemInFolder`. Names and paths only; contents are never read. Spec and proof: `docs/search-spec.md`, JOURNAL 167–170.
 
 ---
 
@@ -345,11 +351,11 @@ UI decisions: ADR-0001 (component boundaries), ADR-0002 (original mascot), ADR-0
 
 Last status audit: 2026-11-18.
 
-**Built and proven:** every feature in TASKS blocks A–F and Settings; the 2026-11-15 suite run was green at 30/30 with no skips (JOURNAL 151). The Add files picker and the quit confirm were proven 2026-11-15 (JOURNAL 154–155); resources were measured 2026-11-17 (JOURNAL 160). `v0.1.1` installs per-user and opens the panel on first run; the release carries `SHA256SUMS.txt`.
+**Built and proven:** every feature in TASKS blocks A–F and Settings; the 2026-11-15 suite run was green at 30/30 with no skips (JOURNAL 151). The Add files picker and the quit confirm were proven 2026-11-15 (JOURNAL 154–155); resources were measured 2026-11-17 (JOURNAL 160). Search shipped in v1: index, IPC, panel UI, and the journey (JOURNAL 167–170). `v0.1.1` installs per-user and opens the panel on first run; the release carries `SHA256SUMS.txt`.
 
 **Blocked:** R7 multi-monitor restore, 100/150% scaling, and Windows 10; no hardware for the first two.
 
-**Verification:** `.agents/skills/verify-beam/` is the current proof path: `SKILL.md`, a feature map (capsule, panel and tabs, files, music, timer, settings, resources, displays), and a Node CDP helper. The old 30-check single-file runner is retired; its green run remains historical evidence.
+**Verification:** `.agents/skills/verify-beam/` is the current proof path: `SKILL.md`, a feature map (capsule, panel and tabs, files, music, search, timer, settings, resources, displays), and a Node CDP helper. The old 30-check single-file runner is retired; its green run remains historical evidence.
 
 **Packaging:** `extraResources` lists `BeamBridge.exe` and `tray.ico`, and `src/main/paths.ts` resolves them when packaged. `npm run dist` only calls electron-builder, so the helper publish and `npm run build` must run first. `v0.1.1` (140,818,841 B ≈ 141 MB) is published at https://github.com/kwakhare5/beam/releases/tag/v0.1.1 with `SHA256SUMS.txt` and linked from the site. The local `release/` output was deleted after publishing; rebuild it when needed.
 

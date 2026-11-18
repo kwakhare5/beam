@@ -89,9 +89,9 @@ Spec: `docs/search-spec.md`. One ticket at a time, top unchecked box first.
 - [x] **S3 Panel search UI** — *Depends on: S2.*
   - DESIGN: field and result rows at 420×284. `Alt+Space` opens the panel with the field focused; typing replaces the tabs with the ranked list; arrows, Enter, Shift+Enter, Esc (clear, then close); empty query restores the previous tab; indexing, no-results, and helper-down states; the matching state is added to `showcase/app-preview.html` in the same task at the measured sizes.
   - _Proved 2026-11-18:_ live CDP run: `Alt+Space` opened `{"open":true,"search":true,"layerHidden":false,"focused":"search-input"}`; typing `notepad` showed the single row `["Notepad"]`; Enter launched Notepad (PID 25932) and dismissed the panel (`{"open":false,"search":false}`); reopening and typing `zzzz-no-result` then Esc returned `{"open":true,"search":false,"tab":"tab-music"}`, and a second Esc closed (`{"open":false}`). Shift+Enter on the fixture `beamreveal5184.txt` logged `[search] open kind=file reveal=true ok=true` and Explorer showed a Documents window. Preview at 418×282 client: `isSearch:true`, 4 rows, Notepad selected, no overflow (`.scratch/verify/search-ui/preview-search.png`).
-- [ ] **S4 Search verification and docs** — *Depends on: S3.*
+- [x] **S4 Search verification and docs** — *Depends on: S3.*
   - Add `features/search.md` with real fixture files in Documents and cleanup; record JOURNAL; sync AGENTS, README, ARCHITECTURE, and DESIGN.
-  - _Verify:_ the search journey passes with pasted rows and screenshots; typecheck and build green.
+  - _Proved 2026-11-18:_ fresh journey run: hotkey `{"open":true,"search":true,"focused":"search-input"}`; rows `["beamsearch-2026.txt","beamsearch-folder-2026"]` with selection `0 → 1 → 0`; Shift+Enter `[search] open kind=file reveal=true ok=true`; no-results text `No results for “zzzz-no-result”`; Esc `{"open":true,"search":false,"tab":"tab-music"}` then `{"open":false}`; Notepad opened (`kind=app`, pid 33832) and closed; fixtures removed. Screenshots in `.scratch/verify/search-journey-2026-11-18/`; typecheck and build green. Docs synced; JOURNAL 170.
 
 ## I. UI trust pass (approved 2026-11-04)
 
