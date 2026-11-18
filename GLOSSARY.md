@@ -38,6 +38,22 @@ _Avoid_: hover button, hidden control
 
 ## Structure
 
+**Search**:
+The panel mode where a typed query replaces the tab body with one ranked list of apps, files, and folders.
+_Avoid_: spotlight, launcher, quick search
+
+**Search query**:
+The text typed into the search field; it matches names and folder paths only, never file contents.
+_Avoid_: keyword, filter
+
+**Search index**:
+The in-memory list of Start-menu apps and the files and folders inside the six user folders, rebuilt at launch and refreshed whenever the panel opens.
+_Avoid_: cache, database
+
+**Search result**:
+One app, file, or folder row in the search list, selected with the arrow keys and opened with Enter.
+_Avoid_: hit, match, item
+
 **Tab**:
 A content area in the panel: Music, Files, Timer, Calendar, or Settings.
 _Avoid_: page, screen

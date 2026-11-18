@@ -76,6 +76,23 @@ The app is built and `v0.1.1` ships as a per-user one-click installer whose rele
 - [x] **C3.2 Publish v0.1.1** — bump the version, rebuild, publish `Beam-Setup-0.1.1.exe` to GitHub, and update the site download link, changelog, and status copy from "portable exe" to the installer in the same step.
 - _Proved 2026-11-16:_ release https://github.com/kwakhare5/beam/releases/tag/v0.1.1 carries `Beam-Setup-0.1.1.exe` (140,818,841 B ≈ 141 MB). Silent `/S` install proved: shortcuts target the installed exe, HKCU uninstall entry `Beam 0.1.1`, first-run panel opens (`is-open`, Music), settings hint reads "Move the bar back to its default spot". Clean idle measure: helper 48.2 MB, app ~101 MB, 0% CPU, 0 sockets, 0 processes left after kill. Installed footprint 422,801,836 B ≈ 423 MB. Site copy flipped to installer (nav/hero/section CTAs all "Download", FAQ uninstall + size answers, changelog 2026-11-16 entry); 17/17 rendered copy checks pass against the rebuilt export.
 
+## S. Search (v1, approved 2026-11-18)
+
+Spec: `docs/search-spec.md`. One ticket at a time, top unchecked box first.
+
+- [ ] **S1 Helper search index** — *Depends on: nothing.*
+  - Build an in-memory index in the helper at startup: every Start-menu app (shortcut and Store) and every file and folder under Desktop, Documents, Downloads, Pictures, Videos, Music; skip hidden, system, and reparse points. Rank exact, starts-with, word-start, contains, then path; apps win ties; cap 8. Add `search.query { query }` and `search.refresh` over stdio; replies carry `{ results, indexing, count }`.
+  - _Verify:_ standalone helper probe: `notepad` returns Notepad first, a fixture file in Documents returns by name, and a refresh sees a new file; helper private bytes stay under 60 MB.
+- [ ] **S2 Search IPC and launch** — *Depends on: S1.*
+  - Add the shared types and `beam:search:query` (renderer → main), relay it to `search.query`, send `search.refresh` whenever the panel opens, and launch results from main: apps through `shell:AppsFolder`, files and folders through their default app or Explorer; Shift+Enter reveals.
+  - _Verify:_ typecheck passes; a main-side probe returns the S1 rows; launching a throwaway text file opens its default app.
+- [ ] **S3 Panel search UI** — *Depends on: S2.*
+  - DESIGN: field and result rows at 420×284. `Alt+Space` opens the panel with the field focused; typing replaces the tabs with the ranked list; arrows, Enter, Shift+Enter, Esc (clear, then close); empty query restores the previous tab; indexing, no-results, and helper-down states; the matching state is added to `showcase/app-preview.html` in the same task at the measured sizes.
+  - _Verify:_ CDP run: focus, type, rows, selection, open, reveal, Esc; preview matches at the measured sizes.
+- [ ] **S4 Search verification and docs** — *Depends on: S3.*
+  - Add `features/search.md` with real fixture files in Documents and cleanup; record JOURNAL; sync AGENTS, README, ARCHITECTURE, and DESIGN.
+  - _Verify:_ the search journey passes with pasted rows and screenshots; typecheck and build green.
+
 ## I. UI trust pass (approved 2026-11-04)
 
 These run before the phase tasks, as previous UI passes did. The canonical preview keeps every state; the app only shows what works. 2.4/2.5 proof is part of 9.9.
