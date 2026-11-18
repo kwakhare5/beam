@@ -37,6 +37,9 @@ internal static class Program
             Protocol.Log($"fullscreen unavailable: {ex.Message}");
         }
 
+        var search = new SearchIndex();
+        search.Start();
+
         try
         {
             while (Console.In.ReadLine() is { } line)
@@ -95,6 +98,13 @@ internal static class Program
                         break;
                     case "music.pick" when sessionsTest:
                         PickMusic(request, watcher);
+                        break;
+                    case "search.query":
+                        ReplySearch(request, search);
+                        break;
+                    case "search.refresh":
+                        _ = search.RebuildAsync();
+                        Protocol.Emit(new JsonObject { ["id"] = request["id"]?.DeepClone(), ["ok"] = true });
                         break;
                     case "fullscreen.get":
                         ReplyFullscreen(request, fullscreen);
@@ -211,6 +221,16 @@ internal static class Program
             ["id"] = request["id"]?.DeepClone(),
             ["sessions"] = sessions
         });
+    }
+
+    private static void ReplySearch(JsonObject request, SearchIndex index)
+    {
+        var query = string.Empty;
+        if (request["query"] is JsonValue value && value.TryGetValue<string>(out var text))
+        {
+            query = text ?? string.Empty;
+        }
+        Protocol.Emit(index.Query(request["id"]?.DeepClone(), query));
     }
 
     private static void PickMusic(JsonObject request, MusicWatcher watcher)

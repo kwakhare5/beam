@@ -80,9 +80,9 @@ The app is built and `v0.1.1` ships as a per-user one-click installer whose rele
 
 Spec: `docs/search-spec.md`. One ticket at a time, top unchecked box first.
 
-- [ ] **S1 Helper search index** — *Depends on: nothing.*
+- [x] **S1 Helper search index** — *Depends on: nothing.*
   - Build an in-memory index in the helper at startup: every Start-menu app (shortcut and Store) and every file and folder under Desktop, Documents, Downloads, Pictures, Videos, Music; skip hidden, system, and reparse points. Rank exact, starts-with, word-start, contains, then path; apps win ties; cap 8. Add `search.query { query }` and `search.refresh` over stdio; replies carry `{ results, indexing, count }`.
-  - _Verify:_ standalone helper probe: `notepad` returns Notepad first, a fixture file in Documents returns by name, and a refresh sees a new file; helper private bytes stay under 60 MB.
+  - _Proved 2026-11-18:_ standalone stdio probe on the rebuilt helper: index ready at `count=770`; `notepad` returned `{"kind":"app","name":"Notepad","launch":"Microsoft.WindowsNotepad_8wekyb3d8bbwe!App"}` first; a fixture file in Documents returned by name with its folder; after `search.refresh` the count was 771 and a file created after the first build was found; an empty query returned 0 rows; helper private bytes 13.8 MB / 60.
 - [ ] **S2 Search IPC and launch** — *Depends on: S1.*
   - Add the shared types and `beam:search:query` (renderer → main), relay it to `search.query`, send `search.refresh` whenever the panel opens, and launch results from main: apps through `shell:AppsFolder`, files and folders through their default app or Explorer; Shift+Enter reveals.
   - _Verify:_ typecheck passes; a main-side probe returns the S1 rows; launching a throwaway text file opens its default app.
