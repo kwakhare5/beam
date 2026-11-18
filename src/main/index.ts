@@ -87,7 +87,7 @@ if (!gotLock) {
   const panel = new PanelController(() => win, () => pillPosition, () => shelf.rows(), applyWindowShape, () =>
     refreshSearch()
   );
-  const openPanel = (tab?: 'settings'): void => panel.show(tab);
+  const openPanel = (tab?: 'settings', search = false): void => panel.show(tab, search);
   const closePanel = (): void => panel.hide();
   let settings: BeamSettings = { version: 1, position: null, ...SETTINGS_DEFAULTS };
   let pillPosition: Electron.Rectangle = {
@@ -396,6 +396,16 @@ if (!gotLock) {
         if (panel.open) closePanel();
         else openPanel();
       };
+      const hotkeyToggle = (): void => {
+        if (window.isDestroyed()) return;
+        if (!window.isVisible()) {
+          showPill('hotkey');
+          if (!panel.open) openPanel(undefined, true);
+          return;
+        }
+        if (panel.open) closePanel();
+        else openPanel(undefined, true);
+      };
       onFullscreen = (active: boolean): void => {
         if (window.isDestroyed()) return;
         if (active) {
@@ -475,7 +485,7 @@ if (!gotLock) {
         () => quitWithConfirm()
       );
       console.log('[tray] ready');
-      const hotkey = registerHotkey(trayToggle, settings.shortcut || DEFAULT_HOTKEY);
+      const hotkey = registerHotkey(hotkeyToggle, settings.shortcut || DEFAULT_HOTKEY);
       settings.startup = isStartupEnabled();
       if (hotkey && hotkey !== settings.shortcut) {
         settings.shortcut = hotkey;

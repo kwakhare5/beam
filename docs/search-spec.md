@@ -8,12 +8,12 @@ Replace Windows search with a fast, correct one inside Beam. Press `Alt+Space`, 
 
 ## 2. User flow
 
-1. `Alt+Space` opens the panel with the search field focused. The cursor is in the field, ready to type.
-2. Typing replaces the tab body with one ranked list of apps, files, and folders. The tabs return when the query is cleared.
+1. `Alt+Space` opens the panel in search mode with the field focused. The cursor is ready to type; a pill click or the tray still opens the normal tabs.
+2. Typing replaces the tab bar with one ranked list of apps, files, and folders. The search field and list take the panel body.
 3. Arrow keys move the selection; the first row is selected by default.
 4. `Enter` opens the selection: apps launch, files open in their default app, folders open in Explorer.
 5. `Shift+Enter` reveals a file or folder in Explorer. On an app row it does nothing.
-6. `Esc` clears the query and returns to the tab you came from. `Esc` again closes the panel.
+6. `Esc` leaves search mode and restores the tab you came from. `Esc` again closes the panel.
 7. Closing and reopening the panel refreshes the index, so new and deleted files appear without an app restart.
 
 ## 3. Scope
@@ -55,14 +55,15 @@ Apps win ties against files. Within the same rank, shorter names first, then alp
 
 ## 6. UI
 
-- A single search field at the top of the panel, above the tab body, using existing DESIGN tokens: 28px height, 8px radius, `--control` fill, Lucide search glyph.
-- While the query is non-empty the tabs hide and the result list fills the body: icon, name, and a muted path or app label. One selection highlight, keyboard-first.
-- Empty query restores the tab that was open before typing.
+- A single 32px search field at the top of the panel, above the result list, using existing DESIGN tokens: `--control` fill, 8px radius, 14px search glyph, 13px text.
+- Search mode replaces the tab bar and tab body; the field and ranked list fill the 420×284 panel.
+- While the query is non-empty the result list fills the body: 14px type icon, 13px name, and an 11px muted folder path or `App`. One selection highlight (`--surface-hover`), keyboard-first.
+- An empty query shows a centered hint, not a stale result list.
 - The panel still never takes focus from startup or the tray; only the `Alt+Space` press focuses the field.
 - Loading, empty, and error states:
   - Indexing: rows stream in, `indexing…` note at the bottom.
   - No matches: "No results for <query>" inside the panel body.
-  - Index unavailable (helper down): "Search is offline" with the existing connection-lost language.
+  - Index unavailable (helper down): "Search is offline" inside the panel body.
 
 ## 7. Data contract
 

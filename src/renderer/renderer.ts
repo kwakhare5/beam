@@ -394,7 +394,7 @@ if (app && beam) {
     pillEl.addEventListener('pointercancel', endPress);
   }
 
-  beam.onPanelOpen((files, tab) => view.open(files, tab));
+  beam.onPanelOpen((files, tab, search) => view.open(files, tab, search));
 
   beam.onPanelDismiss(() => view.dismiss());
 

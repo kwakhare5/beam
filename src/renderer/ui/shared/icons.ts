@@ -20,9 +20,16 @@ export type IconName =
   | 'plus'
   | 'chevronLeft'
   | 'chevronRight'
-  | 'chevronUp';
+  | 'chevronUp'
+  | 'search'
+  | 'app';
 
 type MediaName = 'play' | 'pause' | 'prev' | 'next';
+
+const EXTRA_PATHS: Partial<Record<IconName, string>> = {
+  search: '<circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/>',
+  app: '<rect x="2" y="4" width="20" height="16" rx="2"/><path d="M10 4v4"/><path d="M2 8h20"/><path d="M6 4v4"/>'
+};
 
 const MEDIA_PATHS: Record<MediaName, string> = {
   play: '<path d="M8 5v14l11-7z"/>',
@@ -37,7 +44,7 @@ export function icon(name: IconName, px?: number): string {
 
 function symbol(name: IconName): string {
   const media = MEDIA_PATHS[name as MediaName];
-  const inner = media ?? ICON_PATHS[name];
+  const inner = media ?? EXTRA_PATHS[name] ?? ICON_PATHS[name];
   const paint = media
     ? 'fill="currentColor" stroke="none"'
     : 'fill="none" stroke="currentColor" stroke-width="2"';
@@ -48,6 +55,7 @@ function symbol(name: IconName): string {
 export function iconSprite(): string {
   const names = [
     ...(Object.keys(ICON_PATHS) as IconName[]),
+    ...(Object.keys(EXTRA_PATHS) as IconName[]),
     ...(Object.keys(MEDIA_PATHS) as IconName[])
   ];
   const icons = names.map(symbol).join('');

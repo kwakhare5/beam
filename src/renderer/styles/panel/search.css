@@ -1,0 +1,146 @@
+/* ---------- search mode ---------- */
+
+.panel.is-search .tabs,
+.panel.is-search .panel-body {
+  display: none;
+}
+
+.panel-search {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  padding: var(--space-2);
+}
+
+.panel-search[hidden] {
+  display: none;
+}
+
+.search-field {
+  flex: none;
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  height: 32px;
+  padding: 0 var(--space-2);
+  border-radius: var(--r-control);
+  background: var(--control);
+  color: var(--muted-foreground);
+}
+
+.search-field:focus-within {
+  outline: 2px solid var(--ring);
+  outline-offset: 2px;
+}
+
+.search-field svg {
+  width: 14px;
+  height: 14px;
+  flex: none;
+}
+
+.search-input {
+  flex: 1;
+  min-width: 0;
+  height: 100%;
+  border: 0;
+  background: none;
+  outline: none;
+  font-family: inherit;
+  font-size: 13px;
+  color: var(--foreground);
+}
+
+.search-input::placeholder {
+  color: var(--muted-foreground);
+}
+
+.search-list {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  overflow-y: auto;
+}
+
+.search-row {
+  flex: none;
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  height: 32px;
+  padding: 0 var(--space-2);
+  border: 0;
+  border-radius: var(--r-control);
+  background: none;
+  font-family: inherit;
+  color: var(--foreground);
+  text-align: left;
+  cursor: default;
+  transition: background 120ms var(--ease), transform 100ms var(--ease-spring);
+}
+
+.search-row svg {
+  width: 14px;
+  height: 14px;
+  flex: none;
+  color: var(--muted-foreground);
+}
+
+.search-row:hover,
+.search-row[aria-selected='true'] {
+  background: var(--surface-hover);
+}
+
+.search-row:active {
+  transform: scale(0.99);
+}
+
+.search-row:focus-visible {
+  outline: 2px solid var(--ring);
+  outline-offset: -2px;
+}
+
+.search-name {
+  flex: 0 1 auto;
+  min-width: 0;
+  font-size: 13px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.search-detail {
+  flex: 1;
+  min-width: 0;
+  text-align: right;
+  font-size: 11px;
+  color: var(--muted-foreground);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.search-empty {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0 var(--space-4);
+  text-align: center;
+  font-size: 13px;
+  color: var(--muted-foreground);
+}
+
+.search-note {
+  flex: none;
+  min-height: 14px;
+  font-size: 11px;
+  color: var(--muted-foreground);
+}
+
+.search-note[hidden] {
+  display: none;
+}

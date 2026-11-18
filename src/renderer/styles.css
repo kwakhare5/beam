@@ -3,6 +3,7 @@
 @import './styles/capsule.css';
 @import './styles/panel/shell.css';
 @import './styles/panel/body.css';
+@import './styles/panel/search.css';
 @import './styles/controls/buttons.css';
 @import './styles/controls/fields.css';
 @import './styles/controls/indicators.css';

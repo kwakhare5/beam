@@ -430,6 +430,7 @@
         <button type="button" data-panel-key="timerDone" aria-pressed="false">Timer done</button>
         <button type="button" data-panel-key="calendar" aria-pressed="false">Calendar</button>
         <button type="button" data-panel-key="settings" aria-pressed="false">Settings</button>
+        <button type="button" data-panel-key="search" aria-pressed="false">Search</button>
       </div>
 
       <div class="g-panel-stage">
@@ -471,7 +472,7 @@
           <ul>
             <li>Capsule <code>quiet · idle · playing · paused · timer · done · files · drag · error</code></li>
             <li>Interaction <code>rest · hover · focus · pressed · disabled</code></li>
-            <li>Panel <code>empty · loading · success</code></li>
+            <li>Panel <code>empty · loading · success · search</code></li>
             <li>Capsule <code>1px</code> · panel <code>2px</code> focus</li>
             <li>Tab bar <code>four equal labeled tabs + a 28px icon-only Settings button; selected = gold + 2px underline, no fill</code></li>
             <li>Dots <code>green playing · amber paused · red missing</code></li>
@@ -594,6 +595,24 @@
       case 'timerRunning': return { tab: 'timer', data: { ...base, timer: { mode: 'running', digits: '07:42', note: 'Focus', preset: '10' } } };
       case 'timerDone': return { tab: 'timer', data: { ...base, timer: { mode: 'done', digits: '00:00', note: 'Timer finished' } } };
       case 'calendar': return { tab: 'calendar', data: base };
+      case 'search': return {
+        tab: 'music',
+        data: {
+          ...base,
+          search: {
+            active: true,
+            query: 'invoice',
+            selected: 0,
+            indexing: false,
+            results: [
+              { kind: 'app', name: 'Notepad', detail: 'App', launch: 'preview' },
+              { kind: 'file', name: 'invoice.pdf', detail: 'C:\\Users\\you\\Documents', launch: 'preview' },
+              { kind: 'file', name: 'invoice-2026.xlsx', detail: 'C:\\Users\\you\\Downloads', launch: 'preview' },
+              { kind: 'folder', name: 'invoices', detail: 'C:\\Users\\you\\Documents', launch: 'preview' }
+            ]
+          }
+        }
+      };
       default: return { tab: key, data: base };
     }
   }

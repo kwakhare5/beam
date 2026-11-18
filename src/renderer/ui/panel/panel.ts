@@ -1,6 +1,7 @@
 import { icon } from '../shared/icons';
 import type { Tab } from './tab-meta';
 import { CONTENT_TABS } from './tab-meta';
+import { searchLayer, type SearchData } from './search';
 import { calendarPanel } from './tabs/calendar';
 import { filesPanel, type FileRow } from './tabs/files';
 import { musicPanel, type MusicData } from './tabs/music';
@@ -13,6 +14,7 @@ export interface PanelData {
   timer: TimerData;
   calendar: { view: Date; today: Date };
   settings: SettingsData;
+  search?: SearchData;
   enabledTabs?: ReadonlyArray<Tab>;
 }
 
@@ -45,7 +47,8 @@ export function panel(tab: Tab, data: PanelData): string {
     enabled.includes('settings') ? settingsPanel(data.settings, active === 'settings') : ''
   ].join('');
 
-  return `<div class="panel" tabindex="-1">${tabs(active, enabled)}${bodies}</div>`;
+  return `<div class="panel${data.search?.active ? ' is-search' : ''}" tabindex="-1">${tabs(active, enabled)}${bodies}${searchLayer(data.search)}</div>`;
 }
 
 export { bindPanelTabs } from './tab-nav';
+export type { SearchData } from './search';

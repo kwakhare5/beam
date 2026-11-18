@@ -29,8 +29,10 @@ contextBridge.exposeInMainWorld('beam', {
   beginWindowDrag: (x: number, y: number): void => ipcRenderer.send(IPC.windowDragStart, x, y),
   moveWindowDrag: (x: number, y: number): void => ipcRenderer.send(IPC.windowDragMove, x, y),
   endWindowDrag: (x: number, y: number): void => ipcRenderer.send(IPC.windowDragEnd, x, y),
-  onPanelOpen: (callback: (files: ShelfFile[], tab?: 'settings') => void): void => {
-    ipcRenderer.on(IPC.panelOpen, (_event, files: ShelfFile[], tab?: 'settings') => callback(files, tab));
+  onPanelOpen: (callback: (files: ShelfFile[], tab?: 'settings', search?: boolean) => void): void => {
+    ipcRenderer.on(IPC.panelOpen, (_event, files: ShelfFile[], tab?: 'settings', search?: boolean) =>
+      callback(files, tab, search === true)
+    );
   },
   onPanelDismiss: (callback: () => void): void => {
     ipcRenderer.on(IPC.panelDismiss, () => callback());

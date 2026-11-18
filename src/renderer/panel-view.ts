@@ -14,6 +14,7 @@ import { beginClose, endClose, SURFACE_CLOSING_MS, SURFACE_COLLAPSE_MS, SURFACE_
 import { dayKey, shiftMonth } from './core/calendar';
 import { FileShelf } from './files';
 import { MusicSession } from './music';
+import { SearchView } from './search';
 import { SettingsController } from './settings';
 import type { BeamApi } from './api';
 import type { TimerView } from './timer-view';
@@ -39,6 +40,7 @@ export class PanelView {
   readonly music: MusicSession;
   readonly shelf: FileShelf;
   readonly settings: SettingsController;
+  readonly search: SearchView;
   private readonly app: HTMLElement | null;
   private readonly data: PanelData = {
     music: { title: '', subtitle: '', playing: false, positionMs: 0, durationMs: 0 },
@@ -91,6 +93,12 @@ export class PanelView {
       setPill: deps.setPill,
       showShelf: deps.showShelf
     });
+    this.search = new SearchView({
+      api: () => deps.api(),
+      panel: () => this.panelEl,
+      dismiss: () => this.dismiss(),
+      refresh: () => this.render()
+    });
     window.setInterval(() => this.music.tick(), 1000);
     window.setInterval(() => this.checkDay(), 30_000);
     document.body.addEventListener('click', (event) => {
@@ -109,8 +117,9 @@ export class PanelView {
     return this.settings.rebinding;
   }
 
-  open(files: ShelfFile[], tab?: 'settings'): void {
+  open(files: ShelfFile[], tab?: 'settings', search = false): void {
     this.cancelClose();
+    this.search.exit(false);
     this.deps.wake();
     this.active = tab ?? this.deps.openedTab(files.length);
     this.shelf.apply(files);
@@ -144,11 +153,12 @@ export class PanelView {
       el.focus({ preventScroll: true });
       el.addEventListener('transitionend', done);
       setTimeout(report, 260);
+      if (search) this.search.activate();
     });
   }
 
   render(): void {
-    if (!this.app) return;
+    if (!this.app || this.search.isActive) return;
     this.data.music = this.music.data;
     this.data.timer = this.deps.timer.data();
     this.data.calendar = { view: this.calendarView, today: new Date() };
@@ -167,6 +177,7 @@ export class PanelView {
 
   dismiss(): void {
     if (!this.isOpen()) return;
+    this.search.exit(false);
     this.cancelClose();
     beginClose(document.body);
     this.closingTimer = window.setTimeout(() => {
@@ -222,6 +233,7 @@ export class PanelView {
   private bind(wrap: HTMLElement): void {
     const api = this.deps.api();
     bindPanelTabs(wrap);
+    this.search.bind(wrap);
     bindMusicSeek(wrap, (positionMs) => (api ? this.music.seek(api, positionMs) : undefined));
     wrap.addEventListener('click', (event) => {
       const target = event.target;

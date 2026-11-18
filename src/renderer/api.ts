@@ -14,7 +14,7 @@ export type BeamApi = {
   beginWindowDrag(x: number, y: number): void;
   moveWindowDrag(x: number, y: number): void;
   endWindowDrag(x: number, y: number): void;
-  onPanelOpen(callback: (files: ShelfFile[], tab?: 'settings') => void): void;
+  onPanelOpen(callback: (files: ShelfFile[], tab?: 'settings', search?: boolean) => void): void;
   onPanelDismiss(callback: () => void): void;
   onMusicState(callback: (state: MusicState | null) => void): void;
   onHelperState(callback: (state: HelperState) => void): void;
