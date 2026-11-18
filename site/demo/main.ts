@@ -104,6 +104,8 @@ function close(): void {
   }, SURFACE_CLOSING_MS);
 }
 
+host.onCloseRequest(close);
+
 panelWrap.addEventListener('click', (event) => {
   const target = event.target;
   if (!(target instanceof Element)) return;

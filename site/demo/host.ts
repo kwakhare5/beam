@@ -2,13 +2,19 @@ type HostMessage = { source?: string; instance?: string; type?: string };
 
 export class DemoHost {
   private onResized: (() => void) | null = null;
+  private onClose: (() => void) | null = null;
   private readonly parent = window.parent !== window ? window.parent : null;
 
   constructor(private readonly instance: string) {
     window.addEventListener('message', (event) => {
       if (!this.parent || event.source !== this.parent) return;
       const data = event.data as HostMessage | null;
-      if (!data || data.source !== 'beam-host' || data.instance !== this.instance || data.type !== 'resized') return;
+      if (!data || data.source !== 'beam-host' || data.instance !== this.instance) return;
+      if (data.type === 'close') {
+        this.onClose?.();
+        return;
+      }
+      if (data.type !== 'resized') return;
       const run = this.onResized;
       this.onResized = null;
       run?.();
@@ -32,5 +38,9 @@ export class DemoHost {
 
   requestClosed(): void {
     this.parent?.postMessage({ source: 'beam-demo', instance: this.instance, type: 'closed' }, '*');
+  }
+
+  onCloseRequest(handler: () => void): void {
+    this.onClose = handler;
   }
 }
