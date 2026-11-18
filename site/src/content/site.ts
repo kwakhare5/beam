@@ -42,12 +42,21 @@ export const FAQ = [
     answer: 'No. There is no sign-in, no cloud, and no sync. The app makes no network requests.'
   },
   {
-    question: 'What does it store on my PC?',
+    question: 'Is beam free and open source?',
     answer:
-      'Your theme, volume, shortcut, startup choice, and the bar’s position live in %APPDATA%\\Beam\\settings.json. Files on the shelf are paths kept in memory, and they clear when you quit.'
+      'Yes. Beam is free, with no account, no ads, and no paid tier. The full source is on GitHub under the MIT license.'
   },
   {
-    question: 'Windows says it’s unsafe. What now?',
+    question: 'Does beam work offline?',
+    answer: 'Yes. The app makes no network requests. Only the download and this website need the internet.'
+  },
+  {
+    question: 'What does it store on my PC?',
+    answer:
+      'Your theme, volume, shortcut, startup choice, and the bar\'s position live in %APPDATA%\\Beam\\settings.json. Files on the shelf are paths kept in memory, and they clear when you quit.'
+  },
+  {
+    question: 'Windows says it\'s unsafe. What now?',
     answer:
       'The build is unsigned, so SmartScreen warns once. Choose More info, then Run anyway. The full source is on GitHub.'
   },
@@ -67,7 +76,7 @@ export const FAQ = [
   {
     question: 'How big is it?',
     answer:
-      'About 141 MB to download and 423 MB installed. Beam ships a browser engine and a small Windows helper inside it; the app’s own code is under 1 MB. While running it uses about 100 MB of memory and no network.'
+      'About 141 MB to download and 423 MB installed. The rest is the browser engine and the Windows helper. The app\'s own code is under 1 MB. While running it uses about 100 MB of memory and no network.'
   },
   {
     question: 'How do I check my download?',
@@ -76,7 +85,7 @@ export const FAQ = [
   },
   {
     question: 'Does the demo send anything?',
-    answer: 'No. The demo runs the app’s panel in this page with two local audio files, and dropped files stay in the browser. The site uses Vercel’s cookie-free analytics; every other request is for the site’s own files.'
+    answer: 'No. The demo runs the app\'s panel in this page with two local audio files, and dropped files stay in the browser. The site uses Vercel\'s cookie-free analytics; every other request is for the site\'s own files.'
   },
   {
     question: 'Can I copy files out of the demo?',

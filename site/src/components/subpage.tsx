@@ -47,20 +47,6 @@ export function Subpage({ children }: { children: React.ReactNode }) {
             </a>
           </div>
         </div>
-        <div className="mx-auto w-full max-w-4xl px-5 pb-7">
-          <p className="border-t border-hairline pt-4 text-[12px] text-muted">
-            Built by{' '}
-            <a
-              href="https://karan30.vercel.app"
-              target="_blank"
-              rel="noopener noreferrer"
-              className="font-medium text-ink underline decoration-hairline underline-offset-2 hover:no-underline"
-            >
-              Karan Wakhare
-            </a>
-            .
-          </p>
-        </div>
       </footer>
     </div>
   );

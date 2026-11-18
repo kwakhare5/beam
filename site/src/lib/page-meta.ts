@@ -1,10 +1,10 @@
 import type { Metadata } from 'next';
 
 export const SITE = 'https://beamm.vercel.app';
-export const OG_ALT = 'beam. — music, files, time — all using Alt + Space.';
+export const OG_ALT = 'beam. music, files, time, all using Alt + Space.';
 
 export function pageMetadata(title: string, description: string, path: string): Metadata {
-  const full = `${title} — beam.`;
+  const full = `${title} · beam.`;
   return {
     title,
     description,

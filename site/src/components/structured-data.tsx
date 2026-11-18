@@ -1,7 +1,8 @@
-import { FAQ } from '../content/site';
+import { FAQ, DOWNLOAD_URL, VERSION } from '../content/site';
 
 const SITE = 'https://beamm.vercel.app';
 const REPO = 'https://github.com/kwakhare5/beam';
+const APP_VERSION = VERSION.replace(/^v/, '');
 
 const ORGANIZATION = {
   '@context': 'https://schema.org',
@@ -40,9 +41,26 @@ const APP = {
   applicationCategory: 'UtilitiesApplication',
   applicationSubCategory: 'Desktop customization',
   operatingSystem: 'Windows 11',
-  softwareVersion: '0.1.0',
+  softwareVersion: APP_VERSION,
+  softwareRequirements: 'Windows 11',
+  fileSize: '141 MB',
+  datePublished: '2026-11-17',
+  dateModified: '2026-11-17',
+  inLanguage: 'en',
   isAccessibleForFree: true,
-  offers: { '@type': 'Offer', price: '0', priceCurrency: 'USD' },
+  downloadUrl: DOWNLOAD_URL,
+  installUrl: `${SITE}/#download`,
+  releaseNotes: `${SITE}/changelog`,
+  license: `${REPO}/blob/main/LICENSE`,
+  codeRepository: REPO,
+  author: { '@type': 'Person', name: 'Karan Wakhare', url: 'https://karan30.vercel.app' },
+  offers: {
+    '@type': 'Offer',
+    price: '0',
+    priceCurrency: 'USD',
+    availability: 'https://schema.org/InStock',
+    url: DOWNLOAD_URL
+  },
   featureList: [
     'Live media controls for the current Windows media session',
     'Album art and play, pause, previous, and next on the bar',

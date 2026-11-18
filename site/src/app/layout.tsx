@@ -5,13 +5,13 @@ import { OG_ALT } from '../lib/page-meta';
 import './globals.css';
 
 const site = 'https://beamm.vercel.app';
-const title = 'beam. — a free Windows 11 bar for music, files, and time.';
+const title = 'beam. a free Windows 11 bar for music, files, and time.';
 const description =
   'A tiny Windows 11 bar above your taskbar: live music controls, a file shelf, a countdown, and the month. Offline, one click away, never in the way.';
 
 export const metadata: Metadata = {
   metadataBase: new URL(site),
-  title: { default: title, template: '%s — beam.' },
+  title: { default: title, template: '%s · beam.' },
   description,
   icons: { icon: '/mascot.svg' },
   openGraph: {

@@ -19,7 +19,7 @@ const ENTRIES = [
     date: '2026-11-15',
     title: 'the windows build',
     items: [
-      'v0.1.0 is published as a portable Windows 11 exe — download it, run it, no installer.',
+      'v0.1.0 ships as a portable Windows 11 exe; download it, run it, no installer.',
       'The bar, panel, music, files, timer, calendar, and settings shipped together.',
       'The live demo stays the fastest way to try it; the app is the same UI in a real window.'
     ]
@@ -39,7 +39,7 @@ const ENTRIES = [
     items: [
       'Keyboard control: the bar takes focus, Enter or Space opens the panel, and a focus ring shows where you are.',
       'Alt + Space toggles the panel, with Ctrl + Shift + Space as the fallback.',
-      'Add files opens the Windows picker, and a cleared shelf can be undone for five seconds.',
+      'Add files opens the Windows picker, and you can undo a cleared shelf for five seconds.',
       'The bar dims to a quiet star after 10 seconds, and the window only clips to its visible shape.',
       'The bar hides while a fullscreen window owns the screen, and the tray brings it back.'
     ]

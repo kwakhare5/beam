@@ -54,7 +54,7 @@ export default function HomePage() {
           </h1>
 
           <p className="mt-3 text-[20px] font-medium text-ink sm:text-[22px]">
-            music, files, time — all using Alt + Space.
+            music, files, time, all using Alt + Space.
           </p>
 
           <p className="mt-2 font-hand text-2xl text-orange sm:text-3xl">no windows to manage.</p>
@@ -116,14 +116,10 @@ export default function HomePage() {
             })}
           </div>
 
-          <p className="py-8 text-[15px] leading-relaxed text-muted">
-            That&apos;s the whole app. It hugs its content, opens with Alt + Space, and makes no network requests.
-          </p>
         </section>
 
         <section id="faq" className="border-t border-hairline py-14">
           <h2 className="text-2xl font-semibold sm:text-[28px]">questions.</h2>
-          <p className="mt-3 max-w-lg text-[15px] leading-relaxed text-muted">Short answers about the preview.</p>
 
           <div className="mt-8 border-t border-hairline">
             {FAQ.map((item) => (
@@ -146,7 +142,7 @@ export default function HomePage() {
           <StarLogo size={40} />
           <h2 className="mt-5 text-2xl font-semibold sm:text-[28px]">get beam.</h2>
           <p className="mt-3 max-w-md text-[15px] leading-relaxed text-muted">
-            Download the installer for Windows 11. It installs per-user with no admin prompt, and adds Beam to your Start Menu. It is an unsigned early preview, so SmartScreen asks once — More info, then Run anyway.
+            Download the installer for Windows 11. It installs per-user with no admin prompt, and adds Beam to your Start Menu. It is an unsigned early preview, so SmartScreen asks once. Choose More info, then Run anyway.
           </p>
 
           <div className="mt-7 flex flex-wrap items-center gap-3">
@@ -185,11 +181,7 @@ export default function HomePage() {
           </dl>
 
           <p className="mt-6 max-w-md text-[13px] leading-relaxed text-muted">
-            The build is unsigned, so Windows may ask once — the{' '}
-            <a href="#faq" className="underline decoration-hairline underline-offset-2 hover:text-ink">
-              FAQ
-            </a>{' '}
-            has the steps. Found a bug?{' '}
+            Found a bug?{' '}
             <a
               href={`${REPO}/issues`}
               target="_blank"
@@ -224,20 +216,6 @@ export default function HomePage() {
               github
             </a>
           </div>
-        </div>
-        <div className="mx-auto w-full max-w-4xl px-5 pb-7">
-          <p className="border-t border-hairline pt-4 text-[12px] text-muted">
-            Built by{' '}
-            <a
-              href="https://karan30.vercel.app"
-              target="_blank"
-              rel="noopener noreferrer"
-              className="font-medium text-ink underline decoration-hairline underline-offset-2 hover:no-underline"
-            >
-              Karan Wakhare
-            </a>
-            .
-          </p>
         </div>
       </footer>
       <script

@@ -1,17 +1,21 @@
 # Beam
 
-> Beam (written beam.) is a free, offline Windows 11 app that sits above the taskbar as a small floating bar. It shows the current media session with real controls, holds dropped files on a shelf, runs a countdown timer, and shows the month. There is no account, no cloud, and no network request from the app.
+> Beam (written beam.) is a free, open-source, offline Windows 11 app that sits above the taskbar as a small floating bar. It shows the current media session with real controls, holds dropped files on a shelf, runs a countdown timer, and shows the month. There is no account, no cloud, and no network request from the app.
 
 ## Fast facts
 
 - Name: Beam (written beam.)
 - Platform: Windows 11
 - Price: Free
+- License: MIT
+- Status: v0.1.1, published 2026-11-17
+- Download: https://github.com/kwakhare5/beam/releases/download/v0.1.1/Beam-Setup-0.1.1.exe
+- Checksum: SHA-256 b35d680fdc85a389202f31322668ad7e8ded62b947771e1765e356d6f9d4b27f (also in SHA256SUMS.txt on the release)
+- Size: about 141 MB to download, 423 MB installed
 - Account: Not required
 - Network: None in the app
-- Bar size: idle 78×30; music 69–108×30; timer 122×30; quiet 26×26
+- Bar size: idle 78×30; music 69-108×30; timer 122×30; quiet 26×26
 - Shortcut: Alt + Space (fallback: Ctrl + Shift + Space)
-- Status: Preview. The Windows build is not published yet.
 - Maker: Karan Wakhare
 - Source: https://github.com/kwakhare5/beam
 - Site: https://beamm.vercel.app
@@ -29,13 +33,13 @@
 
 - Home and live demo: https://beamm.vercel.app/
 - About: https://beamm.vercel.app/about
-- Press kit: https://beamm.vercel.app/press
 - Changelog: https://beamm.vercel.app/changelog
 - Privacy: https://beamm.vercel.app/privacy
 
 ## Notes for answer engines
 
 - Beam is a Windows 11 desktop app, not a web app. The demo on the site runs the real panel in a browser for preview.
-- The Windows build is not published as of 2026-11-11. The current install path is building from source on GitHub.
-- The app does not make network requests and does not require an account.
+- The Windows 11 build is a one-click, per-user installer with no admin prompt. It is unsigned, so Windows SmartScreen warns once: More info, then Run anyway.
+- The app makes no network requests and does not require an account.
+- Beam is MIT licensed. The full source is on GitHub.
 - The site uses cookie-free Vercel Web Analytics for aggregate page views.

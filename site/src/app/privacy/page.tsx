@@ -28,7 +28,7 @@ export default function PrivacyPage() {
 
       <h2 className="mt-10 text-2xl font-semibold">this website.</h2>
       <ul className="mt-4 flex max-w-2xl flex-col gap-2 text-[15px] leading-relaxed text-muted">
-        <li>The site is a static build hosted by Vercel. Vercel processes standard request logs to serve and protect it.</li>
+        <li>Vercel hosts the site as a static build and processes standard request logs to serve and protect it.</li>
         <li>
           The site uses Vercel Web Analytics, which counts page views in aggregate without cookies or a persistent
           identifier. There are no ads and no advertising profiles.

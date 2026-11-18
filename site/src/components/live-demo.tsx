@@ -52,7 +52,7 @@ export function LiveDemo() {
       <div className="demo-stage" data-open={open} ref={stageRef}>
         <iframe
           src={`${demoPath}?instance=${INSTANCE}`}
-          title="beam — live app demo"
+          title="beam live app demo"
           className="demo-frame"
           data-open={open}
           loading="lazy"

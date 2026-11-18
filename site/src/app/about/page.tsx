@@ -1,7 +1,5 @@
-import Link from 'next/link';
 import { pageMetadata } from '../../lib/page-meta';
 import { Subpage } from '../../components/subpage';
-import { REPO } from '../../content/site';
 
 export const metadata = pageMetadata(
   'about',
@@ -14,7 +12,7 @@ const FACTS = [
   ['Price', 'Free'],
   ['Account', 'Not required'],
   ['Network', 'None in the app'],
-  ['Rest size', 'Hugs its content: 69–127×30 pixels'],
+  ['License', 'MIT'],
   ['Shortcut', 'Alt + Space (fallback: Ctrl + Shift + Space)'],
   ['Status', 'v0.1.1 published'],
   ['Source', 'GitHub']
@@ -55,26 +53,6 @@ export default function AboutPage() {
         <li>No claims beyond Windows 11, the system it is built and tested on.</li>
       </ul>
 
-      <h2 className="mt-10 text-2xl font-semibold">how it is built.</h2>
-      <p className="mt-3 max-w-2xl text-[15px] leading-relaxed text-muted">
-        The window and panel are an Electron shell with a sandboxed, vanilla TypeScript renderer. Windows-specific work
-        lives in a small C# helper that talks to the app over standard input and output: the media session, the file
-        clipboard, and fullscreen detection. Settings are written to{' '}
-        <code className="rounded bg-hover px-1.5 py-0.5 text-[13px]">%APPDATA%\Beam\settings.json</code>.
-      </p>
-
-      <h2 className="mt-10 text-2xl font-semibold">status.</h2>
-      <p className="mt-3 max-w-2xl text-[15px] leading-relaxed text-muted">
-        Beam is in preview. The Windows 11 build is published as a one-click installer. The source is on{' '}
-        <a href={REPO} target="_blank" rel="noopener noreferrer" className="underline decoration-hairline underline-offset-2 hover:text-ink">
-          GitHub
-        </a>
-        , and the{' '}
-        <Link href="/#demo" className="underline decoration-hairline underline-offset-2 hover:text-ink">
-          live demo
-        </Link>{' '}
-        runs the real panel in this page.
-      </p>
     </Subpage>
   );
 }
