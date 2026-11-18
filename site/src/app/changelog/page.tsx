@@ -12,16 +12,15 @@ const ENTRIES = [
     items: [
       'v0.1.1 ships as a one-click installer: Start Menu and desktop shortcuts, an entry in Windows Apps, and no admin prompt.',
       'First launch opens the panel once, so a new install shows the whole app instead of just the bar.',
-      'English-only build cuts about 50 MB of installed size; every Download button on the site now downloads, and every page shares one header and footer.'
+      'English-only build cuts about 50 MB of installed size.'
     ]
   },
   {
     date: '2026-11-15',
     title: 'the windows build',
     items: [
-      'v0.1.0 ships as a portable Windows 11 exe; download it, run it, no installer.',
-      'The bar, panel, music, files, timer, calendar, and settings shipped together.',
-      'The live demo stays the fastest way to try it; the app is the same UI in a real window.'
+      'v0.1.0 shipped as a portable Windows 11 exe.',
+      'The bar, panel, music, files, timer, calendar, and settings shipped together.'
     ]
   },
   {
@@ -51,7 +50,7 @@ const ENTRIES = [
       'The live track, cover art, and previous / play / next sit on the bar and in the Music tab.',
       'Dropped files stay on a shelf: copy them, drag them into Explorer, see missing files, clear them all.',
       'A countdown that keeps real time through sleep, and a month calendar with Today.',
-      'The bar remembers its position and restores it on the right monitor.'
+      'The bar remembers its position.'
     ]
   }
 ];
@@ -59,8 +58,7 @@ const ENTRIES = [
 export default function ChangelogPage() {
   return (
     <Subpage>
-      <p className="text-[15px] text-muted">What changed in the preview, newest first.</p>
-      <h1 className="mt-4 text-[clamp(2.2rem,5.6vw,3.9rem)] font-semibold leading-[1]">changelog.</h1>
+      <h1 className="text-[clamp(2.2rem,5.6vw,3.9rem)] font-semibold leading-[1]">changelog.</h1>
 
       <div className="mt-10 flex flex-col gap-10">
         {ENTRIES.map((entry) => (

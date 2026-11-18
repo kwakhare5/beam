@@ -59,11 +59,6 @@ export default function HomePage() {
 
           <p className="mt-2 font-hand text-2xl text-orange sm:text-3xl">no windows to manage.</p>
 
-          <p className="mt-6 max-w-xl text-base leading-relaxed text-muted">
-            Control what&apos;s playing, keep files close, start a countdown, check the month. One small bar, no account,
-            no cloud.
-          </p>
-
           <div className="mt-8 flex flex-wrap items-center gap-3">
             <a
               href={DOWNLOAD_URL}
@@ -87,10 +82,6 @@ export default function HomePage() {
             <p className="font-hand text-2xl text-purple">go on, click the star.</p>
           </div>
           <LiveDemo />
-          <p className="mt-4 text-center text-[13px] text-muted">
-            The real app, running in this page. The music is two free tracks, and the Files tab takes real dropped files.
-            Press play for sound. Copy, drag-out, the shortcut, and startup live in the Windows app.
-          </p>
         </section>
 
         <section id="features" className="border-t border-hairline pt-14">

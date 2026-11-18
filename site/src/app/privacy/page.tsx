@@ -14,7 +14,7 @@ export default function PrivacyPage() {
       <p className="text-[15px] text-muted">Privacy</p>
       <h1 className="mt-4 text-[clamp(2.2rem,5.6vw,3.9rem)] font-semibold leading-[1]">privacy.</h1>
       <p className="mt-6 max-w-2xl text-[17px] leading-relaxed text-muted">
-        Beam has no accounts, no cloud, and no advertising. This page explains exactly what is stored and what is not.
+        Beam has no accounts, no cloud, and no advertising.
       </p>
       <p className="mt-4 text-[13px] text-muted">Last updated: 2026-11-11</p>
 
@@ -42,8 +42,7 @@ export default function PrivacyPage() {
         Open an issue on{' '}
         <a href={`${REPO}/issues`} target="_blank" rel="noopener noreferrer" className="underline decoration-hairline underline-offset-2 hover:text-ink">
           GitHub
-        </a>{' '}
-        and ask.
+        </a>.
       </p>
     </Subpage>
   );

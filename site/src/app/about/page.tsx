@@ -50,7 +50,6 @@ export default function AboutPage() {
         <li>No account, sign-in, cloud, or sync.</li>
         <li>No network requests from the app.</li>
         <li>No copies of your files; the shelf stores paths in memory and clears when you quit.</li>
-        <li>No claims beyond Windows 11, the system it is built and tested on.</li>
       </ul>
 
     </Subpage>
