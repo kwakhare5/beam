@@ -28,10 +28,11 @@ Beam is a lightweight floating Windows 11 capsule that keeps media controls, a m
   - A second launch reveals the existing pill instead of starting another one.
 
 ### 2. Music Controls (Windows SMTC Integration)
-- **User Flow:** Audio plays in Spotify, Apple Music, or a browser → Beam automatically shows track title, artist, and album artwork. Hovering the playing pill expands it into Prev / Play-Pause / Next / Panel; the full Music panel carries the same transports plus a seek slider.
+- **User Flow:** Audio plays in Spotify, Apple Music, or a browser → Beam automatically shows track title, artist, and album artwork. A browser counts as a music source only when its session reports both artist and album: Spotify Web and YouTube Music show, while regular YouTube videos and songs, reels, and social apps are ignored. Hovering the playing pill expands it into Prev / Play-Pause / Next / Panel; the full Music panel carries the same transports plus a seek slider.
 - **Acceptance Criteria:**
   - Integrates locally with Windows System Media Transport Controls (SMTC) with $0 API cost and no developer accounts.
   - Displays track title, artist name, and album artwork.
+  - Ignores browser sessions without artist and album, and always ignores social/video apps (proved live 2026-11-18).
   - Play/Pause and Next/Previous track buttons function reliably.
   - A seek slider shows elapsed and total time and seeks through SMTC (built 2026-11-08; the helper clamps to the session timeline and a refusal repaints the last position).
 
@@ -66,8 +67,8 @@ Beam is a lightweight floating Windows 11 capsule that keeps media controls, a m
 ---
 
 ## 4. What We Are NOT Building (Out of Scope for v1)
-- **App Launcher / Switcher:** Cut to V2.
-- **File Search (Name & Content):** Cut to V2.
+- **App Launcher / Switcher:** Promoted into v1 by Karan on 2026-11-18; spec pending.
+- **File Search (Name & Content):** Promoted into v1 by Karan on 2026-11-18; spec pending.
 - **Clipboard History Manager:** Cut to future releases.
 - **Cloud Accounts, Sync & Multi-Device Sharing:** Fully out of scope; Beam is 100% offline.
 - **Music Scrubbing / Timeline Seeker:** Delivered on 2026-11-08 (U2); seeking goes through SMTC and the bar reports the accepted position.

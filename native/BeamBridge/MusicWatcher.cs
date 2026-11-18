@@ -14,12 +14,52 @@ internal sealed class MusicWatcher : IDisposable
     private string lastLine = string.Empty;
     private bool disposed;
 
+    // Windows publishes any tab audio as a media session, so a YouTube video would otherwise
+    // own the bar. Browsers and PWAs publish different AUMIDs, so match by keyword. A browser
+    // session counts as music only when it reports both artist and album; video tabs leave the
+    // album empty (proved 2026-11-18: Spotify Web had an album, a YouTube video did not).
+    private static readonly string[] BrowserApps =
+    {
+        "chrome", "chromium", "msedge", "edge", "firefox", "brave", "opera", "vivaldi"
+    };
+
+    private static readonly string[] AlwaysBlockedApps = { "instagram", "tiktok", "youtube", "facebook" };
+
+    private static bool MatchesAny(string? app, string[] terms)
+    {
+        if (string.IsNullOrEmpty(app)) return false;
+        var id = app.ToLowerInvariant();
+        foreach (var term in terms)
+        {
+            if (id.Contains(term, StringComparison.Ordinal)) return true;
+        }
+        return false;
+    }
+
+    private static async Task<bool> IsIgnoredAsync(GlobalSystemMediaTransportControlsSession candidate)
+    {
+        var app = candidate.SourceAppUserModelId;
+        if (MatchesAny(app, AlwaysBlockedApps)) return true;
+        if (!MatchesAny(app, BrowserApps)) return false;
+
+        try
+        {
+            var props = await candidate.TryGetMediaPropertiesAsync();
+            return string.IsNullOrWhiteSpace(props?.Artist) || string.IsNullOrWhiteSpace(props?.AlbumTitle);
+        }
+        catch (Exception ex)
+        {
+            Protocol.Log($"session metadata check failed: {ex.Message}");
+            return true;
+        }
+    }
+
     public async Task StartAsync()
     {
         manager = await GlobalSystemMediaTransportControlsSessionManager.RequestAsync();
         manager.CurrentSessionChanged += OnManagerChanged;
         manager.SessionsChanged += OnSessionsChanged;
-        Attach(Resolve());
+        Attach(await ResolveAsync());
         await PublishAsync();
     }
 
@@ -27,7 +67,7 @@ internal sealed class MusicWatcher : IDisposable
     {
         try
         {
-            var current = Resolve();
+            var current = await ResolveAsync();
             if (current is null)
             {
                 return (false, "no active media session");
@@ -52,7 +92,7 @@ internal sealed class MusicWatcher : IDisposable
     {
         try
         {
-            var current = Resolve();
+            var current = await ResolveAsync();
             if (current is null)
             {
                 return (false, "no active media session");
@@ -84,13 +124,18 @@ internal sealed class MusicWatcher : IDisposable
             try
             {
                 var props = await candidate.TryGetMediaPropertiesAsync();
+                var playback = candidate.GetPlaybackInfo();
                 list.Add(new JsonObject
                 {
                     ["index"] = index,
                     ["app"] = candidate.SourceAppUserModelId ?? string.Empty,
                     ["title"] = props?.Title ?? string.Empty,
-                    ["playing"] = candidate.GetPlaybackInfo()?.PlaybackStatus == GlobalSystemMediaTransportControlsSessionPlaybackStatus.Playing,
-                    ["current"] = current is not null && current.SourceAppUserModelId == candidate.SourceAppUserModelId
+                    ["artist"] = props?.Artist ?? string.Empty,
+                    ["album"] = props?.AlbumTitle ?? string.Empty,
+                    ["type"] = playback?.PlaybackType?.ToString() ?? string.Empty,
+                    ["playing"] = playback?.PlaybackStatus == GlobalSystemMediaTransportControlsSessionPlaybackStatus.Playing,
+                    ["current"] = current is not null && current.SourceAppUserModelId == candidate.SourceAppUserModelId,
+                    ["blocked"] = await IsIgnoredAsync(candidate)
                 });
             }
             catch (Exception ex)
@@ -165,22 +210,22 @@ internal sealed class MusicWatcher : IDisposable
     private void OnManagerChanged(GlobalSystemMediaTransportControlsSessionManager sender, CurrentSessionChangedEventArgs args)
     {
         if (disposed) return;
-        Reattach();
+        _ = ReattachAsync();
         _ = PublishAsync();
     }
 
     private void OnSessionsChanged(GlobalSystemMediaTransportControlsSessionManager sender, SessionsChangedEventArgs args)
     {
         if (disposed) return;
-        Reattach();
+        _ = ReattachAsync();
         _ = PublishAsync();
     }
 
-    private void Reattach()
+    private async Task ReattachAsync()
     {
         try
         {
-            Attach(Resolve());
+            Attach(await ResolveAsync());
         }
         catch (Exception ex)
         {
@@ -196,19 +241,21 @@ internal sealed class MusicWatcher : IDisposable
 
     // Windows marks a session current when the user touches its player, and the media flyout
     // switches it the same way. When no session is current the pill would go blank even though
-    // another player is still running, so the newest playing session stands in.
-    private GlobalSystemMediaTransportControlsSession? Resolve()
+    // another player is still running, so the newest playing session stands in. An ignored
+    // current session falls through the same way instead of owning the bar.
+    private async Task<GlobalSystemMediaTransportControlsSession?> ResolveAsync()
     {
         var mgr = manager;
         if (mgr is null) return session;
 
         var current = mgr.GetCurrentSession();
-        if (current is not null) return current;
+        if (current is not null && !await IsIgnoredAsync(current)) return current;
 
-        return MostRecentPlaying(mgr);
+        return await MostRecentPlayingAsync(mgr);
     }
 
-    private static GlobalSystemMediaTransportControlsSession? MostRecentPlaying(GlobalSystemMediaTransportControlsSessionManager mgr)
+    private static async Task<GlobalSystemMediaTransportControlsSession?> MostRecentPlayingAsync(
+        GlobalSystemMediaTransportControlsSessionManager mgr)
     {
         GlobalSystemMediaTransportControlsSession? best = null;
         var newest = DateTimeOffset.MinValue;
@@ -218,6 +265,11 @@ internal sealed class MusicWatcher : IDisposable
             try
             {
                 if (candidate.GetPlaybackInfo()?.PlaybackStatus != GlobalSystemMediaTransportControlsSessionPlaybackStatus.Playing)
+                {
+                    continue;
+                }
+
+                if (await IsIgnoredAsync(candidate))
                 {
                     continue;
                 }
@@ -269,7 +321,7 @@ internal sealed class MusicWatcher : IDisposable
         await publishGate.WaitAsync();
         try
         {
-            var current = Resolve();
+            var current = await ResolveAsync();
             JsonObject line;
 
             if (current is null)

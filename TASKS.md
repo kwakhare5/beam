@@ -8,9 +8,9 @@
 
 **Done before the order:** 0.1 scaffold, 0.2 budget (90 MB / 0.035% CPU), 0.3 helper ping (6.3 MB), 0.4a live SMTC + PNG art, 0.4b CF_HDROP clipboard. Plus UI work outside the phase order: the app UI system, the canonical preview, the focus/cleanup pass (cards 21–35), the 2026-10-28 cleanup (card 43), the segmented-tab redesign (cards 44–54), the 100/136 capsule pass (cards 55–56), the 2026-10-29 audit fix pass (card 64), the 6% capsule scale to 94×30 / 128×30 in a 136×42 window (card 67), and the 2026-11-11 capsule final — content-hugged rest with a centered star+label and a 126px music hover row (cards 133–134, verify sync pending as V1).
 
-## Current state (2026-11-15)
+## Current state (2026-11-18)
 
-The app is built and `v0.1.0` is published. The last full suite run was green at 30/30 with no skips; its evidence is in JOURNAL 151 and `docs/release-notes.md`. The old single-file runner is retired; current verification is `.agents/skills/verify-beam/` (feature map: capsule, panel, files, music, timer, settings, tray/quit). Open: R7 (hardware-blocked: multi-monitor, 100/150% scaling, Windows 10). Historical “Proved” lines below record what passed at the time.
+The app is built and `v0.1.1` ships as a per-user one-click installer whose release carries `SHA256SUMS.txt`; the site auto-deploys from `main`. The last full suite run was green at 30/30 with no skips; its evidence is in JOURNAL 151 and `docs/release-notes.md`. The old single-file runner is retired; current verification is `.agents/skills/verify-beam/` (feature map: capsule, panel, files, music, timer, settings, tray/quit). Open: R7 (hardware-blocked: multi-monitor, 100/150% scaling, Windows 10). Historical “Proved” lines below record what passed at the time.
 
 ## R. Codebase repair (approved 2026-11-07)
 
@@ -270,7 +270,7 @@ These run before the phase tasks, as previous UI passes did. The canonical previ
 
 ## Backlog (do not touch this milestone)
 
-- App launcher / switcher
-- File search by name or content
+- App launcher / switcher — promoted into v1 by Karan 2026-11-18; spec pending
+- File search by name or content — promoted into v1 by Karan 2026-11-18; spec pending
 - Clipboard history
 - Volume / brightness sliders

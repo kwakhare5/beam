@@ -14,22 +14,18 @@ To build it yourself: `npm install`, `npm run build`, publish the helper, then `
 
 To run from source instead: `npm install`, `npm run build`, then `npm start`.
 
-## Current state (2026-11-15)
+## Current state (2026-11-18)
 
 **Working**
 - **Shell:** one 136×42 transparent window holding a content-hugged capsule — idle 78×30 with the star and label centered as one unit, files 80–88, music and paused 69–108, timer 122 with an always-visible 28px cancel, done 108 with `Done` and a 28px dismiss, drag 88, error 127, and a 26×26 quiet star after 10s idle (woken when the cursor comes within 37px). Music alone expands on hover or focus, snapping to 126×30 with four 24px controls: previous, play/pause, next, panel. The window is clipped with `setShape` to the pill plus a 6px halo. It uses `showInactive()`, never takes focus on show, drags with pointer capture, persists its position in `%APPDATA%\Beam\settings.json`, and hides on fullscreen. Tray: Settings, Reset Position, Hide, Quit; Quit confirms while the shelf holds files.
 - **Files:** drop or Add files, per-row copy, drag-out to Explorer, missing badge, row remove with 5s Undo, armed Clear All, 50-entry in-memory cap.
-- **Music:** live SMTC title, art, dot, the expanded hover row, and the Music tab with a real seek slider. Sessions are picked automatically; last-touched switching is proven by check 24.
-- **Timer and Calendar:** 5/10/25/custom countdown on the tab and pill with a main-owned deadline, cancel and replace, done face with one chime and one Windows notification (fires while the pill is hidden), month grid with arrows and Today. The deadline and alert path are proven by checks 28–29; calendar locale/midnight cases are still unproven.
+- **Music:** live SMTC title, art, dot, the expanded hover row, and the Music tab with a real seek slider. Sessions are picked automatically and last-touched switching is proven by check 24. A browser counts only when the session reports both artist and album, so Spotify Web and YouTube Music show while regular YouTube videos, songs, and reels stay out; social/video apps are always ignored.
+- **Timer and Calendar:** 5/10/25/custom countdown on the tab and pill with a main-owned deadline, cancel and replace, done face with one chime and one Windows notification (fires while the pill is hidden), month grid with arrows and Today. The deadline and alert path are proven by checks 28–29; the calendar locale, week-start, and midnight cases are proven by check 25.
 - **Glue and access:** a rest click opens the panel to what the pill shows (Music, Timer, Files, otherwise last-used), `Alt+Space` (fallback `Ctrl+Shift+Space`), keyboard pill control plus the hover row's four tab stops, one 2px focus ring, a live region, and Beam's own motion regardless of the OS reduced-motion flag.
 - **Landing site:** live at `beamm.vercel.app`, running the real renderer as a browser demo.
 
 **Proof gaps**
-- 9.2 Add files picker: built; one manual click still needed to confirm the native dialog opens.
-- 9.4 native quit-confirm and the copy/add/remove failure text: built; not yet driven.
-- 9.9 follows 9.2 and 9.4.
 - R7 multi-monitor restore, 100/150% scaling, and Windows 10: hardware-blocked.
-- A memory journey is not yet in the verification skill; the budget and the last measurement are in AGENTS.md.
 
 ## Verification
 
@@ -47,7 +43,7 @@ node .agents\skills\verify-beam\helpers\beam.mjs doctor
 node .agents\skills\verify-beam\helpers\beam.mjs launch
 ```
 
-`npm run dist` only runs electron-builder, so publish the helper and run `npm run build` first. `v0.1.0` was built and launched on 2026-11-15. The app uses software rendering to stay under the 130 MB private-byte budget; last measured 90.3 MB app, 9.8 MB helper, 0% CPU, 0 sockets.
+`npm run dist` only runs electron-builder, so publish the helper and run `npm run build` first. `v0.1.1` was built, installed, and launched on 2026-11-16 (JOURNAL 159); its installer is published with `SHA256SUMS.txt`. The app uses software rendering to stay under the 130 MB private-byte budget; last measured 90.3 MB app, 9.8 MB helper, 0% CPU, 0 sockets.
 
 ## Preview
 
